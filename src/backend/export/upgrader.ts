@@ -1,5 +1,5 @@
 import {sanitizeString, DEFAULTS} from '../sanitize';
-import {COLOR_REMAP} from '../migrations/scripts/002_remap_category_colors';
+import {COLOR_REMAP} from '../migrations/colorRemap';
 import {CURRENT_EXPORT_VERSION, type ExportData} from './format';
 
 interface RawExport {

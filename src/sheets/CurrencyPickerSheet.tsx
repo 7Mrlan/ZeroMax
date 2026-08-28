@@ -1,4 +1,4 @@
-import {TextInput, TouchableOpacity, View} from 'react-native';
+import {TextInput, TouchableOpacity, View, useWindowDimensions} from 'react-native';
 import React, {useCallback, useMemo, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import {SheetManager, SheetProps, ScrollView as SheetScrollView} from 'react-native-actions-sheet';
@@ -20,6 +20,7 @@ interface Currency {
 const CurrencyPickerSheet: React.FC<SheetProps<'currency-picker-sheet'>> = React.memo(props => {
   const {t} = useTranslation();
   const colors = useThemeColors();
+  const {height: screenHeight} = useWindowDimensions();
   const initialCurrency = props.payload?.selectedCurrency;
   const [searchText, setSearchText] = useState('');
   const [selectedCurrency, setSelectedCurrency] = useState<Currency | null>(initialCurrency || null);
@@ -116,7 +117,7 @@ const CurrencyPickerSheet: React.FC<SheetProps<'currency-picker-sheet'>> = React
           />
         </View>
 
-        <View style={[gs.h320, gs.my10]}>
+        <View style={[gs.my10, {height: screenHeight * 0.42}]}>
           <FlashList
             renderScrollComponent={SheetScrollView}
             data={filteredCurrencies}

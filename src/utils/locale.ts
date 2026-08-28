@@ -1,4 +1,4 @@
-import {getLocales, getNumberFormatSettings} from 'react-native-localize';
+import {getLocales} from 'react-native-localize';
 import i18n from 'i18next';
 import StorageService from './asyncStorageService';
 
@@ -76,16 +76,9 @@ export const setLocaleOverride = (locale: string | null): void => {
   if (i18n.isInitialized) {
     void i18n.changeLanguage(langCode);
   }
+  // Dates must follow the language too. Imported lazily: dateUtils imports
+  // this module, so a top-level import would be circular.
+  const {setDayjsLocale} = require('./dateUtils') as typeof import('./dateUtils');
+  setDayjsLocale(langCode);
 };
 
-/**
- * Returns the device's number format settings (separators).
- * Useful for input parsing — tells us what char the user sees as decimal/group.
- */
-export const getNumberSeparators = (): {decimalSeparator: string; groupingSeparator: string} => {
-  try {
-    return getNumberFormatSettings();
-  } catch {
-    return {decimalSeparator: '.', groupingSeparator: ','};
-  }
-};

@@ -16,9 +16,9 @@ const IconPickerSheet: React.FC<SheetProps<'icon-picker-sheet'>> = React.memo(pr
   const {t} = useTranslation();
   const colors = useThemeColors();
   const [searchText, setSearchText] = useState('');
-  const selectedIcon = props.payload?.selectedIcon ?? 'null';
+  const selectedIcon = props.payload?.selectedIcon;
 
-  const {width: screenWidth} = useWindowDimensions();
+  const {width: screenWidth, height: screenHeight} = useWindowDimensions();
   const iconsPerRow = 6;
   const iconSize = (screenWidth * 0.85) / iconsPerRow;
 
@@ -89,7 +89,9 @@ const IconPickerSheet: React.FC<SheetProps<'icon-picker-sheet'>> = React.memo(pr
         />
       </View>
 
-      <View style={[gs.h350, gs.px10]}>
+      {/* Viewport-relative: a fixed height is cramped on small phones and
+          wastes space on tablets. */}
+      <View style={[gs.px10, {height: screenHeight * 0.45}]}>
         {filteredIcons.length === 0 ? (
           <View style={[gs.flex1, gs.center]}>
             <Icon name="search" size={40} color={colors.secondaryText} />

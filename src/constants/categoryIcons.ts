@@ -184,7 +184,7 @@ export const CATEGORY_ICONS: IconName[] = [
   'dog',
   'bird',
   'bug',
-  'fish',
+  'fish-animal',
   'rabbit',
   'squirrel',
   'snail',

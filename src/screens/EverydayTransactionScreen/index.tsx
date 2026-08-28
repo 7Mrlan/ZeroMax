@@ -36,7 +36,7 @@ const EverydayTransactionScreen = () => {
         </PrimaryText>
       </View>
     ),
-    [colors, formatAmount, totalAmountForTheDay],
+    [colors, formatAmount, totalAmountForTheDay, t],
   );
 
   const listEmpty = useMemo(
@@ -50,7 +50,7 @@ const EverydayTransactionScreen = () => {
         </PrimaryText>
       </View>
     ),
-    [colors, expenseDate],
+    [colors, expenseDate, t],
   );
 
   return (

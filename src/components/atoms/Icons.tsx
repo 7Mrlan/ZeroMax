@@ -1,8 +1,14 @@
 import React, {memo} from 'react';
-import {ICON_REGISTRY, isValidIconName} from './IconRegistry';
+import {ICON_REGISTRY, isValidIconName, type IconName} from './IconRegistry';
 
 interface IconProps {
-  name: string;
+  /**
+   * `IconName` gives autocomplete and typo-checking for names written in
+   * code, while the `string` arm keeps accepting icon names loaded from the
+   * database (users pick those at runtime, so they cannot be a literal type).
+   * Unknown names are caught by isValidIconName below.
+   */
+  name: IconName | (string & {});
   size?: number;
   color?: string;
   strokeWidth?: number;

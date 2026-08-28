@@ -15,6 +15,7 @@ import useFormatAmount from '../../hooks/useFormatAmount';
 import {SheetManager} from 'react-native-actions-sheet';
 import DailyBudgetRow from '../../components/atoms/DailyBudgetRow';
 import {gs, hitSlop} from '../../styles/globalStyles';
+import {computeDailyAllowance} from '../../utils/budgetMath';
 
 const HomeScreen = () => {
   const {
@@ -53,7 +54,15 @@ const HomeScreen = () => {
 
   const budgetPct = currentBudget ? Math.min(Math.round((totalSpent / currentBudget.amount) * 100), 999) : 0;
   const budgetExceeded = currentBudget ? totalSpent > currentBudget.amount : false;
-  const dailyBudget = currentBudget && daysInMonth > 0 ? currentBudget.amount / daysInMonth : 0;
+  // Adaptive: what is left of the budget, spread over the remaining days.
+  // new Date() deliberately inline — a module-level "today" goes stale at midnight.
+  const {allowance: dailyBudget} = computeDailyAllowance({
+    monthlyBudget: currentBudget?.amount ?? 0,
+    spentBeforeToday: totalSpent - todayTotal,
+    dayOfMonth: new Date().getDate(),
+    daysInMonth,
+    isCurrentMonth,
+  });
   const dailyLeft = dailyBudget - todayTotal;
 
   const listHeader = useMemo(

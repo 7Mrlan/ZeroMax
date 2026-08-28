@@ -62,9 +62,15 @@ react {
 }
 
 /**
- * Set this to true to Run Proguard on Release builds to minify the Java bytecode.
- * Recommended for production builds to reduce APK size and obfuscate code.
- * NOTE: Disabled due to React Native compatibility issues. Re-enable after testing.
+ * Runs R8/ProGuard on release builds to shrink and obfuscate the Java bytecode.
+ *
+ * Deliberately OFF. Enabling it is a standalone piece of work, not a flag flip:
+ * WatermelonDB models rely on decorators and reflective field access, and the
+ * Nitro/Reanimated JSI bindings are reached from native code, so keep rules
+ * must be written in proguard-rules.pro and validated on a real device
+ * (create/edit/delete an expense, run a backup export + restore, open Reports)
+ * against an actual release build — a successful compile proves nothing here.
+ * Until that pass happens, shipping unminified is the safe choice.
  */
 def enableProguardInReleaseBuilds = false
 
@@ -91,14 +97,17 @@ android {
         applicationId "com.anotherwhy.zero"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 16
-        versionName "2.5.0"
+        versionCode 19
+        versionName "2.6.6"
     }
 
-    // Enable 16 KB page size support for Android 15+ devices
+    // 16 KB page size support (required for Android 15+ / Play submissions):
+    // native libraries must ship UNCOMPRESSED and page-aligned, which is what
+    // useLegacyPackaging = false does. The previous `true` did the opposite of
+    // what its comment claimed.
     packaging {
         jniLibs {
-            useLegacyPackaging = true
+            useLegacyPackaging = false
         }
     }
     signingConfigs {
@@ -114,6 +123,10 @@ android {
                 storePassword keystoreProperties['ZERO_UPLOAD_STORE_PASSWORD']
                 keyAlias keystoreProperties['ZERO_UPLOAD_KEY_ALIAS']
                 keyPassword keystoreProperties['ZERO_UPLOAD_KEY_PASSWORD']
+            } else {
+                // Fail loudly instead of silently emitting an unsigned release
+                // that only gets rejected at upload time.
+                logger.warn("keystore.properties missing — release builds will not be signed.")
             }
         }
     }

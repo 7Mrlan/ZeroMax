@@ -1,6 +1,6 @@
 import {useAppDispatch, useAppSelector} from '../../redux/hooks';
 import useThemeColors from '../../hooks/useThemeColors';
-import {useCallback, useEffect, useMemo, useState} from 'react';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {fetchUserData, selectUserId} from '../../redux/slice/userIdSlice';
 import {navigate} from '../../utils/navigationUtils';
 import {createCategory} from '../../watermelondb/services';
@@ -27,11 +27,29 @@ const useOnboarding = () => {
     dispatch(fetchUserData());
   }, [dispatch]);
 
+  // Guards a double-tap, which would otherwise create the whole default
+  // category set twice.
+  const isSubmittingRef = useRef(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const handleSubmit = useCallback(async () => {
-    for (const category of selectedCategories) {
-      await createCategory(category.name, userId, category.icon ?? null, category.color ?? null);
+    if (isSubmittingRef.current) {
+      return;
     }
-    navigate('ChooseCurrencyScreen');
+    isSubmittingRef.current = true;
+    setIsSubmitting(true);
+    try {
+      for (const category of selectedCategories) {
+        await createCategory(category.name, userId, category.icon ?? null, category.color ?? null);
+      }
+      navigate('ChooseCurrencyScreen');
+    } catch (error) {
+      if (__DEV__) {
+        console.error('Error creating default categories:', error);
+      }
+      isSubmittingRef.current = false;
+      setIsSubmitting(false);
+    }
   }, [selectedCategories, userId]);
 
   const toggleCategorySelection = useCallback(
@@ -59,6 +77,7 @@ const useOnboarding = () => {
     userId,
     handleSkip,
     handleSubmit,
+    isSubmitting,
     toggleCategorySelection,
     isCategorySelected,
   };

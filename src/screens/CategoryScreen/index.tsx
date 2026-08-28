@@ -17,6 +17,7 @@ import EmptyState from '../../components/atoms/EmptyState';
 import {Colors} from '../../hooks/useThemeColors';
 import {FlashList} from '@shopify/flash-list';
 import {gs, hitSlop} from '../../styles/globalStyles';
+import {hexToRgba} from '../../utils/colorUtils';
 
 const CategoryRow = memo(({
   category,
@@ -62,7 +63,7 @@ const CategoryRow = memo(({
               gs.size36,
               gs.rounded10,
               gs.center,
-              {backgroundColor: (category.color || colors.primaryText) + '18'},
+              {backgroundColor: hexToRgba(category.color || colors.primaryText, 0.094)},
             ]}>
             <Icon name={category.icon || 'shapes'} size={18} color={category.color || colors.primaryText} />
           </View>

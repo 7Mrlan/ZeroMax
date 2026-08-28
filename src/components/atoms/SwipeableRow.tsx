@@ -1,10 +1,12 @@
 import {TouchableOpacity} from 'react-native-gesture-handler';
-import React, {useCallback, useRef, memo} from 'react';
+import React, {useCallback, useMemo, useRef, memo} from 'react';
+import {View, type AccessibilityActionEvent} from 'react-native';
 import Animated, {SharedValue, useAnimatedStyle, interpolate} from 'react-native-reanimated';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import type {SwipeableMethods} from 'react-native-gesture-handler/ReanimatedSwipeable';
 import Icon from './Icons';
 import {gs} from '../../styles/globalStyles';
+import {useTranslation} from 'react-i18next';
 
 const ACTION_WIDTH = 50;
 const EDGE_INSET = 16;
@@ -12,6 +14,9 @@ const EDGE_INSET = 16;
 interface SwipeableRowProps {
   onEdit?: () => void;
   onDelete?: () => void;
+  /** Screen-reader labels; swipe is otherwise the only affordance. */
+  editLabel?: string;
+  deleteLabel?: string;
   children: React.ReactNode;
   colors: {
     accentGreen: string;
@@ -30,6 +35,7 @@ const SwipeAction = memo(({
   backgroundColor,
   side,
   onPress,
+  accessibilityLabel,
   edgeToEdge = false,
 }: {
   progress: SharedValue<number>;
@@ -38,6 +44,7 @@ const SwipeAction = memo(({
   backgroundColor: string;
   side: 'left' | 'right';
   onPress: () => void;
+  accessibilityLabel: string;
   edgeToEdge?: boolean;
 }) => {
   const animatedStyle = useAnimatedStyle(() => ({
@@ -51,6 +58,8 @@ const SwipeAction = memo(({
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
       style={[
         gs.center,
         {
@@ -70,12 +79,15 @@ const SwipeAction = memo(({
 const SwipeableRow: React.FC<SwipeableRowProps> = memo(({
   onEdit,
   onDelete,
+  editLabel,
+  deleteLabel,
   children,
   colors,
   swipeRef,
   openSwipeableRef,
   edgeToEdge = false,
 }) => {
+  const {t} = useTranslation();
   const localRef = useRef<SwipeableMethods | null>(null);
   const combinedRef = swipeRef ?? localRef;
 
@@ -87,6 +99,50 @@ const SwipeableRow: React.FC<SwipeableRowProps> = memo(({
       openSwipeableRef.current = combinedRef.current;
     }
   }, [openSwipeableRef, combinedRef]);
+
+  /**
+   * Accessibility actions are the ONLY way a screen-reader user can reach edit
+   * and delete. The action buttons behind the row are labelled, but they are
+   * revealed by a pan gesture that TalkBack and VoiceOver intercept, so
+   * without this the rows were read-only for anyone using one — in an app
+   * where swipe is the sole affordance for both operations.
+   *
+   * With this, VoiceOver exposes them via the rotor's Actions and TalkBack via
+   * its local context menu.
+   */
+  const accessibilityActions = useMemo(() => {
+    const actions: Array<{name: string; label: string}> = [];
+    if (onEdit) {
+      actions.push({name: 'edit', label: editLabel ?? t('common.edit')});
+    }
+    if (onDelete) {
+      actions.push({name: 'delete', label: deleteLabel ?? t('common.delete')});
+    }
+    return actions;
+  }, [onEdit, onDelete, editLabel, deleteLabel, t]);
+
+  const handleAccessibilityAction = useCallback(
+    (event: AccessibilityActionEvent) => {
+      if (event.nativeEvent.actionName === 'edit') {
+        onEdit?.();
+      } else if (event.nativeEvent.actionName === 'delete') {
+        onDelete?.();
+      }
+    },
+    [onEdit, onDelete],
+  );
+
+  const content =
+    accessibilityActions.length > 0 ? (
+      <View
+        accessible={false}
+        accessibilityActions={accessibilityActions}
+        onAccessibilityAction={handleAccessibilityAction}>
+        {children}
+      </View>
+    ) : (
+      children
+    );
 
   return (
     <ReanimatedSwipeable
@@ -100,6 +156,7 @@ const SwipeableRow: React.FC<SwipeableRowProps> = memo(({
                 iconColor={colors.accentGreen}
                 backgroundColor={colors.lightAccent}
                 side="left"
+                accessibilityLabel={editLabel ?? t('common.edit')}
                 edgeToEdge={edgeToEdge}
                 onPress={() => {
                   onEdit();
@@ -118,6 +175,7 @@ const SwipeableRow: React.FC<SwipeableRowProps> = memo(({
                 iconColor={colors.accentOrange}
                 backgroundColor={colors.lightAccent}
                 side="right"
+                accessibilityLabel={deleteLabel ?? t('common.delete')}
                 edgeToEdge={edgeToEdge}
                 onPress={() => {
                   onDelete();
@@ -132,7 +190,7 @@ const SwipeableRow: React.FC<SwipeableRowProps> = memo(({
       overshootLeft={false}
       overshootRight={false}
       overshootFriction={8}>
-      {children}
+      {content}
     </ReanimatedSwipeable>
   );
 });

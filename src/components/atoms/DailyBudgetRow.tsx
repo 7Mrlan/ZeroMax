@@ -1,15 +1,17 @@
 import React from 'react';
 import {View} from 'react-native';
+import type {TFunction} from 'i18next';
 import PrimaryText from './PrimaryText';
+import {Colors} from '../../hooks/useThemeColors';
 import {gs} from '../../styles/globalStyles';
 
 interface DailyBudgetRowProps {
   dailyBudget: number;
   dailyLeft: number;
   isCurrentMonth: boolean;
-  colors: any;
+  colors: Colors;
   formatAmount: (n: number) => string;
-  t: (k: any) => string;
+  t: TFunction;
 }
 
 const DailyBudgetRow = React.memo(({dailyBudget, dailyLeft, isCurrentMonth, colors, formatAmount, t}: DailyBudgetRowProps) => {

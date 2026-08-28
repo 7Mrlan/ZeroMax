@@ -1,6 +1,6 @@
 import i18n from 'i18next';
 import {initReactI18next} from 'react-i18next';
-import {getDeviceLocaleInfo} from '../utils/locale';
+import {getFormatLocale} from '../utils/locale';
 import en from './locales/en.json';
 
 const resources = {
@@ -9,7 +9,9 @@ const resources = {
 
 i18n.use(initReactI18next).init({
   resources,
-  lng: getDeviceLocaleInfo().languageCode,
+  // Honour a persisted user override; initialising from the device locale
+  // alone silently reverted the user's language choice on every cold start.
+  lng: getFormatLocale().split('-')[0],
   fallbackLng: 'en',
   interpolation: {escapeValue: false},
   react: {useSuspense: false},

@@ -7,7 +7,7 @@
  * hasn't been "optimized" to filter by status.
  */
 
-/* eslint-disable @typescript-eslint/no-var-requires */
+ 
 declare const __dirname: string;
 const fs = require('fs');
 const path = require('path');
@@ -26,7 +26,9 @@ describe('expenseService — soft-delete category regression', () => {
 
     const fnBody = fnMatch![0];
 
-    expect(fnBody).not.toContain('category_status');
+    // The explanatory comment legitimately mentions category_status, so only
+    // an actual query clause counts as a violation.
+    expect(fnBody).not.toMatch(/Q\.where\(\s*['"]category_status/);
     expect(fnBody).toContain(
       'Intentionally queries ALL categories (no category_status filter)',
     );

@@ -7,6 +7,8 @@ import {CustomBottomSheet} from '../components/atoms/CustomBottomSheet';
 import PrimaryButton from '../components/atoms/PrimaryButton';
 import PrimaryText from '../components/atoms/PrimaryText';
 import Icon from '../components/atoms/Icons';
+import {isCurrencySymbolSuffix} from '../utils/numberUtils';
+import {normalizeAmountInput} from '../utils/amountInput';
 import {gs} from '../styles/globalStyles';
 
 const BudgetSheet: React.FC<SheetProps<'budget-sheet'>> = React.memo(props => {
@@ -32,12 +34,21 @@ const BudgetSheet: React.FC<SheetProps<'budget-sheet'>> = React.memo(props => {
     void SheetManager.hide(props.sheetId);
   }, [props]);
 
+  // Shared with AmountInput. The old inline version stripped every character
+  // outside [0-9.], which turned a European "12,50" into 1250 — a silent 100x
+  // budget with nothing on screen to indicate it.
   const handleAmountChange = useCallback((text: string) => {
-    const cleaned = text.replace(/[^0-9.]/g, '');
-    const parts = cleaned.split('.');
-    if (parts.length > 2) {return;}
-    setAmount(cleaned);
+    setAmount(normalizeAmountInput(text));
   }, []);
+
+  // Symbol sits on the side the user's locale puts it. Without a currency
+  // code in the payload the check returns false — the old prefix behaviour.
+  const symbolIsSuffix = isCurrencySymbolSuffix(props.payload?.currencyCode);
+  const budgetSymbol = (
+    <PrimaryText size={16} color={colors.secondaryText} style={symbolIsSuffix ? gs.ml8 : gs.mr8}>
+      {props.payload?.currencySymbol ?? '$'}
+    </PrimaryText>
+  );
 
   return (
     <CustomBottomSheet
@@ -68,9 +79,7 @@ const BudgetSheet: React.FC<SheetProps<'budget-sheet'>> = React.memo(props => {
             gs.rowCenter,
             {backgroundColor: colors.secondaryAccent, borderWidth: 1.5, borderColor: 'transparent'},
           ]}>
-          <PrimaryText size={16} color={colors.secondaryText} style={gs.mr8}>
-            {props.payload?.currencySymbol ?? '$'}
-          </PrimaryText>
+          {!symbolIsSuffix && budgetSymbol}
           <TextInput
             style={[gs.flex1, gs.h48, gs.fontMedium, gs.noFontPadding, {color: colors.primaryText, fontSize: 16}]}
             value={amount}
@@ -80,11 +89,19 @@ const BudgetSheet: React.FC<SheetProps<'budget-sheet'>> = React.memo(props => {
             keyboardType="decimal-pad"
             autoFocus
           />
+          {symbolIsSuffix && budgetSymbol}
         </View>
 
+        {/* One accessible node, not two: the row used to be a TouchableOpacity
+            wrapping a Switch, which produced a duplicate a11y target and two
+            toggle paths. The row is now the switch. */}
         <TouchableOpacity
           onPress={() => setEveryMonth(prev => !prev)}
           activeOpacity={0.7}
+          accessibilityRole="switch"
+          accessibilityState={{checked: everyMonth}}
+          accessibilityLabel={t('sheets.everyMonth')}
+          accessibilityHint={t('sheets.everyMonthHint')}
           style={[gs.rowBetweenCenter, gs.mt15, gs.px3]}>
           <View style={gs.flex1}>
             <PrimaryText size={13} weight="medium">
@@ -94,11 +111,12 @@ const BudgetSheet: React.FC<SheetProps<'budget-sheet'>> = React.memo(props => {
               {t('sheets.everyMonthHint')}
             </PrimaryText>
           </View>
-          <Switch
-            value={everyMonth}
-            onValueChange={setEveryMonth}
-            trackColor={{false: colors.secondaryAccent, true: colors.accentGreen}}
-          />
+          <View pointerEvents="none" importantForAccessibility="no-hide-descendants">
+            <Switch
+              value={everyMonth}
+              trackColor={{false: colors.secondaryAccent, true: colors.accentGreen}}
+            />
+          </View>
         </TouchableOpacity>
 
         <View style={gs.mt20}>

@@ -1,5 +1,5 @@
 import {TouchableOpacity, View} from 'react-native';
-import React, {useCallback, useState} from 'react';
+import React, {useCallback, useMemo, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import {SheetManager, SheetProps, ScrollView} from 'react-native-actions-sheet';
 import useThemeColors from '../hooks/useThemeColors';
@@ -8,18 +8,23 @@ import PrimaryText from '../components/atoms/PrimaryText';
 import {getMonthNamesShort, getCurrentYear} from '../utils/dateUtils';
 import {gs} from '../styles/globalStyles';
 
-const MONTHS_SHORT = getMonthNamesShort();
-const CURRENT_YEAR = getCurrentYear();
-
 const MonthYearPickerSheet: React.FC<SheetProps<'month-year-picker-sheet'>> = React.memo(props => {
-  const {t} = useTranslation();
+  const {t, i18n} = useTranslation();
   const colors = useThemeColors();
   const {selectedMonth, selectedYear, availableYears, onSelect} = props.payload ?? {};
 
-  const [pickerYear, setPickerYear] = useState(selectedYear ?? CURRENT_YEAR);
+  // Computed per render, not at module load: month names must follow a runtime
+  // language change, and a cached "current year" goes stale on New Year's Eve.
+  // getMonthNamesShort() reads dayjs's active locale, which the lint rule
+  // cannot see — i18n.language is the signal that it changed.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const monthsShort = useMemo(() => getMonthNamesShort(), [i18n.language]);
+  const currentYear = getCurrentYear();
+
+  const [pickerYear, setPickerYear] = useState(selectedYear ?? currentYear);
   const [pickerMonthIndex, setPickerMonthIndex] = useState(selectedMonth ?? 0);
 
-  const years = availableYears && availableYears.length > 0 ? availableYears : [CURRENT_YEAR];
+  const years = availableYears && availableYears.length > 0 ? availableYears : [currentYear];
 
   const handleConfirm = useCallback(() => {
     onSelect?.(pickerMonthIndex, pickerYear);
@@ -28,15 +33,15 @@ const MonthYearPickerSheet: React.FC<SheetProps<'month-year-picker-sheet'>> = Re
 
   const isMonthDisabled = useCallback(
     (monthIndex: number) => {
-      if (pickerYear < CURRENT_YEAR) {
+      if (pickerYear < currentYear) {
         return false;
       }
-      if (pickerYear > CURRENT_YEAR) {
+      if (pickerYear > currentYear) {
         return true;
       }
       return monthIndex > new Date().getMonth();
     },
-    [pickerYear],
+    [pickerYear, currentYear],
   );
 
   return (
@@ -76,7 +81,7 @@ const MonthYearPickerSheet: React.FC<SheetProps<'month-year-picker-sheet'>> = Re
         </ScrollView>
 
         <View style={[gs.row, gs.wrap, gs.gap8, gs.mb15]}>
-          {MONTHS_SHORT.map((month, index) => {
+          {monthsShort.map((month, index) => {
             const isActive = index === pickerMonthIndex;
             const disabled = isMonthDisabled(index);
 

@@ -8,6 +8,22 @@ interface PrimaryViewProps {
   colors?: ThemeColors;
   children?: ReactNode;
   style?: ViewStyle;
+  /**
+   * Wraps the whole screen in a TouchableWithoutFeedback so a tap anywhere
+   * dismisses the keyboard.
+   *
+   * ⚠️ Do NOT set this on a screen whose content scrolls. The wrapper is an
+   * ANCESTOR of the ScrollView, and RN grants the touch responder on
+   * `onStartShouldSetResponder` — which ScrollView declines (it only takes over
+   * on move) but TouchableWithoutFeedback accepts. A descendant cannot then
+   * steal the responder back from its ancestor, so a drag that starts on empty
+   * space never scrolls. Dragging over a row appears to work only because
+   * TouchableOpacity releases the responder on move.
+   *
+   * For scrolling screens use the ScrollView's own
+   * `keyboardShouldPersistTaps="handled"` + `keyboardDismissMode="on-drag"`,
+   * which dismiss the keyboard without touching the responder chain.
+   */
   dismissKeyboardOnTouch?: boolean;
   useBottomPadding?: boolean;
   useSidePadding?: boolean;

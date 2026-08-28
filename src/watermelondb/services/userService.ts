@@ -21,24 +21,6 @@ export const createUser = async (
 };
 
 /**
- * Creates an existing user (for import/restore)
- */
-export const createExistingUser = async (
-  id: string,
-  username: string,
-  email: string,
-): Promise<string> => {
-  await database.write(async () => {
-    await database.get<User>('users').create(user => {
-      user._raw.id = id;
-      user.username = username;
-      user.email = email;
-    });
-  });
-  return id;
-};
-
-/**
  * Updates a user by ID
  */
 export const updateUserById = async (
@@ -56,24 +38,6 @@ export const updateUserById = async (
       }
     });
   });
-};
-
-/**
- * Gets a user by ID
- */
-export const getUserById = async (
-  userId: string,
-): Promise<{id: string; username: string; email: string} | null> => {
-  try {
-    const user = await database.get<User>('users').find(userId);
-    return {
-      id: user.id,
-      username: user.username,
-      email: user.email,
-    };
-  } catch {
-    return null;
-  }
 };
 
 /**

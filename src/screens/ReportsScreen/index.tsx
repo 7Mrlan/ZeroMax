@@ -1,7 +1,7 @@
 import {ScrollView, TouchableOpacity, View} from 'react-native';
-import React, {useCallback, useMemo} from 'react';
+import React, {useCallback, useMemo, useState} from 'react';
 import {useTranslation} from 'react-i18next';
-import {PieChart} from 'react-native-svg-charts';
+import DonutChart from '../../components/atoms/DonutChart';
 import HeaderContainer from '../../components/molecules/HeaderContainer';
 import {getFirstDayOfMonth, formatDate, getMonthIndex, getMonthNumber} from '../../utils/dateUtils';
 import {navigate} from '../../utils/navigationUtils';
@@ -17,6 +17,11 @@ import Icon from '../../components/atoms/Icons';
 import DailyBudgetRow from '../../components/atoms/DailyBudgetRow';
 import {gs} from '../../styles/globalStyles';
 import {hexToRgba} from '../../utils/colorUtils';
+import {computeDailyAllowance} from '../../utils/budgetMath';
+import {leadingBlanks} from '../../utils/weekStart';
+
+/** Fallback slice color for expenses whose category record has no color. */
+const DEFAULT_SLICE_COLOR = '#758595';
 
 const ReportsScreen = () => {
   const {
@@ -33,6 +38,8 @@ const ReportsScreen = () => {
     isCurrentMonth,
     currentBudget,
     currencySymbol,
+    currencyCode,
+    weekStart,
     handleBudgetSave,
     handleBudgetRemove,
   } = useReports();
@@ -40,7 +47,14 @@ const ReportsScreen = () => {
   const formatAmount = useFormatAmount();
 
   const budgetMonthLabel = `${selectedMonth} ${selectedYear}`;
-  const dailyBudget = currentBudget && daysInMonth > 0 ? currentBudget.amount / daysInMonth : 0;
+  // Adaptive: what is left of the budget, spread over the remaining days.
+  const {allowance: dailyBudget} = computeDailyAllowance({
+    monthlyBudget: currentBudget?.amount ?? 0,
+    spentBeforeToday: totalAmountForMonth - todayTotal,
+    dayOfMonth: new Date().getDate(),
+    daysInMonth,
+    isCurrentMonth,
+  });
   const dailyLeft = dailyBudget - todayTotal;
   const budgetExceeded = currentBudget ? totalAmountForMonth > currentBudget.amount : false;
 
@@ -49,13 +63,14 @@ const ReportsScreen = () => {
       payload: {
         currentAmount: currentBudget?.amount,
         currencySymbol,
+        currencyCode,
         isRecurring: currentBudget?.month.startsWith('recurring') ?? false,
         monthLabel: budgetMonthLabel,
         onSave: handleBudgetSave,
         onRemove: handleBudgetRemove,
       },
     });
-  }, [currentBudget, currencySymbol, budgetMonthLabel, handleBudgetSave, handleBudgetRemove]);
+  }, [currentBudget, currencySymbol, currencyCode, budgetMonthLabel, handleBudgetSave, handleBudgetRemove]);
 
   const openMonthPicker = useCallback(() => {
     const monthIndex = getMonthIndex(selectedMonth);
@@ -71,39 +86,47 @@ const ReportsScreen = () => {
     });
   }, [selectedMonth, selectedYear, availableYears, handleMonthYearSelect]);
 
+  // Selection lives here so the ring and the legend stay in step.
+  const [activeSlice, setActiveSlice] = useState<string | null>(null);
+
   const yearMonth = useMemo(
     () => `${selectedYear}-${getMonthNumber(selectedMonth)}`,
     [selectedYear, selectedMonth],
   );
 
   const pieChartData = useMemo(() => {
-    const categoryMap = new Map<string, {category: any; amount: number}>();
+    const categoryMap = new Map<
+      string,
+      {name: string; color: string; id?: string; icon?: string; amount: number}
+    >();
 
     filteredTransactions?.forEach((transaction: any) => {
       const {amount, category} = transaction;
       const categoryName = category?.name ?? t('common.unknown');
-      const categoryColor = category?.color ?? '#808080';
 
-      if (categoryMap.has(categoryName)) {
-        const existing = categoryMap.get(categoryName)!;
+      const existing = categoryMap.get(categoryName);
+      if (existing) {
         existing.amount += amount;
       } else {
+        // Spread first so the fallbacks below actually win over null/undefined
+        // fields on the category record.
         categoryMap.set(categoryName, {
-          category: {name: categoryName, color: categoryColor, ...category},
+          ...category,
+          name: categoryName,
+          color: category?.color ?? DEFAULT_SLICE_COLOR,
           amount,
         });
       }
     });
 
     return Array.from(categoryMap.values()).map(item => ({
-      key: item.category.name,
+      key: item.name,
       value: item.amount,
-      svg: {fill: item.category.color ?? '#808080', onPress: () => {}},
-      label: `${item.category.name}: ${formatAmount(item.amount)}`,
-      categoryId: item.category.id,
-      categoryIcon: item.category.icon,
+      color: item.color,
+      categoryId: item.id,
+      categoryIcon: item.icon,
     }));
-  }, [filteredTransactions, formatAmount]);
+  }, [filteredTransactions, t]);
 
   const handleCategoryPress = useCallback(
     (categoryId: string, categoryName: string, categoryColor: string, categoryIcon?: string) => {
@@ -122,15 +145,22 @@ const ReportsScreen = () => {
   const renderPieChart = useCallback(() => {
     return (
       <View>
-        <PieChart style={gs.h200} data={pieChartData} />
+        <DonutChart
+          data={pieChartData}
+          colors={colors}
+          formatValue={formatAmount}
+          onSelectionChange={setActiveSlice}
+          accessibilityLabel={t('reports.title')}
+        />
         <PieChartLabels
           slices={pieChartData}
           colors={colors}
+          activeKey={activeSlice}
           onCategoryPress={handleCategoryPress}
         />
       </View>
     );
-  }, [pieChartData, colors, handleCategoryPress]);
+  }, [pieChartData, colors, activeSlice, handleCategoryPress, formatAmount, t]);
 
   const {transactionsByDay, maxDayAmount} = useMemo(() => {
     const byDay = new Map<string, {total: number; count: number}>();
@@ -176,7 +206,8 @@ const ReportsScreen = () => {
     const firstDayOfMonth = getFirstDayOfMonth(selectedYear, selectedMonth);
     const monthNum = getMonthNumber(selectedMonth);
 
-    const blanks = new Array(firstDayOfMonth).fill(0);
+    // Shifted by the week-start preference so day 1 lands under its header.
+    const blanks = new Array(leadingBlanks(firstDayOfMonth, weekStart)).fill(0);
     const days = Array.from({length: daysInMonth}, (_, i) => i + 1);
 
     return [...blanks, ...days].map((day, index) => {
@@ -196,7 +227,7 @@ const ReportsScreen = () => {
         hasTransactions: (dayData?.count ?? 0) > 0,
       };
     });
-  }, [selectedYear, selectedMonth, daysInMonth, transactionsByDay]);
+  }, [selectedYear, selectedMonth, daysInMonth, transactionsByDay, weekStart]);
 
   const renderCalendar = useCallback(() => {
     const monthIndex = getMonthIndex(selectedMonth);
@@ -252,13 +283,13 @@ const ReportsScreen = () => {
           <Icon name="chevron-down" size={14} color={colors.buttonText} />
         </TouchableOpacity>
         <View style={[gs.flex1, gs.px12, gs.py10, gs.rounded8, {backgroundColor: colors.secondaryAccent}]}>
-          <PrimaryText size={11} color={colors.secondaryText}>{t('reports.total')}</PrimaryText>
+          <PrimaryText size={11} color={colors.secondaryText} numberOfLines={1}>{t('reports.total')}</PrimaryText>
           <PrimaryText size={14} weight="semibold" variant="number" numberOfLines={1}>
             {formatAmount(totalAmountForMonth)}
           </PrimaryText>
         </View>
         <View style={[gs.flex1, gs.px12, gs.py10, gs.rounded8, {backgroundColor: colors.secondaryAccent}]}>
-          <PrimaryText size={11} color={colors.secondaryText}>{t('reports.avgPerDay')}</PrimaryText>
+          <PrimaryText size={11} color={colors.secondaryText} numberOfLines={1}>{t('reports.avgPerDay')}</PrimaryText>
           <PrimaryText size={14} weight="semibold" variant="number" numberOfLines={1}>
             {formatAmount(totalAmountForMonth / daysInMonth)}
           </PrimaryText>
@@ -310,8 +341,8 @@ const ReportsScreen = () => {
         ) : (
           <>
             <View style={[gs.row, gs.wrap, gs.mt15]}>
-              {dayNames.map(day => (
-                <View key={day} style={[gs.h34, gs.center, {width: '13.5%', margin: 0.5}]}>
+              {dayNames.map((day, index) => (
+                <View key={`${day}-${index}`} style={[gs.h34, gs.center, {width: '13.5%', margin: 0.5}]}>
                   <PrimaryText size={13}>{day}</PrimaryText>
                 </View>
               ))}

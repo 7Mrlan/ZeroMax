@@ -1,10 +1,12 @@
 import StorageService from '../../utils/asyncStorageService';
 import {DATA_MIGRATIONS} from './registry';
 import {appendErrorLog} from '../../utils/errorLog';
+import {getAppVersion} from '../../utils/getVersion';
 
 const MIGRATION_VERSION_KEY = 'data_migration_version';
 const MIGRATION_RETRY_KEY = 'data_migration_retry_count';
 const MIGRATION_FAILED_KEY = 'data_migration_failed';
+const MIGRATION_FAILED_APP_VERSION_KEY = 'data_migration_failed_app_version';
 const MAX_RETRIES = 3;
 
 /**
@@ -12,6 +14,22 @@ const MAX_RETRIES = 3;
  */
 export const hasMigrationFailed = (): boolean => {
   return StorageService.getBoolean(MIGRATION_FAILED_KEY);
+};
+
+const clearMigrationFailure = (): void => {
+  StorageService.setBoolean(MIGRATION_FAILED_KEY, false);
+  StorageService.setNumber(MIGRATION_RETRY_KEY, 0);
+  StorageService.removeItemSync(MIGRATION_FAILED_APP_VERSION_KEY);
+};
+
+/**
+ * User-initiated retry (Settings banner): clears the permanent-failure flag
+ * and re-runs pending migrations. Returns true if they now succeed.
+ */
+export const retryMigrations = async (): Promise<boolean> => {
+  clearMigrationFailure();
+  await runMigrations();
+  return !hasMigrationFailed();
 };
 
 /**
@@ -26,7 +44,13 @@ export const hasMigrationFailed = (): boolean => {
  */
 export const runMigrations = async (): Promise<void> => {
   if (hasMigrationFailed()) {
-    return;
+    // Don't stay poisoned forever: an app update may ship a fixed migration,
+    // so the permanent flag only holds for the app version that set it.
+    const failedOnVersion = StorageService.getItemSync(MIGRATION_FAILED_APP_VERSION_KEY);
+    if (failedOnVersion === getAppVersion()) {
+      return;
+    }
+    clearMigrationFailure();
   }
 
   const currentVersion = StorageService.getNumber(MIGRATION_VERSION_KEY) ?? 0;
@@ -61,6 +85,7 @@ export const runMigrations = async (): Promise<void> => {
 
       if (retryCount >= MAX_RETRIES) {
         StorageService.setBoolean(MIGRATION_FAILED_KEY, true);
+        StorageService.setItemSync(MIGRATION_FAILED_APP_VERSION_KEY, getAppVersion());
         appendErrorLog(
           new Error(`Migration ${migration.version} permanently failed after ${MAX_RETRIES} attempts`),
           true,

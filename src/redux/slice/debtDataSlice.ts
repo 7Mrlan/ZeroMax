@@ -3,16 +3,12 @@ import {RootState} from '../rootReducer';
 import {DebtData as Debt, getAllDebtsByUserIdAndDebtorId, getAllDebtsByUserId} from '../../watermelondb/services';
 import {selectUserId} from './userIdSlice';
 
-export interface DebtWithDebtor extends Debt {
-  debtor?: {type: string};
-}
-
 const debtsAdapter = createEntityAdapter<Debt>();
 
 const initialState = debtsAdapter.getInitialState({
   isLoading: false,
   error: null as string | null,
-  allDebts: [] as DebtWithDebtor[],
+  allDebts: [] as Debt[],
   allDebtsLoading: false,
   allDebtsError: null as string | null,
 });
@@ -30,11 +26,12 @@ export const fetchDebtsByDebtor = createAsyncThunk<Debt[], string, {state: RootS
   },
 );
 
-export const fetchAllDebts = createAsyncThunk<DebtWithDebtor[], void, {state: RootState}>('debt/fetchAll', async (_, {getState, rejectWithValue}) => {
+export const fetchAllDebts = createAsyncThunk<Debt[], void, {state: RootState}>('debt/fetchAll', async (_, {getState, rejectWithValue}) => {
   try {
     const userId = selectUserId(getState());
-    const allDebts = await getAllDebtsByUserId(userId);
-    return allDebts as DebtWithDebtor[];
+    // getAllDebtsByUserId returns plain debts; the old DebtWithDebtor cast
+    // promised a `debtor` relation that was never populated or read.
+    return await getAllDebtsByUserId(userId);
   } catch (error) {
     return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch all debts');
   }

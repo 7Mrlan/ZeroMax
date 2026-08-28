@@ -1,10 +1,9 @@
 import useThemeColors from '../../hooks/useThemeColors';
 import {useAppDispatch, useAppSelector} from '../../redux/hooks';
-import {selectCurrencySymbol} from '../../redux/slice/currencyDataSlice';
 import {RouteProp, useFocusEffect} from '@react-navigation/native';
 import {ExpenseData as Expense} from '../../watermelondb/services';
 import {useCallback, useMemo} from 'react';
-import {fetchExpensesByCategory, selectFilteredExpenses} from '../../redux/slice/expenseDataSlice';
+import {fetchExpensesByCategory, selectFilterKey, selectFilteredExpenses} from '../../redux/slice/expenseDataSlice';
 export type CategoryTransactionRouteProp = RouteProp<
   {
     CategoryTransactionScreen: {
@@ -21,9 +20,9 @@ export type CategoryTransactionRouteProp = RouteProp<
 
 const useCategoryTransaction = (route: CategoryTransactionRouteProp) => {
   const dispatch = useAppDispatch();
-  const transactions = (useAppSelector(selectFilteredExpenses) ?? []) as Expense[];
+  const filteredExpenses = useAppSelector(selectFilteredExpenses) as Expense[];
+  const filterKey = useAppSelector(selectFilterKey);
   const colors = useThemeColors();
-  const currencySymbol = useAppSelector(selectCurrencySymbol);
 
   const {
     categoryId = '',
@@ -40,6 +39,17 @@ const useCategoryTransaction = (route: CategoryTransactionRouteProp) => {
     }, [dispatch, categoryId, yearMonth]),
   );
 
+  /**
+   * Same shared-slot problem as EverydayTransactionScreen: until the store's
+   * `filterKey` matches the category+month we asked for, the rows in it belong
+   * to whichever screen ran last. Render nothing rather than someone else's
+   * expenses. (The slice wrote this key from the start; nothing read it.)
+   */
+  const transactions = useMemo(
+    () => (filterKey === `${categoryId}:${yearMonth}` ? filteredExpenses : []),
+    [filterKey, categoryId, yearMonth, filteredExpenses],
+  );
+
   const totalAmount = useMemo(
     () => transactions.reduce((sum: number, t: Expense) => sum + t.amount, 0),
     [transactions],
@@ -47,7 +57,6 @@ const useCategoryTransaction = (route: CategoryTransactionRouteProp) => {
 
   return {
     colors,
-    currencySymbol,
     transactions,
     totalAmount,
     categoryName,

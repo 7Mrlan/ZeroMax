@@ -1,0 +1,13 @@
+# Configuration for `bun test` ONLY. The canonical test runner is jest
+# (`bun run test`) — it runs the FULL suite. `bun test` covers the pure
+# suites; the exclusions below are files bun fundamentally cannot run.
+
+[test]
+preload = ["./bun-preload.ts"]
+pathIgnorePatterns = [
+  # react-native ships Flow-typed sources (`import typeof ...`) that bun
+  # cannot parse; the App render smoke test is jest-only.
+  "__tests__/**",
+  # vendored third-party docs, not our tests
+  "references/**",
+]

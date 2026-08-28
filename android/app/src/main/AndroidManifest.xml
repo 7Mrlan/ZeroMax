@@ -1,6 +1,25 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
-    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- No INTERNET permission. Zero has no servers and makes no network
+         calls, so the release build is declared without it: the Play listing
+         shows no network access and `aapt dump permissions` on the shipped
+         APK proves the claim. Metro needs it in development, so it is
+         declared in src/debug/AndroidManifest.xml instead.
+         Store/GitHub links open in the browser and do not require it here. -->
+
+    <!-- Backup import/export on API <= 32; PermissionsAndroid auto-denies
+         runtime requests for permissions that are not declared here. -->
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <!-- react-native-fs merges this in without a cap; scoped storage made it
+         irrelevant from API 29 on, so bound it rather than advertising an
+         uncapped storage permission on the store listing. -->
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32"
+        tools:replace="android:maxSdkVersion" />
 
     <application
       android:name=".MainApplication"

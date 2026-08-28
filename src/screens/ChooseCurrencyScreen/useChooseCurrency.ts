@@ -1,4 +1,4 @@
-import {useState, useCallback} from 'react';
+import {useState, useCallback, useRef} from 'react';
 import useThemeColors from '../../hooks/useThemeColors';
 import {useAppDispatch, useAppSelector} from '../../redux/hooks';
 import {selectUserId} from '../../redux/slice/userIdSlice';
@@ -21,12 +21,29 @@ const useChooseCurrency = () => {
   const userId = useAppSelector(selectUserId);
   const dispatch = useAppDispatch();
 
+  // Guards a double-tap on Continue, which would otherwise create two currency
+  // rows before the stack swaps away from onboarding.
+  const isSubmittingRef = useRef(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const handleCurrencySubmit = useCallback(async () => {
-    if (selectedCurrency) {
+    if (!selectedCurrency || isSubmittingRef.current) {
+      return;
+    }
+    isSubmittingRef.current = true;
+    setIsSubmitting(true);
+    try {
       await createCurrency(selectedCurrency.code, selectedCurrency.symbol, selectedCurrency.name, userId);
 
       StorageService.setItemSync('isOnboarded', JSON.stringify(true));
       dispatch(setIsOnboarded(true));
+    } catch (error) {
+      if (__DEV__) {
+        console.error('Error saving currency:', error);
+      }
+      // Let the user retry rather than stranding them pre-onboarding.
+      isSubmittingRef.current = false;
+      setIsSubmitting(false);
     }
   }, [selectedCurrency, userId, dispatch]);
 
@@ -54,6 +71,7 @@ const useChooseCurrency = () => {
     search,
     filteredCurrencies,
     selectedCurrency,
+    isSubmitting,
     handleCurrencySubmit,
     handleSearch,
     handleCurrencySelect,

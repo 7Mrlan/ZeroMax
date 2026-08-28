@@ -176,6 +176,7 @@ function CustomBottomSheetComponent({
     handleClosePress,
     showIndicator,
     indicatorStyles,
+    t,
   ]);
 
   return (

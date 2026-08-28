@@ -9,7 +9,7 @@ import {
 import {selectMonthIndex, selectYear, setMonthSelection} from '../../redux/slice/monthSelectionSlice';
 import {selectUserName} from '../../redux/slice/userNameSlice';
 import {fetchUserData, selectUserId} from '../../redux/slice/userIdSlice';
-import {fetchCurrency, selectCurrencySymbol} from '../../redux/slice/currencyDataSlice';
+import {fetchCurrency} from '../../redux/slice/currencyDataSlice';
 import {fetchCategories} from '../../redux/slice/categoryDataSlice';
 import {fetchBudgetsByMonth, selectCurrentBudget} from '../../redux/slice/budgetDataSlice';
 import {getCurrentYear, getMonthNumber, getMonthNames, getDaysInMonth, sortByDateDesc, formatDate} from '../../utils/dateUtils';
@@ -31,12 +31,11 @@ const useHome = () => {
   const selectedMonthIndex = useAppSelector(selectMonthIndex);
   const selectedYear = useAppSelector(selectYear);
 
-  const allTransactions = useAppSelector(selectExpenseData) ?? [];
+  const allTransactions = useAppSelector(selectExpenseData);
   const sortedTransactions = useMemo(() => sortByDateDesc(allTransactions as Expense[]), [allTransactions]);
 
   const userName = useAppSelector(selectUserName);
   const userId = useAppSelector(selectUserId);
-  const currencySymbol = useAppSelector(selectCurrencySymbol);
 
   const selectedMonthName = MONTHS[selectedMonthIndex];
   const yearMonth = `${selectedYear}-${getMonthNumber(selectedMonthName)}`;
@@ -111,7 +110,6 @@ const useHome = () => {
     allTransactions,
     userName,
     userId,
-    currencySymbol,
     onRefresh,
     sortedTransactions,
     selectedYear,

@@ -14,6 +14,7 @@ import PrimaryText from '../../components/atoms/PrimaryText';
 import DebtList from '../../components/molecules/DebtList';
 import useFormatAmount from '../../hooks/useFormatAmount';
 import {gs, hitSlop} from '../../styles/globalStyles';
+import {hexToRgba} from '../../utils/colorUtils';
 
 const IndividualDebtsScreen = () => {
   const route = useRoute<IndividualDebtsScreenRouteProp>();
@@ -64,7 +65,7 @@ const IndividualDebtsScreen = () => {
               gs.py10,
               gs.px14,
               gs.rounded12,
-              {backgroundColor: colors.accentOrange + '14'},
+              {backgroundColor: hexToRgba(colors.accentOrange, 0.078)},
             ]}>
             <PrimaryText size={11} color={colors.accentOrange} style={gs.mb5}>
               {t('debts.borrowed')}
@@ -79,7 +80,7 @@ const IndividualDebtsScreen = () => {
               gs.py10,
               gs.px14,
               gs.rounded12,
-              {backgroundColor: colors.accentGreen + '14'},
+              {backgroundColor: hexToRgba(colors.accentGreen, 0.078)},
             ]}>
             <PrimaryText size={11} color={colors.accentGreen} style={gs.mb5}>
               {t('debts.lent')}
@@ -99,17 +100,29 @@ const IndividualDebtsScreen = () => {
           </PrimaryText>
 
           <View style={[gs.row, gs.gap8]}>
-            <TouchableOpacity onPress={handleMarkAsPaid} hitSlop={hitSlop}>
+            <TouchableOpacity
+              onPress={handleMarkAsPaid}
+              hitSlop={hitSlop}
+              accessibilityRole="button"
+              accessibilityLabel={t('debts.settled')}>
               <View style={[gs.size32, gs.roundedFull, gs.center, {backgroundColor: colors.secondaryAccent}]}>
                 <Icon name="check-circle" size={16} color={colors.accentBlue} />
               </View>
             </TouchableOpacity>
-            <TouchableOpacity onPress={handleUpdateDebtor} hitSlop={hitSlop}>
+            <TouchableOpacity
+              onPress={handleUpdateDebtor}
+              hitSlop={hitSlop}
+              accessibilityRole="button"
+              accessibilityLabel={t('common.edit')}>
               <View style={[gs.size32, gs.roundedFull, gs.center, {backgroundColor: colors.secondaryAccent}]}>
                 <Icon name="pencil" size={16} color={colors.accentGreen} />
               </View>
             </TouchableOpacity>
-            <TouchableOpacity onPress={handleDeleteDebtor} hitSlop={hitSlop}>
+            <TouchableOpacity
+              onPress={handleDeleteDebtor}
+              hitSlop={hitSlop}
+              accessibilityRole="button"
+              accessibilityLabel={t('common.delete')}>
               <View style={[gs.size32, gs.roundedFull, gs.center, {backgroundColor: colors.secondaryAccent}]}>
                 <Icon name="trash-2" size={16} color={colors.accentOrange} />
               </View>
@@ -153,7 +166,7 @@ const IndividualDebtsScreen = () => {
         </View>
       </View>
     ),
-    [colors, formatAmount, debtsType, debtorTotal, handleDeleteDebtor, handleMarkAsPaid, handleUpdateDebtor, netColor, netLabel, totalBorrowings, totalLendings],
+    [colors, formatAmount, debtsType, debtorTotal, handleDeleteDebtor, handleMarkAsPaid, handleUpdateDebtor, netColor, netLabel, totalBorrowings, totalLendings, t],
   );
 
   return (

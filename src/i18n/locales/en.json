@@ -14,7 +14,9 @@
     "goBack": "Go back",
     "change": "Change",
     "choose": "Choose",
-    "unknown": "Unknown"
+    "unknown": "Unknown",
+    "edit": "Edit",
+    "delete": "Delete"
   },
   "tabs": {
     "home": "Home",
@@ -54,7 +56,11 @@
     "syncExpenses": "Expenses",
     "syncDebtors": "Debtors",
     "syncDebts": "Debts",
+    "syncBudgets": "Budgets",
     "syncCurrency": "Currency",
+    "replaceDataWarning": "Restoring this backup will replace all data currently on this device. Continue?",
+    "recoveredEntries_one": "{{count}} missing category or debtor was recreated from your transactions.",
+    "recoveredEntries_other": "{{count}} missing categories/debtors were recreated from your transactions.",
     "storagePermissionRequired": "Storage permission is required to upload your backup file",
     "invalidFilePath": "Invalid file path",
     "invalidJson": "File is not valid JSON. Please select a zero export file.",
@@ -87,7 +93,6 @@
     "transactionCount_one": "{{count}} transaction",
     "transactionCount_other": "{{count}} transactions",
     "today": "Today",
-    "ofBudget": "of budget",
     "remaining": "left",
     "perDay": "day",
     "leftToday": "left today",
@@ -97,8 +102,7 @@
   "reports": {
     "title": "Reports",
     "total": "Total",
-    "avgPerDay": "Avg/Day",
-    "budget": "Budget",
+    "avgPerDay": "Avg/day",
     "setBudget": "Set a monthly budget",
     "less": "Less",
     "more": "More"
@@ -161,24 +165,33 @@
     "appearanceLabel": "Appearance",
     "iconLabel": "Icon",
     "colorLabel": "Color",
-    "orPickFromDefaults": "or pick from defaults"
+    "orPickFromDefaults": "or pick from defaults",
+    "deleteConfirm": "Delete this category? Past transactions keep it, but you won't be able to pick it for new ones.",
+    "createFailed": "That category couldn't be saved. Please try again."
   },
   "debtor": {
     "addTitle": "Add Person",
     "editTitle": "Edit Person",
     "typeLabel": "Type",
     "nameLabel": "Name",
-    "namePlaceholder": "eg. John Doe or Axis"
+    "namePlaceholder": "eg. John Doe or Axis",
+    "deleteConfirm": "Delete {{name}}?",
+    "deleteWithDebtsConfirm": "Delete {{name}} and all their entries? This can't be undone."
   },
   "debt": {
     "addTitle": "Add Debt",
     "editTitle": "Edit Debt",
-    "descriptionPlaceholder": "eg. Coffee"
+    "descriptionPlaceholder": "eg. Coffee",
+    "deleteConfirm": "Delete this entry? This can't be undone."
   },
   "settings": {
     "title": "Settings",
     "dataWarningTitle": "Some data couldn't be updated",
     "dataWarningMessage": "A background update to your categories didn't finish. Your data is safe. Try exporting a backup and reinstalling, or contact support if this persists.",
+    "dataWarningRetry": "Retry now",
+    "dataWarningRetrySucceeded": "All good — your data was updated successfully.",
+    "dataWarningRetryFailed": "The update still couldn't finish. Your data is safe — export a backup and reinstall if this persists.",
+    "dataWarningBannerHint": "Open Settings to retry.",
     "sectionPersonalization": "PERSONALIZATION",
     "sectionData": "YOUR DATA",
     "sectionAbout": "ABOUT",
@@ -207,13 +220,28 @@
     "footerMadeWith": "Made with passion in India",
     "exportShareTitle": "Export Zero Data",
     "deleteBackupPrompt": "We recommend exporting a backup before deleting. Would you like to export your data first?",
+    "deleteBackupFailed": "Your backup wasn't saved, so nothing has been deleted. Export a backup first, or choose Skip to delete without one.",
+    "deleteFailed": "Your data could not be deleted. Nothing was changed.",
+    "budgetSaveFailed": "Your budget couldn't be saved. Please try again.",
     "deleteConfirm": "Are you sure you want to delete all your data? This cannot be undone.",
     "export": "Export",
-    "exportSuccess": "Your data is successfully exported in Downloads folder",
+    "exportSuccess": "Export complete. Find the file in your share sheet or Downloads.",
     "exportError": "There is an error in exporting your data",
     "storagePermission": "You need to manually give permission for the storage to download your data",
     "language": "Language",
-    "currentLanguage": "English"
+    "currentLanguage": "English",
+    "diagnostics": "Diagnostics",
+    "diagnosticsSubtitle": "View errors recorded on this device",
+    "whatLeavesDevice": "What leaves this device",
+    "whatLeavesDeviceSubtitle": "Nothing. Here is what exists anyway.",
+    "whatLeavesDeviceBody": "Nothing. Your expenses, categories, debts and budgets never leave this phone — zero has no servers, no accounts and no analytics.\n\nWhat exists anyway, outside our reach:",
+    "weekStart": "Week starts on",
+    "exportCsv": "Export as CSV",
+    "exportCsvSubtitle": "Expenses only, for spreadsheets",
+    "whatLeavesDeviceStore": "The app store you installed from knows you downloaded zero.",
+    "whatLeavesDeviceExports": "Backups you export live wherever you save or send them.",
+    "whatLeavesDeviceBackup": "A device-level backup you switch on may include this app's data.",
+    "whatLeavesDeviceAccess": "Anyone who can unlock your phone can open zero and read it."
   },
   "sheets": {
     "selectTheme": "Select Theme",
@@ -235,7 +263,8 @@
     "everyMonthHint": "Use this budget for all months unless overridden",
     "setBudgetButton": "Set Budget",
     "removeBudget": "Remove Budget",
-    "moreLanguages": "More languages coming soon"
+    "moreLanguages": "More languages coming soon",
+    "selectWeekStart": "Week starts on"
   },
   "emptyState": {
     "transactions": "No transactions yet",
@@ -259,16 +288,16 @@
     "lastWeek": "[Last] dddd"
   },
   "validation": {
-    "nameLettersOnly": "Name can only contain letters and spaces.",
+    "nameLettersOnly": "Name can only contain letters, spaces, apostrophes and hyphens.",
     "nameMinLength": "Name must be at least 3 characters long.",
     "nameMaxLength": "Name cannot exceed 50 characters.",
     "expenseMinLength": "Expense must be at least 1 character long.",
     "expenseMaxLength": "Expense cannot exceed 25 characters.",
     "descriptionMinLength": "Expense Description must be at least 1 character long.",
     "descriptionMaxLength": "Expense Description cannot exceed 50 characters.",
-    "amountMin": "Expense Amount cannot be less than 0.",
+    "amountMin": "Expense Amount must be at least 0.01.",
     "amountMax": "Expense Amount cannot exceed 1000000.",
-    "categoryLettersOnly": "Category Name can only contain letters, spaces, and numbers.",
+    "categoryLettersOnly": "Category Name can only contain letters, numbers, spaces, apostrophes and hyphens.",
     "categoryMinLength": "Category Name must be at least 1 character long.",
     "categoryMaxLength": "Category Name cannot exceed 18 characters.",
     "unknownError": "Unknown validation error",
@@ -299,5 +328,15 @@
   "tutorial": {
     "swipeHint": "Swipe left or right to edit or delete",
     "gotIt": "Got it"
+  },
+  "diagnostics": {
+    "title": "Diagnostics",
+    "subtitle": "Recent errors recorded on this device. Nothing is sent anywhere.",
+    "empty": "No errors recorded",
+    "share": "Share log",
+    "clear": "Clear",
+    "clearConfirm": "Clear the diagnostics log?",
+    "fatal": "FATAL",
+    "error": "ERROR"
   }
 }

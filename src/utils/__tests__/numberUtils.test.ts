@@ -1,41 +1,29 @@
 /**
- * Unit tests for numberUtils currency formatting.
- * Run with: bun test src/utils/__tests__/numberUtils.test.ts
+ * Unit tests for numberUtils currency formatting. Runs under BOTH runners:
+ * `bun run test` (jest) and `bun test` — react-native-localize/mmkv are
+ * mocked to src/testing/* by jest.setup.js and bun-preload.ts respectively.
  *
  * Tests the core Intl.NumberFormat behavior and the locale-selection logic
  * without requiring React Native runtime.
  */
 
-// @ts-nocheck — bun:test types not available to tsc
-import {mock} from 'bun:test';
-import {describe, it, expect} from 'bun:test';
+import {setMockLocales, resetLocalizeMock} from '../../testing/localizeMock';
+import {invalidateLocaleCache} from '../locale';
+import {formatCurrency, formatAmountWithSymbol, getCurrencyDecimals} from '../numberUtils';
 
-// Mock react-native-localize before importing numberUtils
-mock.module('react-native-localize', () => ({
-  getLocales: () => [{
-    languageTag: 'en-IN',
-    languageCode: 'en',
-    countryCode: 'IN',
-    isRTL: false,
-  }],
-  getNumberFormatSettings: () => ({
-    decimalSeparator: '.',
-    groupingSeparator: ',',
-  }),
-}));
+// These tests exercise the lakh/crore guard, which only activates on a South
+// Asian device locale — switch the mocked device to en-IN for this file.
+beforeAll(() => {
+  setMockLocales([
+    {languageTag: 'en-IN', languageCode: 'en', countryCode: 'IN', isRTL: false},
+  ]);
+  invalidateLocaleCache();
+});
 
-// Mock the MMKV storage service
-mock.module('../../utils/asyncStorageService', () => ({
-  default: {
-    getItemSync: () => null,
-    setItemSync: () => {},
-    removeItemSync: () => {},
-    getBoolean: () => false,
-  },
-}));
-
-// Now import the module under test
-const {formatCurrency, formatAmountWithSymbol, getCurrencyDecimals} = await import('../numberUtils');
+afterAll(() => {
+  resetLocalizeMock();
+  invalidateLocaleCache();
+});
 
 describe('formatCurrency — device locale en-IN', () => {
   describe('INR should use lakh/crore grouping', () => {
@@ -267,7 +255,10 @@ describe('Non-English Indian locales also get fixed (hi, bn, ta, mr, pa)', () =>
     const bnUS = new Intl.NumberFormat('bn-US', {style: 'currency', currency: 'AED', currencyDisplay: 'narrowSymbol'}).format(1500000);
     const enUS = new Intl.NumberFormat('en-US', {style: 'currency', currency: 'AED', currencyDisplay: 'narrowSymbol'}).format(1500000);
 
-    expect(bnUS).toContain('15,00,000');
+    // Some ICU builds render bn-US with Bengali numerals; normalize so the
+    // assertion checks the lakh GROUPING, not the digit script.
+    const latinBnUS = bnUS.replace(/[০-৯]/g, d => String('০১২৩৪৫৬৭৮৯'.indexOf(d)));
+    expect(latinBnUS).toContain('15,00,000');
     expect(enUS).toContain('1,500,000');
   });
 });
@@ -291,5 +282,35 @@ describe('Explicit locale override (bypasses device detection)', () => {
   it('ru-RU gives space grouping', () => {
     const result = formatCurrency(124000, 'RUB', 'ru-RU');
     expect(result.replace(/\s/g, ' ')).toBe('124 000');
+  });
+});
+
+describe('isCurrencySymbolSuffix', () => {
+  const {isCurrencySymbolSuffix} = require('../numberUtils');
+
+  it('prefix currencies report false', () => {
+    expect(isCurrencySymbolSuffix('USD', 'en-US')).toBe(false);
+    expect(isCurrencySymbolSuffix('INR', 'en-IN')).toBe(false);
+  });
+
+  it('suffix currencies report true', () => {
+    expect(isCurrencySymbolSuffix('EUR', 'de-DE')).toBe(true);
+    expect(isCurrencySymbolSuffix('SEK', 'sv-SE')).toBe(true);
+    expect(isCurrencySymbolSuffix('RUB', 'ru-RU')).toBe(true);
+  });
+
+  it('matches formatAmountWithSymbol placement for the same inputs', () => {
+    // The input and the display must always agree — that is the whole point.
+    for (const [code, locale] of [['USD', 'en-US'], ['EUR', 'de-DE'], ['SEK', 'sv-SE']] as const) {
+      const formatted = formatAmountWithSymbol(1234, code, locale);
+      const startsWithDigit = /^\d/.test(formatted);
+      expect(isCurrencySymbolSuffix(code, locale)).toBe(startsWithDigit);
+    }
+  });
+
+  it('falls back to prefix (false) instead of crashing on garbage input', () => {
+    expect(isCurrencySymbolSuffix('NOT_A_CURRENCY', 'en-US')).toBe(false);
+    expect(isCurrencySymbolSuffix(undefined)).toBe(false);
+    expect(isCurrencySymbolSuffix('')).toBe(false);
   });
 });

@@ -139,7 +139,14 @@ const ExistingUserScreen = () => {
               <SyncStatusItem label={t('existingUser.syncExpenses')} status={syncStatus.expenses} count={syncStats.expenses} colors={colors} />
               <SyncStatusItem label={t('existingUser.syncDebtors')} status={syncStatus.debtors} count={syncStats.debtors} colors={colors} />
               <SyncStatusItem label={t('existingUser.syncDebts')} status={syncStatus.debts} count={syncStats.debts} colors={colors} />
+              <SyncStatusItem label={t('existingUser.syncBudgets')} status={syncStatus.budgets} count={syncStats.budgets} colors={colors} />
               <SyncStatusItem label={t('existingUser.syncCurrency')} status={syncStatus.currencies} colors={colors} />
+
+              {isSyncComplete && syncStats.autoCreated > 0 && (
+                <PrimaryText size={11} color={colors.secondaryText} style={gs.mt10}>
+                  {t('existingUser.recoveredEntries', {count: syncStats.autoCreated})}
+                </PrimaryText>
+              )}
             </View>
           )}
         </View>

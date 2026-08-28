@@ -1,0 +1,8 @@
+references/
+android/
+ios/
+vendor/
+coverage/
+node_modules/
+bun.lock
+*.lock

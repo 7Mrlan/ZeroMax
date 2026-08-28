@@ -6,39 +6,42 @@ import {Provider} from 'react-redux';
 import store, {persistor} from './src/redux/store';
 import {PersistGate} from 'redux-persist/integration/react';
 import MainStack from './src/navigation/MainStack';
-import {LogBox, View, Appearance, StyleSheet} from 'react-native';
+import {LogBox, View, Text, Appearance, StyleSheet} from 'react-native';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {ThemeProvider} from './src/context/ThemeContext';
 import {DialogProvider} from './src/context/DialogContext';
 import {SheetProvider} from 'react-native-actions-sheet';
 import ErrorBoundary from './src/components/atoms/ErrorBoundary';
-import PrimaryText from './src/components/atoms/PrimaryText';
+import MigrationWarningBanner from './src/components/atoms/MigrationWarningBanner';
 import {initBackend} from './src/backend';
 import {getDatabaseError} from './src/watermelondb/database';
 import {appendErrorLog} from './src/utils/errorLog';
 import './src/sheets/sheets';
 import './src/utils/globalErrorHandler';
 
+// Deliberately renders outside every provider (like ErrorBoundary): plain
+// Text + Appearance, because ThemeProvider is unavailable when the DB fails.
 const DatabaseErrorFallback = () => {
   const isDark = Appearance.getColorScheme() === 'dark';
+  const textColor = isDark ? '#fff' : '#000';
   return (
     <View style={[dbStyles.container, {backgroundColor: isDark ? '#000' : '#fff'}]}>
-      <PrimaryText size={40} weight="bold" color={isDark ? '#fff' : '#000'}>:(</PrimaryText>
-      <PrimaryText size={16} weight="semibold" color={isDark ? '#fff' : '#000'} style={dbStyles.title}>
+      <Text style={[dbStyles.face, {color: textColor}]}>:(</Text>
+      <Text style={[dbStyles.title, {color: textColor}]}>
         {i18n.t('databaseError.title')}
-      </PrimaryText>
-      <PrimaryText size={13} color="#888" style={dbStyles.subtitle}>
-        {i18n.t('databaseError.message')}
-      </PrimaryText>
+      </Text>
+      <Text style={dbStyles.subtitle}>{i18n.t('databaseError.message')}</Text>
     </View>
   );
 };
 
 const dbStyles = StyleSheet.create({
+  appRoot: {flex: 1},
   container: {flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32},
-  title: {marginTop: 16, textAlign: 'center'},
-  subtitle: {marginTop: 8, textAlign: 'center', lineHeight: 20},
+  face: {fontSize: 40, fontWeight: 'bold'},
+  title: {fontSize: 16, fontWeight: '600', marginTop: 16, textAlign: 'center'},
+  subtitle: {fontSize: 13, color: '#888', marginTop: 8, textAlign: 'center', lineHeight: 20},
 });
 
 if (!__DEV__) {
@@ -49,21 +52,41 @@ if (!__DEV__) {
   console.debug = () => {};
 }
 
+type InitState = 'pending' | 'ready' | 'db-failed';
+
 const App = () => {
   LogBox.ignoreAllLogs();
-  const [dbFailed, setDbFailed] = useState(false);
+  const [initState, setInitState] = useState<InitState>('pending');
 
   useEffect(() => {
-    initBackend();
-    const dbError = getDatabaseError();
-    if (dbError) {
-      appendErrorLog(dbError, true);
-      setDbFailed(true);
-    }
+    let cancelled = false;
+    // Await data migrations BEFORE mounting screens, so first fetches can't
+    // race them and a late database setup error is actually observed.
+    const init = async () => {
+      await initBackend();
+      if (cancelled) {
+        return;
+      }
+      const dbError = getDatabaseError();
+      if (dbError) {
+        appendErrorLog(dbError, true);
+        setInitState('db-failed');
+        return;
+      }
+      setInitState('ready');
+    };
+    void init();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  if (dbFailed) {
+  if (initState === 'db-failed') {
     return <DatabaseErrorFallback />;
+  }
+  if (initState === 'pending') {
+    // The native splash/launch screen is still on screen; render nothing.
+    return null;
   }
 
   return (
@@ -76,7 +99,10 @@ const App = () => {
                 <DialogProvider>
                   <SheetProvider>
                     <NavigationContainer ref={setNavigationRef}>
-                      <MainStack />
+                      <View style={dbStyles.appRoot}>
+                        <MigrationWarningBanner />
+                        <MainStack />
+                      </View>
                     </NavigationContainer>
                   </SheetProvider>
                 </DialogProvider>

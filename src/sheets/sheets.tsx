@@ -6,6 +6,7 @@ import CurrencyPickerSheet from './CurrencyPickerSheet';
 import ChangeNameSheet from './ChangeNameSheet';
 import MonthYearPickerSheet from './MonthYearPickerSheet';
 import ThemePickerSheet from './ThemePickerSheet';
+import WeekStartPickerSheet from './WeekStartPickerSheet';
 import LanguagePickerSheet from './LanguagePickerSheet';
 import BudgetSheet from './BudgetSheet';
 
@@ -16,6 +17,7 @@ registerSheet('currency-picker-sheet', CurrencyPickerSheet);
 registerSheet('change-name-sheet', ChangeNameSheet);
 registerSheet('month-year-picker-sheet', MonthYearPickerSheet);
 registerSheet('theme-picker-sheet', ThemePickerSheet);
+registerSheet('week-start-picker-sheet', WeekStartPickerSheet);
 registerSheet('language-picker-sheet', LanguagePickerSheet);
 registerSheet('budget-sheet', BudgetSheet);
 
@@ -67,6 +69,12 @@ declare module 'react-native-actions-sheet' {
         onSelect?: (theme: string) => void;
       };
     }>;
+    'week-start-picker-sheet': SheetDefinition<{
+      payload: {
+        current?: 'sunday' | 'monday';
+        onSelect?: (day: 'sunday' | 'monday') => void;
+      };
+    }>;
     'language-picker-sheet': SheetDefinition<{
       payload: {
         currentLanguage?: string;
@@ -77,6 +85,7 @@ declare module 'react-native-actions-sheet' {
       payload: {
         currentAmount?: number;
         currencySymbol?: string;
+        currencyCode?: string;
         isRecurring?: boolean;
         monthLabel?: string;
         onSave?: (amount: number, everyMonth: boolean) => void;

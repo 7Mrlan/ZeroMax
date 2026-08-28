@@ -10,6 +10,7 @@ export type TabParamList = {
 export type HomeStackParamList = {
   TabStack: NavigatorScreenParams<TabParamList>;
   SettingsScreen: undefined;
+  DiagnosticsScreen: undefined;
   AddTransactionsScreen: undefined;
   UpdateTransactionScreen: {
     expenseId: string;

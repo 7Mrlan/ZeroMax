@@ -39,29 +39,57 @@ const useSwipeTutorial = ({screen, itemCount}: UseSwipeTutorialOptions): UseSwip
     hasTriggeredRef.current = true;
     setActive(true);
 
-    const task = InteractionManager.runAfterInteractions(() => {
-      setTimeout(() => {
-        const ref = tutorialRef.current;
-        if (!ref) {
-          setActive(false);
-          StorageService.setBoolean(storageKey, true);
-          return;
-        }
+    // Every timer in the demo chain is tracked so unmount can cancel the whole
+    // thing. Cancelling only the InteractionManager task was not enough: once
+    // that callback fired, the nested setTimeouts ran to completion ~2.6s
+    // later, calling openLeft/close/openRight on a ref belonging to a row the
+    // user had already navigated away from.
+    const timers: Array<ReturnType<typeof setTimeout>> = [];
+    let cancelled = false;
 
-        ref.openLeft();
+    // Re-read the ref at each step rather than closing over it once: the row
+    // can be recycled by the list mid-demo.
+    const step = (delay: number, run: () => void) => {
+      timers.push(
         setTimeout(() => {
-          ref.close();
-          setTimeout(() => {
-            ref.openRight();
-            setTimeout(() => {
-              ref.close();
-            }, 800);
-          }, 400);
-        }, 800);
-      }, 600);
+          if (cancelled || !tutorialRef.current) {
+            return;
+          }
+          run();
+        }, delay),
+      );
+    };
+
+    const task = InteractionManager.runAfterInteractions(() => {
+      if (cancelled) {
+        return;
+      }
+      timers.push(
+        setTimeout(() => {
+          if (cancelled) {
+            return;
+          }
+          if (!tutorialRef.current) {
+            setActive(false);
+            StorageService.setBoolean(storageKey, true);
+            return;
+          }
+
+          tutorialRef.current.openLeft();
+          step(800, () => tutorialRef.current?.close());
+          step(1200, () => tutorialRef.current?.openRight());
+          step(2000, () => tutorialRef.current?.close());
+        }, 600),
+      );
     });
 
-    return () => task.cancel();
+    return () => {
+      cancelled = true;
+      task.cancel();
+      for (const timer of timers) {
+        clearTimeout(timer);
+      }
+    };
   }, [alreadySeen, itemCount, storageKey]);
 
   return {

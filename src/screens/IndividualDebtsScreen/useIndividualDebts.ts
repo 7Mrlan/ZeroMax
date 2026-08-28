@@ -5,11 +5,9 @@ import {fetchDebtsByDebtor, selectDebtData, fetchAllDebts} from '../../redux/sli
 import {goBack, navigate} from '../../utils/navigationUtils';
 import {deleteAllDebtsByDebtorId, deleteDebtById, deleteDebtorById} from '../../watermelondb/services';
 import {RouteProp, useFocusEffect} from '@react-navigation/native';
-import {selectCurrencySymbol} from '../../redux/slice/currencyDataSlice';
 import {fetchDebtors} from '../../redux/slice/debtorDataSlice';
 import {sortByDateDesc} from '../../utils/dateUtils';
 import {DebtData as DebtDocType} from '../../watermelondb/services';
-import useAmountColor from '../../hooks/useAmountColor';
 import {clearIndividualDebtor, fetchIndividualDebtor, selectIndividualDebtorData} from '../../redux/slice/IndividualDebtorSlice';
 import {useDialog} from '../../context/DialogContext';
 import {useTranslation} from 'react-i18next';
@@ -31,13 +29,14 @@ const useIndividualDebts = (route: IndividualDebtsScreenRouteProp) => {
   const {showDialog} = useDialog();
   const {t} = useTranslation();
   const [refreshing, setRefreshing] = useState(false);
-  const individualDebts = (useAppSelector(selectDebtData) ?? []) as DebtDocType[];
-  const currencySymbol = useAppSelector(selectCurrencySymbol);
-  const {debtorId = '', debtorType = ''} = route.params ?? {};
+  const individualDebts = useAppSelector(selectDebtData) as DebtDocType[];
+  const {debtorId = '', debtorType = '', debtorName: routeDebtorName = ''} = route.params ?? {};
   const individualDebtor = useAppSelector(selectIndividualDebtorData);
-  const debtorName = individualDebtor?.title ?? '';
+  // The store is cleared on focus so the previous debtor never flashes; use the
+  // route param until the fetch lands, otherwise the header renders empty.
+  const debtorName = individualDebtor?.title ?? routeDebtorName;
 
-  const {sortedDebts, sortedBorrowings, sortedLendings, totalBorrowings, totalLendings, debtorTotal} = useMemo(() => {
+  const {sortedBorrowings, sortedLendings, totalBorrowings, totalLendings, debtorTotal} = useMemo(() => {
     const sorted = sortByDateDesc(individualDebts);
     const borrowings = sorted.filter((debt: DebtDocType) => debt.type === 'Borrow');
     const lendings = sorted.filter((debt: DebtDocType) => debt.type === 'Lend');
@@ -46,7 +45,6 @@ const useIndividualDebts = (route: IndividualDebtsScreenRouteProp) => {
     const lendingsTotal = lendings.reduce((total: number, debt: DebtDocType) => total + debt.amount, 0);
 
     return {
-      sortedDebts: sorted,
       sortedBorrowings: borrowings,
       sortedLendings: lendings,
       totalBorrowings: borrowingsTotal,
@@ -58,8 +56,6 @@ const useIndividualDebts = (route: IndividualDebtsScreenRouteProp) => {
   const onRefresh = useCallback(() => {
     setRefreshing(true);
   }, []);
-
-  const debtorTotalColor = useAmountColor(debtorTotal);
 
   const handleEditDebt = useCallback(
     (debtId: string, debtDescription: string, amount: number, debtDate: string, debtType: string) => {
@@ -78,29 +74,42 @@ const useIndividualDebts = (route: IndividualDebtsScreenRouteProp) => {
 
   const handleDeleteDebt = useCallback(
     async (debtId: string) => {
+      // Unlike transactions, a deleted debt has no undo window — confirm first.
+      const confirmed = await showDialog({
+        type: 'warning',
+        message: t('debt.deleteConfirm'),
+      });
+      if (!confirmed) {
+        return;
+      }
       await deleteDebtById(debtId);
       dispatch(fetchDebtsByDebtor(debtorId));
       dispatch(fetchAllDebts());
     },
-    [debtorId, dispatch],
+    [debtorId, dispatch, showDialog, t],
   );
 
+  /**
+   * Deletes the debtor and, via the cascading service, every debt they hold.
+   * Previously this only settled the debts when any existed, which made the
+   * trash button behave identically to "mark as paid" and left the debtor
+   * behind.
+   */
   const handleDeleteDebtor = useCallback(async () => {
-    if (individualDebts.length === 0) {
-      await deleteDebtorById(debtorId);
-      dispatch(fetchDebtors());
-      goBack();
-    } else {
-      const confirmed = await showDialog({
-        type: 'warning',
-        message: t('debts.settlePrompt', {name: debtorName}),
-      });
-      if (confirmed) {
-        await deleteAllDebtsByDebtorId(debtorId);
-        dispatch(fetchDebtsByDebtor(debtorId));
-        dispatch(fetchAllDebts());
-      }
+    const hasDebts = individualDebts.length > 0;
+    const confirmed = await showDialog({
+      type: 'warning',
+      message: hasDebts
+        ? t('debtor.deleteWithDebtsConfirm', {name: debtorName})
+        : t('debtor.deleteConfirm', {name: debtorName}),
+    });
+    if (!confirmed) {
+      return;
     }
+    await deleteDebtorById(debtorId);
+    dispatch(fetchDebtors());
+    dispatch(fetchAllDebts());
+    goBack();
   }, [debtorId, debtorName, dispatch, individualDebts.length, showDialog, t]);
 
   const handleMarkAsPaid = useCallback(async () => {
@@ -150,14 +159,11 @@ const useIndividualDebts = (route: IndividualDebtsScreenRouteProp) => {
     onRefresh,
     handleEditDebt,
     handleDeleteDebt,
-    currencySymbol,
     handleDeleteDebtor,
     handleMarkAsPaid,
     handleUpdateDebtor,
-    sortedDebts,
     sortedBorrowings,
     sortedLendings,
-    debtorTotalColor,
     totalBorrowings,
     totalLendings,
   };

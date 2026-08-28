@@ -30,6 +30,9 @@ interface PrimaryTextProps {
   ellipsizeMode?: 'head' | 'middle' | 'tail' | 'clip';
   onPress?: () => void;
   selectable?: boolean;
+  /** Leave undefined (RN default: true). Set false only for fixed-size chrome
+   * whose box cannot grow with the OS font setting — e.g. avatar initials. */
+  allowFontScaling?: boolean;
 }
 
 const PrimaryText: React.FC<PrimaryTextProps> = ({
@@ -43,6 +46,7 @@ const PrimaryText: React.FC<PrimaryTextProps> = ({
   ellipsizeMode,
   onPress,
   selectable = false,
+  allowFontScaling,
 }) => {
   const colors = useThemeColors();
   const fonts = variant === 'number' ? NUMBER_FONTS : TEXT_FONTS;
@@ -65,7 +69,8 @@ const PrimaryText: React.FC<PrimaryTextProps> = ({
       style={[textStyle, style]}
       numberOfLines={numberOfLines}
       ellipsizeMode={resolvedEllipsizeMode}
-      selectable={selectable}>
+      selectable={selectable}
+      allowFontScaling={allowFontScaling}>
       {children}
     </Text>
   );

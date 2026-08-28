@@ -10,6 +10,20 @@ export interface BudgetData {
   budgetType: string;
 }
 
+/**
+ * Creates or updates the user's monthly budget.
+ *
+ * `month` uses one of three forms:
+ *   - `'2026-07'`             — applies to that month only.
+ *   - `'recurring:2026-07'`   — applies to July 2026 and every month after.
+ *   - `'recurring'`           — legacy, pre-start-month form; treated as
+ *                               "applies to every month". Still read by
+ *                               getBudgetsByMonth for backwards compatibility;
+ *                               new writes always use the `recurring:` form.
+ *
+ * The start-month comparison in getBudgetsByMonth is lexicographic, which is
+ * only correct because months are zero-padded `YYYY-MM`. Keep that format.
+ */
 export const upsertBudget = async (
   userId: string,
   amount: number,
@@ -50,23 +64,6 @@ export const upsertBudget = async (
     }
   });
   return budgetId;
-};
-
-export const updateBudget = async (
-  budgetId: string,
-  updates: {amount?: number; month?: string},
-): Promise<void> => {
-  await database.write(async () => {
-    const budget = await database.get<Budget>('budgets').find(budgetId);
-    await budget.update(b => {
-      if (updates.amount !== undefined) {
-        b.amount = updates.amount;
-      }
-      if (updates.month !== undefined) {
-        b.month = updates.month;
-      }
-    });
-  });
 };
 
 export const deleteBudget = async (budgetId: string): Promise<void> => {

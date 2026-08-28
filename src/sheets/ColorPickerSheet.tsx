@@ -11,9 +11,9 @@ import {gs} from '../styles/globalStyles';
 const ColorPickerSheet: React.FC<SheetProps<'color-picker-sheet'>> = React.memo(props => {
   const {t} = useTranslation();
   const colors = useThemeColors();
-  const selectedColor = props.payload?.selectedColor ?? 'null';
+  const selectedColor = props.payload?.selectedColor;
 
-  const {width: screenWidth} = useWindowDimensions();
+  const {width: screenWidth, height: screenHeight} = useWindowDimensions();
   const colorsPerRow = 6;
   const colorSize = (screenWidth * 0.85) / colorsPerRow;
 
@@ -57,7 +57,9 @@ const ColorPickerSheet: React.FC<SheetProps<'color-picker-sheet'>> = React.memo(
         },
       }}
       gestureEnabled>
-      <View style={[gs.h350, gs.px10]}>
+      {/* Viewport-relative: a fixed height is cramped on small phones and
+          wastes space on tablets. */}
+      <View style={[gs.px10, {height: screenHeight * 0.45}]}>
         <FlashList
           renderScrollComponent={SheetScrollView}
           data={colorsList}

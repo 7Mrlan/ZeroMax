@@ -4,7 +4,7 @@ import advancedFormat from 'dayjs/plugin/advancedFormat';
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import localeData from 'dayjs/plugin/localeData';
-import {getDeviceLocaleInfo} from './locale';
+import {getDeviceLocaleInfo, getFormatLocale} from './locale';
 import i18n from '../i18n';
 
 dayjs.extend(calendar);
@@ -49,26 +49,65 @@ const DAYJS_LOCALES: Record<string, () => void> = {
   zh: () => require('dayjs/locale/zh'),
 };
 
-const initDayjsLocale = () => {
+/**
+ * Canonical English month names. Month identity is persisted (redux
+ * `monthSelection`) and passed through navigation params as a NAME, so a name
+ * saved under one language must still resolve after the user switches
+ * language — the localized array alone cannot do that.
+ */
+const MONTHS_EN = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+// Cached locale data — recomputed by setDayjsLocale(), never per call.
+let MONTHS = dayjs.months();
+let MONTHS_SHORT = dayjs.monthsShort();
+let WEEKDAYS = dayjs.weekdays();
+let WEEKDAYS_SHORT = dayjs.weekdaysShort();
+let WEEKDAYS_MIN = dayjs.weekdaysMin();
+
+const refreshLocaleData = () => {
+  MONTHS = dayjs.months();
+  MONTHS_SHORT = dayjs.monthsShort();
+  WEEKDAYS = dayjs.weekdays();
+  WEEKDAYS_SHORT = dayjs.weekdaysShort();
+  WEEKDAYS_MIN = dayjs.weekdaysMin();
+};
+
+/**
+ * Switches dayjs to `languageCode` and refreshes the cached month/weekday
+ * arrays. Call this whenever the app language changes — dayjs.locale() alone
+ * leaves the cached arrays (and therefore every calendar header) stale.
+ */
+export const setDayjsLocale = (languageCode: string): void => {
   try {
-    const {languageCode} = getDeviceLocaleInfo();
     const loader = DAYJS_LOCALES[languageCode];
     if (loader) {
       loader();
       dayjs.locale(languageCode);
+    } else {
+      dayjs.locale('en');
     }
   } catch {
-    // Stay on English
+    // Stay on whatever locale is currently active
+  }
+  refreshLocaleData();
+};
+
+const initDayjsLocale = () => {
+  try {
+    // getFormatLocale() honours a user override; falling back to the device
+    // locale only would revert the user's choice on every cold start.
+    const languageCode = getFormatLocale().split('-')[0];
+    setDayjsLocale(languageCode);
+  } catch {
+    const {languageCode} = getDeviceLocaleInfo();
+    setDayjsLocale(languageCode);
   }
 };
 
 initDayjsLocale();
-
-const MONTHS = dayjs.months();
-const MONTHS_SHORT = dayjs.monthsShort();
-const WEEKDAYS = dayjs.weekdays();
-const WEEKDAYS_SHORT = dayjs.weekdaysShort();
-const WEEKDAYS_MIN = dayjs.weekdaysMin();
 
 export type DateInput = string | number | Date | Dayjs | null | undefined;
 export type DateUnit =
@@ -119,13 +158,43 @@ export const getDaysInMonth = (year: number, month: string): number => {
   return dayjs().year(year).month(monthIndex).daysInMonth();
 };
 
-// Uses cached MONTHS array for O(N) lookup
-export const getMonthIndex = (monthName: string): number => {
-  return MONTHS.findIndex(m => m.toLowerCase() === monthName.toLowerCase());
+/** Days in a month expressed as a `YYYY-MM` key (the DB/query convention). */
+export const getDaysInMonthByYearMonth = (yearMonth: string): number => {
+  return dayjs(`${yearMonth}-01`).daysInMonth();
 };
 
+/**
+ * Resolves a month name to its 0-based index. Checks the active locale first,
+ * then short names, then canonical English — a name persisted under a previous
+ * language must still resolve.
+ */
+export const getMonthIndex = (monthName: string): number => {
+  const needle = monthName.toLowerCase();
+  const localized = MONTHS.findIndex(m => m.toLowerCase() === needle);
+  if (localized !== -1) {
+    return localized;
+  }
+  const short = MONTHS_SHORT.findIndex(m => m.toLowerCase() === needle);
+  if (short !== -1) {
+    return short;
+  }
+  return MONTHS_EN.findIndex(m => m.toLowerCase() === needle);
+};
+
+/**
+ * Month name -> "01".."12". Never returns "00": the result is concatenated
+ * into `YYYY-MM` database query keys, and an out-of-range month silently
+ * matches no rows (which used to render an empty month after a language
+ * change). Falls back to the current month if the name cannot be resolved.
+ */
 export const getMonthNumber = (monthName: string): string => {
   const index = getMonthIndex(monthName);
+  if (index === -1) {
+    if (__DEV__) {
+      console.warn(`getMonthNumber: unresolved month name "${monthName}"`);
+    }
+    return String(dayjs().month() + 1).padStart(2, '0');
+  }
   return String(index + 1).padStart(2, '0');
 };
 
@@ -179,14 +248,6 @@ export const getFirstDayOfMonth = (year: number, month: string): number => {
   return dayjs(`${year}-${monthNum}-01`).day();
 };
 
-export const createDateString = (
-  year: number,
-  month: string,
-  day: number,
-): string => {
-  return dayjs(`${year}-${month}-${day}`, 'YYYY-MMM-D').format('YYYY-MM-DD');
-};
-
 export const getTimestamp = (): string => {
   return dayjs().format('YYYYMMDDHHmmss');
 };
@@ -203,36 +264,4 @@ export const sortByDateDesc = <T extends {date: DateInput}>(
 
 export const sortByDateAsc = <T extends {date: DateInput}>(items: T[]): T[] => {
   return [...items].sort((a, b) => diffDates(a.date, b.date));
-};
-
-export default {
-  now,
-  parseDate,
-  formatDate,
-  getCurrentYear,
-  getCurrentMonthName,
-  getYear,
-  getMonthName,
-  getDayOfMonth,
-  getDayOfWeek,
-  getMonthNames,
-  getMonthNamesShort,
-  getWeekdayNames,
-  getWeekdayShortNames,
-  getWeekdayNamesMin,
-  getDaysInMonth,
-  getMonthIndex,
-  getMonthNumber,
-  isSameDate,
-  diffDates,
-  subtractFromDate,
-  addToDate,
-  getYesterday,
-  formatCalendar,
-  getFirstDayOfMonth,
-  createDateString,
-  getTimestamp,
-  getISODateTime,
-  sortByDateDesc,
-  sortByDateAsc,
 };

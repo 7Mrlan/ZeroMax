@@ -2,6 +2,7 @@ import {TouchableOpacity, View} from 'react-native';
 import React, {useCallback, useMemo, useState, memo} from 'react';
 import type {RouteProp} from '@react-navigation/native';
 import {useTranslation} from 'react-i18next';
+import {useDialog} from '../../context/DialogContext';
 import type {HomeStackParamList} from '../../navigation/types';
 import PrimaryView from '../atoms/PrimaryView';
 import AppHeader from '../atoms/AppHeader';
@@ -34,6 +35,7 @@ interface CategoryEntryProps {
 
 const CategoryEntry: React.FC<CategoryEntryProps> = ({type, route}) => {
   const {t} = useTranslation();
+  const {showAlert} = useDialog();
   const colors = useThemeColors();
   const dispatch = useAppDispatch();
   const categoryData = route?.params;
@@ -42,6 +44,7 @@ const CategoryEntry: React.FC<CategoryEntryProps> = ({type, route}) => {
   const [categoryName, setCategoryName] = useState(isAddButton ? '' : categoryData?.categoryName ?? '');
 
   const resolveIconParam = (val?: string): string | null => {
+    // 'null' is a legacy sentinel that older rows/params may still carry.
     if (!val || val === 'null' || val === '') { return null; }
     return val;
   };
@@ -56,7 +59,7 @@ const CategoryEntry: React.FC<CategoryEntryProps> = ({type, route}) => {
 
   const selectedCategoryNames = useMemo(() => new Set(selectedCategories.map(c => c.name)), [selectedCategories]);
 
-  const allCategories = useAppSelector(selectCategoryData) ?? [];
+  const allCategories = useAppSelector(selectCategoryData);
   const existingCategoryNamesSet = useMemo(
     () => new Set((allCategories ?? []).map((category: CategorySelection) => category.name)),
     [allCategories],
@@ -82,12 +85,25 @@ const CategoryEntry: React.FC<CategoryEntryProps> = ({type, route}) => {
   }, [categoryName, userId, selectedIcon, selectedColor, dispatch]);
 
   const handleAddFromDefaultCategory = useCallback(async () => {
-    for (const category of selectedCategories) {
-      await createCategory(category.name, userId, category.icon ?? null, category.color ?? null);
+    // Was the one handler here with no try/catch: a rejected createCategory
+    // skipped both the refetch and goBack, leaving the user on a screen that
+    // looked like the tap did nothing at all.
+    try {
+      for (const category of selectedCategories) {
+        await createCategory(category.name, userId, category.icon ?? null, category.color ?? null);
+      }
+      dispatch(fetchCategories());
+      goBack();
+    } catch (error) {
+      if (__DEV__) {
+        console.error('Error creating default categories:', error);
+      }
+      // Some may have been created before the failure; refetch so the screen
+      // reflects what actually landed.
+      dispatch(fetchCategories());
+      await showAlert({type: 'error', message: t('category.createFailed')});
     }
-    dispatch(fetchCategories());
-    goBack();
-  }, [selectedCategories, userId, dispatch]);
+  }, [selectedCategories, userId, dispatch, showAlert, t]);
 
   const handleUpdateCategory = useCallback(async () => {
     if (!categoryData?.categoryId) { return; }
@@ -102,17 +118,61 @@ const CategoryEntry: React.FC<CategoryEntryProps> = ({type, route}) => {
     }
   }, [categoryData?.categoryId, categoryName, selectedIcon, selectedColor, dispatch]);
 
-  const handleAddFromDefaultOrAddCategory = useCallback(() => {
-    if (isAddButton) {
-      if (selectedCategories.length > 0) {
-        handleAddFromDefaultCategory();
-      } else {
-        handleAddCategory();
+  /** Creates the picked default chips AND the typed name, in one pass. */
+  const handleAddBothDefaultsAndTyped = useCallback(async () => {
+    try {
+      for (const category of selectedCategories) {
+        await createCategory(category.name, userId, category.icon ?? null, category.color ?? null);
       }
-    } else {
-      handleUpdateCategory();
+      await createCategory(categoryName.trim(), userId, selectedIcon, selectedColor);
+      dispatch(fetchCategories());
+      goBack();
+    } catch (error) {
+      if (__DEV__) {
+        console.error('Error creating categories:', error);
+      }
+      dispatch(fetchCategories());
+      await showAlert({type: 'error', message: t('category.createFailed')});
     }
-  }, [isAddButton, selectedCategories.length, handleAddFromDefaultCategory, handleAddCategory, handleUpdateCategory]);
+  }, [selectedCategories, categoryName, userId, selectedIcon, selectedColor, dispatch, showAlert, t]);
+
+  /**
+   * A typed name and picked default chips are two different intents, and this
+   * used to resolve the ambiguity by silently preferring the chips — the user
+   * typed a category name, tapped Add, and got something else with no
+   * explanation. Now both are honoured: the chips are created AND the typed
+   * name is created alongside them.
+   */
+  const handleAddFromDefaultOrAddCategory = useCallback(async () => {
+    if (!isAddButton) {
+      await handleUpdateCategory();
+      return;
+    }
+
+    const hasTypedName = categoryName.trim().length > 0 && isValid;
+
+    if (selectedCategories.length === 0) {
+      await handleAddCategory();
+      return;
+    }
+
+    if (hasTypedName && !selectedCategoryNames.has(categoryName.trim())) {
+      await handleAddBothDefaultsAndTyped();
+      return;
+    }
+
+    await handleAddFromDefaultCategory();
+  }, [
+    isAddButton,
+    categoryName,
+    isValid,
+    selectedCategories.length,
+    selectedCategoryNames,
+    handleAddBothDefaultsAndTyped,
+    handleAddFromDefaultCategory,
+    handleAddCategory,
+    handleUpdateCategory,
+  ]);
 
   const handleOpenIconPicker = useCallback(() => {
     SheetManager.show('icon-picker-sheet', {

@@ -140,22 +140,3 @@ export const getAllDebtsByUserIdAndDebtorId = async (
   }));
 };
 
-/**
- * Gets a debt by ID
- */
-export const getDebtById = async (debtId: string): Promise<DebtData | null> => {
-  try {
-    const debt = await database.get<Debt>('debts').find(debtId);
-    return {
-      id: debt.id,
-      description: debt.description,
-      amount: debt.amount,
-      debtorId: debt.debtorId,
-      userId: debt.userId,
-      date: debt.date,
-      type: debt.type,
-    };
-  } catch {
-    return null;
-  }
-};

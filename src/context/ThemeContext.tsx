@@ -1,5 +1,5 @@
-import React, {createContext, useContext, useState, useEffect, useCallback, useMemo, type ReactNode} from 'react';
-import {useColorScheme, Appearance} from 'react-native';
+import React, {createContext, useContext, useState, useCallback, useMemo, type ReactNode} from 'react';
+import {useColorScheme} from 'react-native';
 import StorageService from '../utils/asyncStorageService';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
@@ -70,7 +70,7 @@ interface ThemeContextType {
   resolvedTheme: ResolvedTheme;
   colors: ThemeColors;
   isDark: boolean;
-  setThemeMode: (mode: ThemeMode) => Promise<void>;
+  setThemeMode: (mode: ThemeMode) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -104,12 +104,10 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({children}) => {
 
   const isDark = resolvedTheme === 'dark';
 
-  useEffect(() => {
-    const subscription = Appearance.addChangeListener(() => {});
-    return () => subscription.remove();
-  }, []);
+  // No Appearance listener needed: useColorScheme() above already re-renders
+  // this provider when the system theme changes.
 
-  const setThemeMode = useCallback(async (mode: ThemeMode) => {
+  const setThemeMode = useCallback((mode: ThemeMode) => {
     StorageService.setItemSync('themePreference', mode);
     setThemeModeState(mode);
   }, []);

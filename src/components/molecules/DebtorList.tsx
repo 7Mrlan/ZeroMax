@@ -9,6 +9,8 @@ import {Colors} from '../../hooks/useThemeColors';
 import useFormatAmount from '../../hooks/useFormatAmount';
 import {FlashList} from '@shopify/flash-list';
 import {gs} from '../../styles/globalStyles';
+import {hexToRgba} from '../../utils/colorUtils';
+import EmptyState from '../atoms/EmptyState';
 
 interface Debt extends DebtDocType {
   debtor?: {type?: string};
@@ -80,9 +82,9 @@ const DebtorList: React.FC<DebtorListProps> = ({colors, debtors, allDebts, ListH
           <View
             style={[
               gs.size36,
-              gs.rounded50,
+              gs.roundedFull,
               gs.center,
-              {backgroundColor: (debtor.color ?? colors.primaryText) + '18'},
+              {backgroundColor: hexToRgba(debtor.color ?? colors.primaryText, 0.094)},
             ]}>
             <Icon name={debtor.icon || 'user'} size={18} color={debtor.color || colors.primaryText} />
           </View>
@@ -106,19 +108,13 @@ const DebtorList: React.FC<DebtorListProps> = ({colors, debtors, allDebts, ListH
         </TouchableOpacity>
       );
     },
-    [colors, formatAmount, getDebtTotal, getAmountColor, handleDebtor],
+    [colors, formatAmount, getDebtTotal, getAmountColor, handleDebtor, t],
   );
 
-  const ListEmpty = useCallback(() => (
-    <View style={[gs.center, gs.mt30p]}>
-      <View style={[gs.size50, gs.roundedFull, gs.center, {backgroundColor: colors.secondaryAccent}]}>
-        <Icon name="users" size={22} color={colors.secondaryText} />
-      </View>
-      <PrimaryText size={13} color={colors.secondaryText} style={gs.mt10}>
-        {t('debts.noOneHereYet')}
-      </PrimaryText>
-    </View>
-  ), [colors]);
+  const ListEmpty = useCallback(
+    () => <EmptyState type="Debts" colors={colors} message={t('debts.noOneHereYet')} />,
+    [colors, t],
+  );
 
   return (
     <View style={gs.flex1}>

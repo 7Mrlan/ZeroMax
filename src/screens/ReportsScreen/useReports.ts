@@ -10,12 +10,13 @@ import {
   formatDate,
 } from '../../utils/dateUtils';
 
-const DAY_NAMES = getWeekdayShortNames();
 const MONTHS = getMonthNames();
 
+import {useFocusEffect} from '@react-navigation/native';
+import {getWeekStartDay, rotateWeekdays, type WeekStartDay} from '../../utils/weekStart';
 import {fetchExpensesByMonth, selectExpenseData} from '../../redux/slice/expenseDataSlice';
 import {selectMonthIndex, selectYear, setMonthSelection} from '../../redux/slice/monthSelectionSlice';
-import {selectCurrencySymbol} from '../../redux/slice/currencyDataSlice';
+import {selectCurrencyCode, selectCurrencySymbol} from '../../redux/slice/currencyDataSlice';
 import {selectUserId} from '../../redux/slice/userIdSlice';
 import {fetchBudgetsByMonth, selectCurrentBudget} from '../../redux/slice/budgetDataSlice';
 import {upsertBudget, deleteBudget} from '../../watermelondb/services/budgetService';
@@ -42,8 +43,20 @@ const useReports = () => {
   const selectedYear = useAppSelector(selectYear);
   const selectedMonth = MONTHS[selectedMonthIndex];
 
-  const filteredTransactions = (useAppSelector(selectExpenseData) ?? []) as TransactionWithCategory[];
+  const filteredTransactions = useAppSelector(selectExpenseData) as TransactionWithCategory[];
   const currencySymbol = useAppSelector(selectCurrencySymbol);
+  const currencyCode = useAppSelector(selectCurrencyCode);
+
+  // Week-start preference. Re-read on focus: this screen stays mounted while
+  // Settings is pushed on top, so a plain module read would go stale after
+  // the user changes the option and navigates back.
+  const [weekStart, setWeekStart] = useState<WeekStartDay>(getWeekStartDay);
+  useFocusEffect(
+    useCallback(() => {
+      setWeekStart(getWeekStartDay());
+    }, []),
+  );
+  const dayNames = useMemo(() => rotateWeekdays(getWeekdayShortNames(), weekStart), [weekStart]);
   const userId = useAppSelector(selectUserId);
 
   const yearMonth = `${selectedYear}-${getMonthNumber(selectedMonth)}`;
@@ -112,7 +125,9 @@ const useReports = () => {
     selectedMonth,
     filteredTransactions,
     currencySymbol,
-    dayNames: DAY_NAMES,
+    currencyCode,
+    dayNames,
+    weekStart,
     availableYears,
     handleMonthYearSelect,
     totalAmountForMonth,

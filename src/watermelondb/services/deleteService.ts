@@ -6,7 +6,6 @@ import Currency from '../models/Currency';
 import Debtor from '../models/Debtor';
 import Debt from '../models/Debt';
 import Budget from '../models/Budget';
-import {Q} from '@nozbe/watermelondb';
 
 /**
  * Deletes all data from all collections
@@ -46,52 +45,3 @@ export const deleteAllData = async (): Promise<void> => {
   }
 };
 
-/**
- * Deletes all expenses for a specific user
- */
-export const deleteAllExpensesByUserId = async (
-  userId: string,
-): Promise<void> => {
-  try {
-    await database.write(async () => {
-      const expenses = await database
-        .get<Expense>('expenses')
-        .query(Q.where('user_id', userId))
-        .fetch();
-
-      await database.batch(
-        ...expenses.map(expense => expense.prepareDestroyPermanently()),
-      );
-    });
-  } catch (error) {
-    if (__DEV__) {
-      console.error('Error deleting expenses by userId:', error);
-    }
-    throw error;
-  }
-};
-
-/**
- * Deletes all categories for a specific user
- */
-export const deleteAllCategoriesByUserId = async (
-  userId: string,
-): Promise<void> => {
-  try {
-    await database.write(async () => {
-      const categories = await database
-        .get<Category>('categories')
-        .query(Q.where('user_id', userId))
-        .fetch();
-
-      await database.batch(
-        ...categories.map(category => category.prepareDestroyPermanently()),
-      );
-    });
-  } catch (error) {
-    if (__DEV__) {
-      console.error('Error deleting categories by userId:', error);
-    }
-    throw error;
-  }
-};

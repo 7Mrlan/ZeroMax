@@ -1,6 +1,6 @@
 import {RefreshControl, View} from 'react-native';
 import {TouchableOpacity} from 'react-native-gesture-handler';
-import React, {useCallback, useMemo, useRef, memo} from 'react';
+import React, {useCallback, useEffect, useMemo, useRef, memo} from 'react';
 import {useTranslation} from 'react-i18next';
 import useThemeColors, {Colors} from '../../hooks/useThemeColors';
 import type {SwipeableMethods} from 'react-native-gesture-handler/ReanimatedSwipeable';
@@ -166,12 +166,17 @@ const InlineUndo: React.FC<{
 const TransactionItem: React.FC<TransactionItemProps> = React.memo(
   ({expense: initialExpense, colors, dispatch, label, targetDate, targetMonth, openSwipeableRef, edgeToEdge, tutorialSwipeRef, isFirstGroup}) => {
     const deletionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const pendingDeleteRef = useRef<string | null>(null);
+    // Indirection so the recycle callback below can flush without touching
+    // consts that may still be in their temporal dead zone on first render.
+    const flushRef = useRef<() => void>(() => {});
     const formatAmount = useFormatAmount();
 
     const [expenses, setExpenses] = useRecyclingState<Array<Expense>>(initialExpense || [], [initialExpense], () => {
-      if (deletionTimeoutRef.current) {
-        clearTimeout(deletionTimeoutRef.current);
-      }
+      // A row awaiting its undo window can be recycled at any time. Commit the
+      // delete instead of cancelling it — cancelling silently resurrects the
+      // row and loses the user's action.
+      flushRef.current();
     });
     const [deletedItemId, setDeletedItemId] = useRecyclingState<string | null>(null, [initialExpense]);
     const deletedItemRef = useRef<Expense | null>(null);
@@ -187,20 +192,10 @@ const TransactionItem: React.FC<TransactionItemProps> = React.memo(
       });
     }, []);
 
-    const handleDelete = useCallback(
-      (expenseId: string) => {
-        const deletedExpense = expenses.find(expense => String(expense.id) === expenseId) ?? null;
-        deletedItemRef.current = deletedExpense;
-        setDeletedItemId(expenseId);
-
-        if (deletionTimeoutRef.current) {
-          clearTimeout(deletionTimeoutRef.current);
-        }
-
-        deletionTimeoutRef.current = setTimeout(async () => {
-          setExpenses(prev => prev.filter(e => String(e.id) !== expenseId));
-          setDeletedItemId(null);
-          deletedItemRef.current = null;
+    const commitDelete = useCallback(
+      async (expenseId: string) => {
+        pendingDeleteRef.current = null;
+        try {
           await deleteExpenseById(expenseId);
           dispatch(invalidateExpenseCache());
           if (targetMonth) {
@@ -211,9 +206,56 @@ const TransactionItem: React.FC<TransactionItemProps> = React.memo(
           if (targetDate) {
             dispatch(fetchEverydayExpenses(targetDate));
           }
+        } catch (error) {
+          if (__DEV__) {
+            console.error('Error deleting expense:', error);
+          }
+        }
+      },
+      [dispatch, targetDate, targetMonth],
+    );
+
+    const flushPendingDelete = useCallback(() => {
+      const pendingId = pendingDeleteRef.current;
+      if (!pendingId) {
+        return;
+      }
+      if (deletionTimeoutRef.current) {
+        clearTimeout(deletionTimeoutRef.current);
+        deletionTimeoutRef.current = null;
+      }
+      // Deferred: this can be invoked from a render-phase recycle callback,
+      // and dispatching to redux during render is not safe.
+      setTimeout(() => {
+        void commitDelete(pendingId);
+      }, 0);
+    }, [commitDelete]);
+
+    flushRef.current = flushPendingDelete;
+
+    // Commit rather than drop a pending delete when the row goes away.
+    useEffect(() => flushPendingDelete, [flushPendingDelete]);
+
+    const handleDelete = useCallback(
+      (expenseId: string) => {
+        const deletedExpense = expenses.find(expense => String(expense.id) === expenseId) ?? null;
+        deletedItemRef.current = deletedExpense;
+        setDeletedItemId(expenseId);
+
+        if (deletionTimeoutRef.current) {
+          clearTimeout(deletionTimeoutRef.current);
+        }
+        pendingDeleteRef.current = expenseId;
+
+        deletionTimeoutRef.current = setTimeout(() => {
+          deletionTimeoutRef.current = null;
+          setExpenses(prev => prev.filter(e => String(e.id) !== expenseId));
+          setDeletedItemId(null);
+          deletedItemRef.current = null;
+          void commitDelete(expenseId);
         }, 3000);
       },
-      [expenses, dispatch, targetDate, targetMonth, setExpenses, setDeletedItemId],
+      [expenses, setExpenses, setDeletedItemId, commitDelete],
     );
 
     const handleUndo = useCallback(() => {
@@ -221,13 +263,19 @@ const TransactionItem: React.FC<TransactionItemProps> = React.memo(
         clearTimeout(deletionTimeoutRef.current);
         deletionTimeoutRef.current = null;
       }
+      pendingDeleteRef.current = null;
       setDeletedItemId(null);
       deletedItemRef.current = null;
     }, [setDeletedItemId]);
 
+    // The row awaiting undo is still in `expenses`, but it must not count
+    // toward the day's total while it is shown as deleted.
     const dayTotal = useMemo(
-      () => expenses.reduce((sum, e) => sum + e.amount, 0),
-      [expenses],
+      () =>
+        expenses
+          .filter(e => String(e.id) !== deletedItemId)
+          .reduce((sum, e) => sum + e.amount, 0),
+      [expenses, deletedItemId],
     );
 
     return (

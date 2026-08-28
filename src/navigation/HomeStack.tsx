@@ -1,7 +1,7 @@
 import React from 'react';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import HomeScreen from '../screens/HomeScreen';
-import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
+import {createBottomTabNavigator, type BottomTabBarButtonProps} from '@react-navigation/bottom-tabs';
 import {Platform, Pressable, Text, View} from 'react-native';
 import type {HomeStackParamList, TabParamList} from './types';
 import {useTranslation} from 'react-i18next';
@@ -12,6 +12,7 @@ import ReportsScreen from '../screens/ReportsScreen';
 import DebtsScreen from '../screens/DebtsScreen';
 import CategoryScreen from '../screens/CategoryScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import DiagnosticsScreen from '../screens/DiagnosticsScreen';
 import AddTransactionsScreen from '../screens/AddTransactionsScreen';
 import UpdateTransactionScreen from '../screens/UpdateTransactionScreen';
 import AddCategoryScreen from '../screens/AddCategoryScreen';
@@ -82,7 +83,9 @@ const CategoriesIcon = ({color}: {color: string}) => {
 const Stack = createNativeStackNavigator<HomeStackParamList>();
 const Tab = createBottomTabNavigator<TabParamList>();
 
-const TabBarButton = (props: any) => (
+// `ref` is dropped: @react-navigation types it more loosely than Pressable
+// accepts under React 19, and a custom tab button has no use for it.
+const TabBarButton = ({ref: _ref, ...props}: BottomTabBarButtonProps) => (
   <Pressable {...props} android_ripple={{color: 'transparent'}} />
 );
 
@@ -142,6 +145,7 @@ const HomeStack = () => {
       <Stack.Screen name="AddDebtsScreen" component={AddDebtsScreen} />
       <Stack.Screen name="UpdateDebtScreen" component={UpdateDebtScreen} />
       <Stack.Screen name="UpdateDebtorScreen" component={UpdateDebtorScreen} />
+      <Stack.Screen name="DiagnosticsScreen" component={DiagnosticsScreen} />
     </Stack.Navigator>
   );
 };

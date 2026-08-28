@@ -1,9 +1,4 @@
 import {PermissionsAndroid, Platform} from 'react-native';
-import {nanoid} from 'nanoid';
-
-export const generateUniqueKey = (): string => {
-  return `zero${nanoid(16)}`;
-};
 
 export const requestStoragePermission = async () => {
   if (Platform.OS === 'android') {
@@ -19,31 +14,17 @@ export const requestStoragePermission = async () => {
         PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
       ];
 
+      // Single request only — re-prompting immediately after a denial is
+      // hostile UX, and NEVER_ASK_AGAIN can't be recovered here anyway
+      // (callers show an "open settings" dialog on false).
       const granted = await PermissionsAndroid.requestMultiple(permissions);
 
-      if (
+      return (
         granted['android.permission.READ_EXTERNAL_STORAGE'] ===
           PermissionsAndroid.RESULTS.GRANTED &&
         granted['android.permission.WRITE_EXTERNAL_STORAGE'] ===
           PermissionsAndroid.RESULTS.GRANTED
-      ) {
-        return true;
-      } else {
-        const secondRequest = await PermissionsAndroid.requestMultiple(
-          permissions,
-        );
-
-        if (
-          secondRequest['android.permission.READ_EXTERNAL_STORAGE'] ===
-            PermissionsAndroid.RESULTS.GRANTED &&
-          secondRequest['android.permission.WRITE_EXTERNAL_STORAGE'] ===
-            PermissionsAndroid.RESULTS.GRANTED
-        ) {
-          return true;
-        } else {
-          return false;
-        }
-      }
+      );
     } catch (err) {
       if (__DEV__) {
         console.warn(err);

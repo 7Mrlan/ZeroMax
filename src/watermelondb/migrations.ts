@@ -18,12 +18,17 @@ export const migrations = schemaMigrations({
       ],
     },
     {
-      // Add indexes to category_status and debtor_status for faster queries
+      // Intended to index category_status / debtor_status.
       toVersion: 2,
       steps: [
-        // Note: WatermelonDB doesn't have a direct "addIndex" migration step
-        // The index will be applied automatically when the schema version changes
-        // and the adapter recreates the indexes based on the updated schema
+        // NO-OP, and knowingly so. WatermelonDB does NOT recreate indexes for
+        // existing tables on a version bump — `isIndexed` in schema.ts only
+        // takes effect when a table is created, i.e. on fresh installs.
+        // Devices upgraded from v1 therefore lack these two indexes. The
+        // tables are small enough that it does not matter in practice; if it
+        // ever does, add an explicit `unsafeExecuteSql('CREATE INDEX IF NOT
+        // EXISTS ...')` step to the NEXT migration rather than editing this
+        // one (already-applied migrations never re-run).
       ],
     },
   ],

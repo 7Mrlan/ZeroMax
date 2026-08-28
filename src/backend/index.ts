@@ -1,6 +1,6 @@
 import {runMigrations} from './migrations/runner';
 
-export {hasMigrationFailed} from './migrations/runner';
+export {hasMigrationFailed, retryMigrations} from './migrations/runner';
 
 /**
  * Initialize the backend layer.

@@ -3,21 +3,15 @@ import useThemeColors from '../../hooks/useThemeColors';
 import {fetchDebtors, selectDebtorData} from '../../redux/slice/debtorDataSlice';
 import {fetchAllDebts, selectAllDebts} from '../../redux/slice/debtDataSlice';
 import {useCallback, useMemo, useState} from 'react';
-import {selectCurrencySymbol} from '../../redux/slice/currencyDataSlice';
 import {DebtorData as Debtor, DebtData as Debt} from '../../watermelondb/services';
 import {useFocusEffect} from '@react-navigation/native';
-
-interface DebtWithDebtor extends Debt {
-  debtor?: {type: string};
-}
 
 const useDebts = () => {
   const colors = useThemeColors();
   const dispatch = useAppDispatch();
   const debtors = useAppSelector(selectDebtorData) as Debtor[];
-  const allDebts = useAppSelector(selectAllDebts) as DebtWithDebtor[];
+  const allDebts = useAppSelector(selectAllDebts) as Debt[];
   const [debtorType, setDebtorType] = useState('Person');
-  const currencySymbol = useAppSelector(selectCurrencySymbol);
 
   const {personDebtors, otherAccountsDebtors} = useMemo(
     () => ({
@@ -31,7 +25,7 @@ const useDebts = () => {
     let borrowings = 0;
     let lendings = 0;
 
-    allDebts.forEach((debt: DebtWithDebtor) => {
+    allDebts.forEach((debt: Debt) => {
       if (debt.type === 'Borrow') {
         borrowings += debt.amount;
       } else {
@@ -54,7 +48,6 @@ const useDebts = () => {
     allDebts,
     debtorType,
     setDebtorType,
-    currencySymbol,
     personDebtors,
     otherAccountsDebtors,
     totalDebts,

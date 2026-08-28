@@ -4,13 +4,13 @@ import {useTranslation} from 'react-i18next';
 import type {SwipeableMethods} from 'react-native-gesture-handler/ReanimatedSwipeable';
 import {DebtData as Debt} from '../../watermelondb/services';
 import PrimaryText from '../atoms/PrimaryText';
-import Icon from '../atoms/Icons';
 import SwipeableRow from '../atoms/SwipeableRow';
 import {formatDate, formatCalendar} from '../../utils/dateUtils';
 import {Colors} from '../../hooks/useThemeColors';
 import useFormatAmount from '../../hooks/useFormatAmount';
 import {FlashList} from '@shopify/flash-list';
 import {gs} from '../../styles/globalStyles';
+import EmptyState from '../atoms/EmptyState';
 
 interface DebtListProps {
   colors: Colors;
@@ -157,11 +157,17 @@ const DebtList: React.FC<DebtListProps> = ({
       groupedExpenses.set(date, currentGroup);
     });
 
-    return Array.from(groupedExpenses.keys()).map(date => ({
-      date,
-      debts: groupedExpenses.get(date) ?? [],
-      label: formatCalendar(date),
-    }));
+    // Sort explicitly rather than relying on Map insertion order, which only
+    // happens to be correct while callers pre-sort their input.
+    return Array.from(groupedExpenses.keys())
+      .sort((a, b) => b.localeCompare(a))
+      .map(date => ({
+        date,
+        debts: [...(groupedExpenses.get(date) ?? [])].sort(
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+        ),
+        label: formatCalendar(date),
+      }));
   }, [individualDebts]);
 
   const renderGroupItem = useCallback(
@@ -179,16 +185,10 @@ const DebtList: React.FC<DebtListProps> = ({
     [colors, handleEditDebt, handleDeleteDebt, tutorialSwipeRef],
   );
 
-  const ListEmpty = useCallback(() => (
-    <View style={[gs.center, gs.mt30p]}>
-      <View style={[gs.size50, gs.roundedFull, gs.center, {backgroundColor: colors.secondaryAccent}]}>
-        <Icon name="hand-coins" size={22} color={colors.secondaryText} />
-      </View>
-      <PrimaryText size={13} color={colors.secondaryText} style={gs.mt10}>
-        {t('debts.noEntriesYet')}
-      </PrimaryText>
-    </View>
-  ), [colors]);
+  const ListEmpty = useCallback(
+    () => <EmptyState type="Debts" colors={colors} message={t('debts.noEntriesYet')} />,
+    [colors, t],
+  );
 
   return (
     <View style={gs.flex1}>

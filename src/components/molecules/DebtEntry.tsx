@@ -1,5 +1,5 @@
 import React, {useState, memo, useCallback} from 'react';
-import {View, TextInput, TouchableOpacity} from 'react-native';
+import {View, TouchableOpacity} from 'react-native';
 import {useTranslation} from 'react-i18next';
 import AppHeader from '../../components/atoms/AppHeader';
 import CustomInput from '../../components/atoms/CustomInput';
@@ -16,8 +16,8 @@ import {DebtsScreenProp} from '../../screens/AddDebtsScreen';
 import {getISODateTime} from '../../utils/dateUtils';
 import {expenseAmountSchema, expenseSchema} from '../../utils/validationSchema';
 import PrimaryText from '../atoms/PrimaryText';
-import {selectCurrencySymbol} from '../../redux/slice/currencyDataSlice';
 import {gs} from '../../styles/globalStyles';
+import AmountInput from '../atoms/AmountInput';
 
 interface DebtEntryProps {
   buttonText: string;
@@ -28,7 +28,6 @@ const DebtEntry: React.FC<DebtEntryProps> = ({buttonText, route}) => {
   const {t} = useTranslation();
   const colors = useThemeColors();
   const dispatch = useAppDispatch();
-  const currencySymbol = useAppSelector(selectCurrencySymbol);
   const {debtId = '', debtDescription = '', amount = 0, debtorName = '', debtDate = '', debtorId = '', debtType = 'Borrow'} = route.params ?? {};
   const isAddButton = buttonText === 'Add';
   const [hasInteracted, setHasInteracted] = useState(false);
@@ -77,7 +76,8 @@ const DebtEntry: React.FC<DebtEntryProps> = ({buttonText, route}) => {
     }
   }, [isValid, debtId, debtorId, debtAmount, debtName, createdAt, debtsType, dispatch]);
 
-  const handleTextInputFocus = useCallback(() => {
+  // Gates validation errors until the user leaves the field (see ExpenseEntry).
+  const handleAmountBlur = useCallback(() => {
     setHasInteracted(true);
   }, []);
 
@@ -134,30 +134,12 @@ const DebtEntry: React.FC<DebtEntryProps> = ({buttonText, route}) => {
         />
 
         <PrimaryText size={12} color={colors.secondaryText} style={gs.mb5}>{t('transaction.amountLabel')}</PrimaryText>
-        <View
-          style={[
-            gs.h48,
-            gs.itemsCenter,
-            gs.rounded12,
-            gs.pl10,
-            gs.justifyStart,
-            gs.row,
-            {
-              backgroundColor: colors.secondaryAccent,
-              marginBottom: debtAmountError.length > 0 ? 5 : 15,
-            },
-          ]}>
-          <PrimaryText size={15} variant="number" color={colors.secondaryText}>{currencySymbol}</PrimaryText>
-          <TextInput
-            style={[gs.px15, gs.h48, gs.wFull, gs.numMedium, gs.noFontPadding, {color: colors.primaryText}]}
-            value={debtAmount}
-            onChangeText={setDebtAmount}
-            placeholder={'0'}
-            onChange={handleTextInputFocus}
-            placeholderTextColor={colors.secondaryText}
-            keyboardType="numeric"
-          />
-        </View>
+        <AmountInput
+          value={debtAmount}
+          onChangeText={setDebtAmount}
+          onBlur={handleAmountBlur}
+          style={{marginBottom: debtAmountError.length > 0 ? 5 : 15}}
+        />
         {debtAmountError.length > 0 && (
           <View style={gs.mb10}>
             {debtAmountError.map((error: {message: string}) => (

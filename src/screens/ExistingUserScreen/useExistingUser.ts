@@ -3,18 +3,11 @@ import {useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import {Linking, Platform} from 'react-native';
 import {requestStoragePermission} from '../../utils/dataUtils';
+import {isValidExportKey} from '../../backend/export/key';
 import {useDialog} from '../../context/DialogContext';
-import {pick, types} from '@react-native-documents/picker';
+import {pick, types, isErrorWithCode, errorCodes} from '@react-native-documents/picker';
 import RNFS from 'react-native-fs';
-import {
-  createUser,
-  deleteAllData,
-  createCategory,
-  createDebtor,
-  createCurrency,
-  createExpense,
-  createDebt,
-} from '../../watermelondb/services';
+import {getAllUsers, importAllData} from '../../watermelondb/services';
 import {fetchCategories} from '../../redux/slice/categoryDataSlice';
 import {fetchDebtors} from '../../redux/slice/debtorDataSlice';
 import {fetchUserData} from '../../redux/slice/userIdSlice';
@@ -24,20 +17,52 @@ import {fetchAllDebts} from '../../redux/slice/debtDataSlice';
 import StorageService from '../../utils/asyncStorageService';
 import {setIsOnboarded} from '../../redux/slice/isOnboardedSlice';
 import {useAppDispatch} from '../../redux/hooks';
+import {refreshYearsCache} from '../../utils/availableYearsCache';
 import {upgradeExportData} from '../../backend/export/upgrader';
 import type {ExportData} from '../../backend/export/format';
 import {validateExportEnvelope} from '../../backend/export/validate';
 
 type ImportedData = ExportData;
 
+type EntityStatus = 'pending' | 'syncing' | 'done' | 'error';
+
 interface SyncStatus {
-  user: 'pending' | 'syncing' | 'done' | 'error';
-  categories: 'pending' | 'syncing' | 'done' | 'error';
-  debtors: 'pending' | 'syncing' | 'done' | 'error';
-  currencies: 'pending' | 'syncing' | 'done' | 'error';
-  expenses: 'pending' | 'syncing' | 'done' | 'error';
-  debts: 'pending' | 'syncing' | 'done' | 'error';
+  user: EntityStatus;
+  categories: EntityStatus;
+  debtors: EntityStatus;
+  currencies: EntityStatus;
+  expenses: EntityStatus;
+  debts: EntityStatus;
+  budgets: EntityStatus;
 }
+
+interface SyncStats {
+  categories: number;
+  expenses: number;
+  debtors: number;
+  debts: number;
+  budgets: number;
+  autoCreated: number;
+}
+
+const allStatuses = (status: EntityStatus): SyncStatus => ({
+  user: status,
+  categories: status,
+  debtors: status,
+  currencies: status,
+  expenses: status,
+  debts: status,
+  budgets: status,
+});
+
+const EMPTY_STATS: SyncStats = {
+  categories: 0,
+  expenses: 0,
+  debtors: 0,
+  debts: 0,
+  budgets: 0,
+  autoCreated: 0,
+};
 
 const useExistingUser = () => {
   const colors = useThemeColors();
@@ -50,20 +75,8 @@ const useExistingUser = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [isSyncComplete, setIsSyncComplete] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
-  const [syncStatus, setSyncStatus] = useState<SyncStatus>({
-    user: 'pending',
-    categories: 'pending',
-    debtors: 'pending',
-    currencies: 'pending',
-    expenses: 'pending',
-    debts: 'pending',
-  });
-  const [syncStats, setSyncStats] = useState({
-    categories: 0,
-    expenses: 0,
-    debtors: 0,
-    debts: 0,
-  });
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>(allStatuses('pending'));
+  const [syncStats, setSyncStats] = useState<SyncStats>(EMPTY_STATS);
 
   const normalizePath = (path: string | undefined): string => {
     try {
@@ -86,121 +99,16 @@ const useExistingUser = () => {
     }
   };
 
-  const isValidKey = (key: string | null): boolean => {
-    if (!key || key.length !== 20) {
-      return false;
-    }
-    const prefix = key.slice(0, 4);
-    if (prefix !== 'zero') {
-      return false;
-    }
-    const alphanumericPart = key.slice(4);
-    return /^[a-zA-Z0-9]+$/.test(alphanumericPart);
-  };
-
-  const syncAllData = async (data: ImportedData, userId: string) => {
-    const categoryIdMap = new Map<string, string>();
-    const debtorIdMap = new Map<string, string>();
-
-    setSyncStatus(prev => ({...prev, categories: 'syncing'}));
-    try {
-      for (const categoryData of data.categories) {
-        const {name, icon, color} = categoryData;
-        const newCategoryId = await createCategory(name, userId, icon ?? null, color ?? null);
-        if (newCategoryId) {
-          categoryIdMap.set(name, newCategoryId);
-        }
-      }
-      setSyncStats(prev => ({...prev, categories: data.categories.length}));
-      setSyncStatus(prev => ({...prev, categories: 'done'}));
-      dispatch(fetchCategories());
-    } catch (error) {
-      if (__DEV__) {
-        console.error('Error syncing categories:', error);
-      }
-      setSyncStatus(prev => ({...prev, categories: 'error'}));
-      throw error;
-    }
-
-    setSyncStatus(prev => ({...prev, debtors: 'syncing'}));
-    try {
-      for (const debtorData of data.debtors) {
-        const {title, icon, type, color} = debtorData;
-        const newDebtorId = await createDebtor(title, userId, icon ?? null, type ?? 'Other', color ?? null);
-        if (newDebtorId) {
-          debtorIdMap.set(title, newDebtorId);
-        }
-      }
-      setSyncStats(prev => ({...prev, debtors: data.debtors.length}));
-      setSyncStatus(prev => ({...prev, debtors: 'done'}));
-      dispatch(fetchDebtors());
-    } catch (error) {
-      if (__DEV__) {
-        console.error('Error syncing debtors:', error);
-      }
-      setSyncStatus(prev => ({...prev, debtors: 'error'}));
-      throw error;
-    }
-
-    setSyncStatus(prev => ({...prev, currencies: 'syncing'}));
-    try {
-      for (const currencyData of data.currencies) {
-        const {code, symbol, name} = currencyData;
-        await createCurrency(code, symbol, name, userId);
-      }
-      setSyncStatus(prev => ({...prev, currencies: 'done'}));
-      dispatch(fetchCurrency());
-    } catch (error) {
-      if (__DEV__) {
-        console.error('Error syncing currencies:', error);
-      }
-      setSyncStatus(prev => ({...prev, currencies: 'error'}));
-      throw error;
-    }
-
-    setSyncStatus(prev => ({...prev, expenses: 'syncing'}));
-    try {
-      let expenseCount = 0;
-      for (const expenseData of data.expenses) {
-        const {title, amount, description, category, date} = expenseData;
-        const categoryId = categoryIdMap.get(category.name);
-        if (categoryId) {
-          await createExpense(userId, title, amount, description ?? '', categoryId, date);
-          expenseCount++;
-        }
-      }
-      setSyncStats(prev => ({...prev, expenses: expenseCount}));
-      setSyncStatus(prev => ({...prev, expenses: 'done'}));
-      dispatch(fetchExpenses());
-    } catch (error) {
-      if (__DEV__) {
-        console.error('Error syncing expenses:', error);
-      }
-      setSyncStatus(prev => ({...prev, expenses: 'error'}));
-      throw error;
-    }
-
-    setSyncStatus(prev => ({...prev, debts: 'syncing'}));
-    try {
-      let debtCount = 0;
-      for (const debtData of data.debts) {
-        const {amount, description, debtor, date, type} = debtData;
-        const debtorId = debtorIdMap.get(debtor.title);
-        if (debtorId) {
-          await createDebt(userId, amount, description, debtorId, date, type);
-          debtCount++;
-        }
-      }
-      setSyncStats(prev => ({...prev, debts: debtCount}));
-      setSyncStatus(prev => ({...prev, debts: 'done'}));
-      dispatch(fetchAllDebts());
-    } catch (error) {
-      if (__DEV__) {
-        console.error('Error syncing debts:', error);
-      }
-      setSyncStatus(prev => ({...prev, debts: 'error'}));
-      throw error;
-    }
+  const refreshStores = async () => {
+    // fetchUserData must resolve FIRST: the entity thunks read userId from
+    // redux state and would otherwise query with the stale/empty id.
+    await dispatch(fetchUserData());
+    dispatch(fetchCategories());
+    dispatch(fetchDebtors());
+    dispatch(fetchCurrency());
+    dispatch(fetchExpenses());
+    dispatch(fetchAllDebts());
+    // Budgets are month-scoped; Home/Reports refetch them on focus.
   };
 
   const importData = async () => {
@@ -208,14 +116,8 @@ const useExistingUser = () => {
       setIsSyncing(false);
       setIsSyncComplete(false);
       setSyncError(null);
-      setSyncStatus({
-        user: 'pending',
-        categories: 'pending',
-        debtors: 'pending',
-        currencies: 'pending',
-        expenses: 'pending',
-        debts: 'pending',
-      });
+      setSyncStatus(allStatuses('pending'));
+      setSyncStats(EMPTY_STATS);
 
       const storagePermissionGranted = await requestStoragePermission();
 
@@ -230,10 +132,18 @@ const useExistingUser = () => {
         return;
       }
 
-      const result = await pick({
-        type: [types.allFiles],
-        allowMultiSelection: false,
-      });
+      let result;
+      try {
+        result = await pick({
+          type: [types.allFiles],
+          allowMultiSelection: false,
+        });
+      } catch (pickError) {
+        if (isErrorWithCode(pickError) && pickError.code === errorCodes.OPERATION_CANCELED) {
+          return;
+        }
+        throw pickError;
+      }
 
       const {0: res} = result;
       const path = normalizePath(res.uri);
@@ -253,37 +163,61 @@ const useExistingUser = () => {
       }
 
       const validation = validateExportEnvelope(jsonData);
-      if (!validation.success) {
+      if (!validation.success || !validation.data) {
         setUploadMessage(validation.error ?? t('existingUser.invalidExport'));
         return;
       }
 
-      const parsed = jsonData as {key: string; version?: number; data: ImportedData};
-      if (!isValidKey(parsed.key)) {
+      const envelope = validation.data;
+      if (!isValidExportKey(envelope.key)) {
         setUploadMessage(t('existingUser.invalidKey'));
         return;
       }
 
-      const data: ImportedData = upgradeExportData(parsed);
+      const data: ImportedData = upgradeExportData(envelope);
+
+      // The file is valid — only NOW may existing data be touched, and only
+      // with consent. The wipe itself happens inside importAllData's single
+      // transaction, so cancelling here (or a failure later) loses nothing.
+      const existingUsers = await getAllUsers();
+      if (existingUsers.length > 0) {
+        const confirmed = await showDialog({
+          type: 'warning',
+          message: t('existingUser.replaceDataWarning'),
+        });
+        if (!confirmed) {
+          return;
+        }
+      }
 
       setFileName(res.name ?? 'data.json');
       setUploadMessage(t('existingUser.syncingData'));
       setIsSyncing(true);
+      setSyncStatus(allStatuses('syncing'));
 
-      setSyncStatus(prev => ({...prev, user: 'syncing'}));
-      const {users} = data;
-      const {username, email} = users[0];
-      const newUserId = await createUser(username, email);
+      const {userId, stats} = await importAllData(data);
 
-      if (!newUserId) {
-        throw new Error('Failed to create user');
+      // Refetch failures must not mark a committed import as failed.
+      try {
+        // The year cache is keyed by user id and the import minted a new one;
+        // rebuild it so the month picker reflects the restored data.
+        await refreshYearsCache(userId);
+        await refreshStores();
+      } catch (refreshError) {
+        if (__DEV__) {
+          console.error('Error refreshing stores after import:', refreshError);
+        }
       }
 
-      setSyncStatus(prev => ({...prev, user: 'done'}));
-      dispatch(fetchUserData());
-
-      await syncAllData(data, newUserId);
-
+      setSyncStatus(allStatuses('done'));
+      setSyncStats({
+        categories: stats.categories,
+        expenses: stats.expenses,
+        debtors: stats.debtors,
+        debts: stats.debts,
+        budgets: stats.budgets,
+        autoCreated: stats.autoCreatedCategories + stats.autoCreatedDebtors,
+      });
       setIsSyncing(false);
       setIsSyncComplete(true);
       setUploadMessage(t('existingUser.allDataSynced'));
@@ -292,20 +226,19 @@ const useExistingUser = () => {
         console.error('Error importing data:', error);
       }
       setIsSyncing(false);
+      setSyncStatus(allStatuses('error'));
       setSyncError(t('existingUser.syncFailed'));
       setUploadMessage(t('existingUser.syncError'));
     }
   };
 
   const reUpload = async () => {
+    // No pre-wipe: importData validates the new file and swaps data
+    // atomically, so a cancelled picker or bad file can't lose anything.
     setFileName(null);
     setIsSyncComplete(false);
     setSyncError(null);
-    setSyncStats({categories: 0, expenses: 0, debtors: 0, debts: 0});
-    await deleteAllData();
-    dispatch(fetchCategories());
-    dispatch(fetchDebtors());
-    dispatch(fetchUserData());
+    setSyncStats(EMPTY_STATS);
     await importData();
   };
 

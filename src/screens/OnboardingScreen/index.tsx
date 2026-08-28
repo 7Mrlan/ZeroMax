@@ -16,7 +16,7 @@ interface CategoryData {
 }
 
 const OnboardingScreen = () => {
-  const {colors, handleSkip, handleSubmit, toggleCategorySelection, isCategorySelected} = useOnboarding();
+  const {colors, handleSkip, handleSubmit, isSubmitting, toggleCategorySelection, isCategorySelected} = useOnboarding();
   const {t} = useTranslation();
 
   return (
@@ -73,7 +73,7 @@ const OnboardingScreen = () => {
           })}
         </ScrollView>
       </View>
-      <PrimaryButton onPress={handleSubmit} colors={colors} buttonTitle={t('common.continue')} />
+      <PrimaryButton onPress={handleSubmit} colors={colors} buttonTitle={t('common.continue')} disabled={isSubmitting} />
     </PrimaryView>
   );
 };

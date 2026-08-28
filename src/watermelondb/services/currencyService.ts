@@ -58,26 +58,6 @@ export const updateCurrencyById = async (
 };
 
 /**
- * Gets a currency by ID
- */
-export const getCurrencyById = async (
-  currencyId: string,
-): Promise<CurrencyData | null> => {
-  try {
-    const currency = await database.get<Currency>('currencies').find(currencyId);
-    return {
-      id: currency.id,
-      code: currency.code,
-      symbol: currency.symbol,
-      name: currency.name,
-      userId: currency.userId,
-    };
-  } catch {
-    return null;
-  }
-};
-
-/**
  * Gets currency by user ID
  */
 export const getCurrencyByUserId = async (
@@ -102,16 +82,3 @@ export const getCurrencyByUserId = async (
   };
 };
 
-/**
- * Gets all currencies
- */
-export const getAllCurrencies = async (): Promise<CurrencyData[]> => {
-  const currencies = await database.get<Currency>('currencies').query().fetch();
-  return currencies.map(c => ({
-    id: c.id,
-    code: c.code,
-    symbol: c.symbol,
-    name: c.name,
-    userId: c.userId,
-  }));
-};

@@ -78,21 +78,6 @@ export const updateCategoryById = async (
 };
 
 /**
- * Gets all categories
- */
-export const getAllCategories = async (): Promise<CategoryData[]> => {
-  const categories = await database.get<Category>('categories').query().fetch();
-  return categories.map(c => ({
-    id: c.id,
-    name: c.name,
-    categoryStatus: c.categoryStatus,
-    userId: c.userId,
-    icon: sanitizeString(c.icon, DEFAULTS.icon),
-    color: sanitizeString(c.color, DEFAULTS.color),
-  }));
-};
-
-/**
  * Gets all categories by user ID
  */
 export const getAllCategoriesByUserId = async (
@@ -112,45 +97,3 @@ export const getAllCategoriesByUserId = async (
   }));
 };
 
-/**
- * Gets active categories by user ID
- */
-export const getActiveCategoriesByUserId = async (
-  userId: string,
-): Promise<CategoryData[]> => {
-  const categories = await database
-    .get<Category>('categories')
-    .query(Q.where('user_id', userId), Q.where('category_status', true))
-    .fetch();
-  return categories.map(c => ({
-    id: c.id,
-    name: c.name,
-    categoryStatus: c.categoryStatus,
-    userId: c.userId,
-    icon: sanitizeString(c.icon, DEFAULTS.icon),
-    color: sanitizeString(c.color, DEFAULTS.color),
-  }));
-};
-
-/**
- * Gets a category by ID
- */
-export const getCategoryById = async (
-  categoryId: string,
-): Promise<CategoryData | null> => {
-  try {
-    const category = await database
-      .get<Category>('categories')
-      .find(categoryId);
-    return {
-      id: category.id,
-      name: category.name,
-      categoryStatus: category.categoryStatus,
-      userId: category.userId,
-      icon: sanitizeString(category.icon, DEFAULTS.icon),
-      color: sanitizeString(category.color, DEFAULTS.color),
-    };
-  } catch {
-    return null;
-  }
-};

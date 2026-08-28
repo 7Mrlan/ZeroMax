@@ -8,28 +8,39 @@ const LAKH_COUNTRY_CODES = new Set([
   'IN', 'BD', 'NP', 'PK', 'LK',
 ]);
 
+// The lakh/crore grouping lives in the numbering system of South Asian
+// LANGUAGES, not only their countries — "hi-US" still groups as 1,24,000.
+const LAKH_LANGUAGE_CODES = new Set([
+  'hi', 'bn', 'ta', 'te', 'mr', 'pa', 'gu', 'kn', 'ml', 'or', 'as', 'ne', 'si', 'ur',
+]);
+
 /**
  * Returns the correct locale for currency formatting.
  * Prevents Indian lakh/crore grouping from leaking into non-South-Asian currencies.
  *
- * The lakh/crore pattern (1,24,000) is baked into the numbering system of
- * South Asian LANGUAGES (hi, bn, ta, mr, pa, ne, etc.), not just country codes.
- * So "hi-US" still gives lakh grouping. We must use "en-US" as the fallback
- * to guarantee international grouping (groups of 3).
+ * Both the language and the region are read from the SAME locale tag —
+ * previously the language came from the (override-aware) format locale while
+ * the country came from the device, so an override like `en-US` on an Indian
+ * device, or `hi-IN` on a US device, produced the wrong grouping.
  */
 const getEffectiveLocaleForCurrency = (currencyCode?: string): string => {
-  const deviceLocale = getFormatLocale();
-  if (!currencyCode) return deviceLocale;
+  const formatLocale = getFormatLocale();
+  if (!currencyCode) return formatLocale;
 
-  const {countryCode} = getDeviceLocaleInfo();
-  const isLakhLocale = LAKH_COUNTRY_CODES.has(countryCode);
+  const [languageSubtag, regionSubtag] = formatLocale.split('-');
+  // Fall back to the device region only when the tag carries no region.
+  const region = regionSubtag || getDeviceLocaleInfo().countryCode;
+
+  const isLakhLocale =
+    LAKH_COUNTRY_CODES.has(region?.toUpperCase() ?? '') ||
+    LAKH_LANGUAGE_CODES.has(languageSubtag?.toLowerCase() ?? '');
   const isLakhCurrency = LAKH_CURRENCIES.has(currencyCode.toUpperCase());
 
   if (isLakhLocale && !isLakhCurrency) {
     return 'en-US';
   }
 
-  return deviceLocale;
+  return formatLocale;
 };
 
 const CURRENCY_DECIMALS: Record<string, number> = {
@@ -48,6 +59,7 @@ const CURRENCY_DECIMALS: Record<string, number> = {
   XAF: 0,
   XOF: 0,
   XPF: 0,
+  BIF: 0,
   DJF: 0,
   GNF: 0,
   KMF: 0,
@@ -62,8 +74,8 @@ const CURRENCY_DECIMALS: Record<string, number> = {
   TZS: 0,
   UZS: 0,
   YER: 0,
-  ZMK: 0,
-  ZWL: 0,
+  ZMW: 0,
+  ZWG: 0,
   AFN: 0,
   ALL: 0,
   AMD: 0,
@@ -157,6 +169,61 @@ export const formatCurrency = (amount: number, currencyCode?: string, locale?: s
   }
 };
 
+const symbolPlacementCache = new Map<string, boolean>();
+
+/**
+ * Whether a currency's symbol goes AFTER the amount for the active locale
+ * (e.g. "1 234 kr" for sv-SE/SEK, "1.234 \u20ac" for de-DE/EUR) rather than
+ * before it ("$1,234").
+ *
+ * Used by amount INPUTS so the symbol sits on the same side the formatted
+ * display strings put it. Every probe is wrapped: any Intl gap falls back to
+ * prefix — exactly today's behaviour, so this can never regress a device.
+ */
+export const isCurrencySymbolSuffix = (
+  currencyCode?: string,
+  locale?: string,
+): boolean => {
+  if (!currencyCode) {
+    return false;
+  }
+  const effectiveLocale = locale ?? getEffectiveLocaleForCurrency(currencyCode);
+  const cacheKey = `${effectiveLocale}|${currencyCode}`;
+  const cached = symbolPlacementCache.get(cacheKey);
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  let suffix = false;
+  try {
+    // Preferred: read the part order directly.
+    const parts = new Intl.NumberFormat(effectiveLocale, {
+      style: 'currency',
+      currency: currencyCode,
+      currencyDisplay: 'narrowSymbol',
+    }).formatToParts(1);
+    const currencyIndex = parts.findIndex(part => part.type === 'currency');
+    const integerIndex = parts.findIndex(part => part.type === 'integer');
+    suffix = currencyIndex > integerIndex && integerIndex !== -1;
+  } catch {
+    try {
+      // Fallback: a formatted sample that STARTS with a digit puts the
+      // symbol at the end.
+      const sample = new Intl.NumberFormat(effectiveLocale, {
+        style: 'currency',
+        currency: currencyCode,
+        currencyDisplay: 'symbol',
+      }).format(1);
+      suffix = /^\d/.test(sample);
+    } catch {
+      suffix = false;
+    }
+  }
+
+  symbolPlacementCache.set(cacheKey, suffix);
+  return suffix;
+};
+
 /**
  * Formats a full currency string with correct symbol placement per locale.
  * Handles prefix ($ before) vs suffix (₽ after) automatically.
@@ -209,23 +276,6 @@ export const formatAmountWithSymbol = (
   }
 };
 
-/**
- * @deprecated Use formatAmountWithSymbol instead for correct locale-aware placement.
- * Kept for backward compatibility during migration.
- */
-export const formatWithSymbol = (
-  amount: number,
-  symbol: string,
-  currencyCode?: string,
-  locale?: string,
-): string => {
-  if (currencyCode) {
-    return formatAmountWithSymbol(amount, currencyCode, locale);
-  }
-  const formattedAmount = formatCurrency(amount, currencyCode, locale);
-  return `${symbol}${formattedAmount}`;
-};
-
 export const formatCompact = (amount: number, locale?: string): string => {
   const effectiveLocale = locale ?? getFormatLocale();
   if (!Number.isFinite(amount)) return '0';
@@ -243,13 +293,6 @@ export const formatCompact = (amount: number, locale?: string): string => {
     if (Math.abs(amount) >= 1e3) return `${(amount / 1e3).toFixed(1)}K`;
     return amount.toString();
   }
-};
-
-export const parseCurrency = (value: string): number => {
-  if (!value) return 0;
-  const cleaned = value.replaceAll(/[^0-9.-]/g, '');
-  const parsed = Number.parseFloat(cleaned);
-  return Number.isNaN(parsed) ? 0 : parsed;
 };
 
 export const roundCurrency = (amount: number, currencyCode?: string): number => {

@@ -12,11 +12,8 @@ export const gs = StyleSheet.create({
 
   row: {flexDirection: 'row'},
   col: {flexDirection: 'column'},
-  rowReverse: {flexDirection: 'row-reverse'},
-  colReverse: {flexDirection: 'column-reverse'},
 
   wrap: {flexWrap: 'wrap'},
-  nowrap: {flexWrap: 'nowrap'},
 
   // ALIGNMENT
 
@@ -181,8 +178,6 @@ export const gs = StyleSheet.create({
   rounded16: {borderRadius: 16},
   rounded18: {borderRadius: 18},
   rounded24: {borderRadius: 24},
-  rounded40: {borderRadius: 40},
-  rounded50: {borderRadius: 50},
   roundedFull: {borderRadius: 9999},
 
   roundedTop15: {borderTopLeftRadius: 15, borderTopRightRadius: 15},
@@ -198,15 +193,12 @@ export const gs = StyleSheet.create({
 
   w8: {width: 8},
   w30: {width: 30},
-  w35: {width: 35},
   w40: {width: 40},
   w50: {width: 50},
   w60: {width: 60},
   w150: {width: 150},
-  w250: {width: 250},
 
   wFull: {width: '100%'},
-  w49: {width: '49%'},
   w50p: {width: '50%'},
   w80p: {width: '80%'},
 
@@ -242,7 +234,6 @@ export const gs = StyleSheet.create({
   size50: {width: 50, height: 50},
   size60: {width: 60, height: 60},
   size100: {width: 100, height: 100},
-  size150: {width: 150, height: 150},
 
   // GAP
 
@@ -279,15 +270,12 @@ export const gs = StyleSheet.create({
 
   w16: {width: 16},
   w20: {width: 20},
-  w95: {width: 95.5},
   h16: {height: 16},
   h26: {height: 26},
   h34: {height: 34},
   h36: {height: 36},
   h65: {height: 65},
   h320: {height: 320},
-  h400: {height: 400},
-  h500: {height: 500},
   minW70: {minWidth: 70},
   minH60: {minHeight: 60},
   minH200: {minHeight: 200},
@@ -309,14 +297,12 @@ export const gs = StyleSheet.create({
   mb5p: {marginBottom: '5%'},
   mb10p: {marginBottom: '10%'},
   mb20p: {marginBottom: '20%'},
-  mb90p: {marginBottom: '90%'},
   mt2p: {marginTop: '2%'},
   mt3p: {marginTop: '3%'},
   mt5p: {marginTop: '5%'},
   mt8p: {marginTop: '8%'},
   mt12p: {marginTop: '12%'},
   mt30p: {marginTop: '30%'},
-  mt60p: {marginTop: '60%'},
 
   // ADDITIONAL PADDINGS
 

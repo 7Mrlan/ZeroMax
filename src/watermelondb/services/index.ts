@@ -1,9 +1,7 @@
 // User Service
 export {
   createUser,
-  createExistingUser,
   updateUserById,
-  getUserById,
   getAllUsers,
 } from './userService';
 
@@ -12,10 +10,7 @@ export {
   createCategory,
   softDeleteCategoryById,
   updateCategoryById,
-  getAllCategories,
   getAllCategoriesByUserId,
-  getActiveCategoriesByUserId,
-  getCategoryById,
 } from './categoryService';
 export type {CategoryData} from './categoryService';
 
@@ -30,7 +25,6 @@ export {
   getAllExpensesByMonth,
   getAllExpensesByCategoryAndMonth,
   getAvailableExpenseYears,
-  getExpenseById,
 } from './expenseService';
 export type {ExpenseData, ExpenseWithCategory} from './expenseService';
 
@@ -38,21 +32,16 @@ export type {ExpenseData, ExpenseWithCategory} from './expenseService';
 export {
   createCurrency,
   updateCurrencyById,
-  getCurrencyById,
   getCurrencyByUserId,
-  getAllCurrencies,
 } from './currencyService';
 export type {CurrencyData} from './currencyService';
 
 // Debtor Service
 export {
   createDebtor,
-  softDeleteDebtorById,
   deleteDebtorById,
   updateDebtorById,
-  getAllDebtors,
   getAllDebtorsByUserId,
-  getActiveDebtorsByUserId,
   getDebtorByDebtorId,
 } from './debtorService';
 export type {DebtorData} from './debtorService';
@@ -65,25 +54,26 @@ export {
   deleteAllDebtsByDebtorId,
   getAllDebtsByUserId,
   getAllDebtsByUserIdAndDebtorId,
-  getDebtById,
 } from './debtService';
 export type {DebtData} from './debtService';
 
 // Get Service
-export {getAllData, debugLogAllData} from './getService';
+export {getAllData} from './getService';
 export type {ExportData} from './getService';
 
 // Delete Service
 export {
   deleteAllData,
-  deleteAllExpensesByUserId,
 } from './deleteService';
 
 // Budget Service
 export {
   upsertBudget,
-  updateBudget,
   deleteBudget,
   getBudgetsByMonth,
 } from './budgetService';
 export type {BudgetData} from './budgetService';
+
+// Import Service (atomic backup restore)
+export {importAllData} from './importService';
+export type {ImportResult} from './importService';

@@ -43,18 +43,6 @@ export const createDebtor = async (
 };
 
 /**
- * Soft deletes a debtor by ID (sets debtorStatus to false)
- */
-export const softDeleteDebtorById = async (debtorId: string): Promise<void> => {
-  await database.write(async () => {
-    const debtor = await database.get<Debtor>('debtors').find(debtorId);
-    await debtor.update(d => {
-      d.debtorStatus = false;
-    });
-  });
-};
-
-/**
  * Permanently deletes a debtor by ID
  */
 export const deleteDebtorById = async (debtorId: string): Promise<void> => {
@@ -101,22 +89,6 @@ export const updateDebtorById = async (
 };
 
 /**
- * Gets all debtors
- */
-export const getAllDebtors = async (): Promise<DebtorData[]> => {
-  const debtors = await database.get<Debtor>('debtors').query().fetch();
-  return debtors.map(d => ({
-    id: d.id,
-    title: d.title,
-    type: d.type,
-    debtorStatus: d.debtorStatus,
-    userId: d.userId,
-    icon: sanitizeString(d.icon, DEFAULTS.icon),
-    color: sanitizeString(d.color, DEFAULTS.color),
-  }));
-};
-
-/**
  * Gets all debtors by user ID
  */
 export const getAllDebtorsByUserId = async (
@@ -125,27 +97,6 @@ export const getAllDebtorsByUserId = async (
   const debtors = await database
     .get<Debtor>('debtors')
     .query(Q.where('user_id', userId))
-    .fetch();
-  return debtors.map(d => ({
-    id: d.id,
-    title: d.title,
-    type: d.type,
-    debtorStatus: d.debtorStatus,
-    userId: d.userId,
-    icon: sanitizeString(d.icon, DEFAULTS.icon),
-    color: sanitizeString(d.color, DEFAULTS.color),
-  }));
-};
-
-/**
- * Gets active debtors by user ID
- */
-export const getActiveDebtorsByUserId = async (
-  userId: string,
-): Promise<DebtorData[]> => {
-  const debtors = await database
-    .get<Debtor>('debtors')
-    .query(Q.where('user_id', userId), Q.where('debtor_status', true))
     .fetch();
   return debtors.map(d => ({
     id: d.id,

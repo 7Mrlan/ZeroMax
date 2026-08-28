@@ -10,12 +10,12 @@ import CurrencySymbolPicker from '../../components/molecules/CurrencySymbolPicke
 import {gs} from '../../styles/globalStyles';
 
 const ChooseCurrencyScreen = () => {
-  const {colors, search, filteredCurrencies, selectedCurrency, handleCurrencySubmit, handleSearch, handleCurrencySelect} =
+  const {colors, search, filteredCurrencies, selectedCurrency, isSubmitting, handleCurrencySubmit, handleSearch, handleCurrencySelect} =
     useChooseCurrency();
   const {t} = useTranslation();
 
   return (
-    <PrimaryView colors={colors} dismissKeyboardOnTouch>
+    <PrimaryView colors={colors}>
       <View style={gs.pt15p}>
         <PrimaryText size={28} weight="bold">{t('chooseCurrency.title')}</PrimaryText>
         <PrimaryText size={28} weight="bold">{t('chooseCurrency.titleSuffix')}</PrimaryText>
@@ -47,7 +47,13 @@ const ChooseCurrencyScreen = () => {
         />
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
+      {/* keyboardShouldPersistTaps + keyboardDismissMode replace the
+          screen-wide TouchableWithoutFeedback: they dismiss the keyboard
+          without taking the touch responder away from this ScrollView. */}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag">
         <CurrencySymbolPicker
           filteredCurrencies={filteredCurrencies}
           selectedCurrency={selectedCurrency}
@@ -59,7 +65,7 @@ const ChooseCurrencyScreen = () => {
         onPress={handleCurrencySubmit}
         colors={colors}
         buttonTitle={t('common.continue')}
-        disabled={!selectedCurrency}
+        disabled={!selectedCurrency || isSubmitting}
       />
     </PrimaryView>
   );

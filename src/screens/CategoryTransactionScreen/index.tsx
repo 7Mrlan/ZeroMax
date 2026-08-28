@@ -11,6 +11,7 @@ import PrimaryText from '../../components/atoms/PrimaryText';
 import Icon from '../../components/atoms/Icons';
 import useFormatAmount from '../../hooks/useFormatAmount';
 import {gs} from '../../styles/globalStyles';
+import {hexToRgba} from '../../utils/colorUtils';
 
 const CategoryTransactionScreen = () => {
   const route = useRoute<CategoryTransactionRouteProp>();
@@ -31,7 +32,7 @@ const CategoryTransactionScreen = () => {
     () => (
       <View style={[gs.rounded12, gs.py12, gs.px14, gs.mb10, {backgroundColor: colors.secondaryAccent}]}>
         <View style={[gs.rowCenter, gs.gap10]}>
-          <View style={[gs.size36, gs.roundedFull, gs.center, {backgroundColor: categoryColor + '20'}]}>
+          <View style={[gs.size36, gs.roundedFull, gs.center, {backgroundColor: hexToRgba(categoryColor, 0.125)}]}>
             <Icon name={categoryIcon || 'shapes'} size={18} color={categoryColor} />
           </View>
           <View style={gs.flex1}>
@@ -40,7 +41,7 @@ const CategoryTransactionScreen = () => {
               {formatAmount(totalAmount)}
             </PrimaryText>
           </View>
-          <View style={[gs.px10, gs.py3, gs.rounded8, {backgroundColor: categoryColor + '20'}]}>
+          <View style={[gs.px10, gs.py3, gs.rounded8, {backgroundColor: hexToRgba(categoryColor, 0.125)}]}>
             <PrimaryText size={12} weight="semibold" variant="number" color={categoryColor}>
               {t('transaction.txnCount', {count: transactions.length})}
             </PrimaryText>
@@ -48,7 +49,7 @@ const CategoryTransactionScreen = () => {
         </View>
       </View>
     ),
-    [colors, formatAmount, totalAmount, categoryColor, categoryIcon, monthLabel, transactions.length],
+    [colors, formatAmount, totalAmount, categoryColor, categoryIcon, monthLabel, transactions.length, t],
   );
 
   const listEmpty = useMemo(
@@ -62,7 +63,7 @@ const CategoryTransactionScreen = () => {
         </PrimaryText>
       </View>
     ),
-    [colors, categoryName],
+    [colors, categoryName, t],
   );
 
   return (

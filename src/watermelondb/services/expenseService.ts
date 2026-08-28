@@ -233,6 +233,20 @@ export const getAllExpensesByCategoryAndMonth = async (
  * Gets distinct years that have expense data for a user.
  * Uses unsafeFetchRaw to avoid hydrating full model objects.
  */
+/**
+ * Distinct years that have expenses.
+ *
+ * This scans the user's expense rows, but via `unsafeFetchRaw` — no models are
+ * hydrated, so it reads plain objects straight from SQLite. On a personal
+ * expense database (hundreds to a few thousand rows) that is cheap, and the
+ * result is cached per user in `utils/availableYearsCache`, so it runs once
+ * per session rather than per render.
+ *
+ * A `SELECT DISTINCT substr(date,1,4)` via `Q.unsafeSqlQuery` would read fewer
+ * rows, but it is SQLite-adapter-specific and only pays off at a dataset size
+ * this app does not reach. Revisit only if profiling on a real database shows
+ * this in a hot path.
+ */
 export const getAvailableExpenseYears = async (
   userId: string,
 ): Promise<number[]> => {
@@ -255,16 +269,3 @@ export const getAvailableExpenseYears = async (
   return Array.from(years).sort((a, b) => a - b);
 };
 
-/**
- * Gets an expense by ID
- */
-export const getExpenseById = async (
-  expenseId: string,
-): Promise<ExpenseData | null> => {
-  try {
-    const expense = await database.get<Expense>('expenses').find(expenseId);
-    return mapExpenseToData(expense);
-  } catch {
-    return null;
-  }
-};

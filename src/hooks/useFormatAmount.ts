@@ -22,6 +22,8 @@ const useFormatAmount = () => {
     if (currencyCode) {
       return formatAmountWithSymbol(amount, currencyCode);
     }
+    // Legacy rows have a symbol but no code — placement is undecidable
+    // without a code, so keep the historical prefix.
     return `${currencySymbol}${formatCurrency(amount)}`;
   }, [currencyCode, currencySymbol]);
 

@@ -1,16 +1,34 @@
 import React, {createContext, useContext, useState, useCallback, useRef, useMemo, type ReactNode} from 'react';
-import {Modal, TouchableOpacity, View} from 'react-native';
+import {Modal, Pressable, TouchableOpacity, View} from 'react-native';
 import {useTranslation} from 'react-i18next';
 import PrimaryText from '../components/atoms/PrimaryText';
 import Icon from '../components/atoms/Icons';
 import {useThemeColors} from './ThemeContext';
 import {gs} from '../styles/globalStyles';
+import {hexToRgba} from '../utils/colorUtils';
 
 type DialogType = 'success' | 'warning' | 'error' | 'info';
+
+/**
+ * One line of a structured list inside a dialog.
+ *
+ * Long explanatory dialogs used to pass their bullets inside `message` as
+ * "\n• ..." text. That renders centred (the message is centre-aligned under
+ * the icon), so every line wrapped to a different width with no left edge to
+ * read down and no space between points — unreadable for anything longer than
+ * a sentence. Bullets are structured instead: left-aligned, evenly spaced, and
+ * each with an icon that carries meaning on its own.
+ */
+export interface DialogBullet {
+  /** Icon registry name, e.g. 'share-2'. */
+  icon: string;
+  text: string;
+}
 
 interface DialogConfig {
   type?: DialogType;
   message: string;
+  bullets?: DialogBullet[];
   okLabel?: string;
   cancelLabel?: string;
 }
@@ -111,7 +129,19 @@ export const DialogProvider: React.FC<DialogProviderProps> = ({children}) => {
 
   const contextValue = useMemo(() => ({showDialog, showAlert}), [showDialog, showAlert]);
 
+  // Backdrop tap / Android back = cancel for confirmations. For alerts (no
+  // cancel button) it simply closes, which is what `resolve()` already does.
+  const handleDismissRequest = useCallback(() => {
+    dismiss(false);
+  }, [dismiss]);
+
   const dialogType = display?.type ?? 'info';
+
+  // Themed scrim: a fixed black wash sat oddly over the dark theme.
+  const overlayColor = useMemo(
+    () => hexToRgba(colors.sameBlack ?? '#000000', 0.45),
+    [colors.sameBlack],
+  );
 
   const accentColor = useMemo(() => {
     switch (dialogType) {
@@ -129,9 +159,20 @@ export const DialogProvider: React.FC<DialogProviderProps> = ({children}) => {
   return (
     <DialogContext.Provider value={contextValue}>
       {children}
-      <Modal visible={visible} animationType="fade" transparent statusBarTranslucent>
-        <View style={[gs.flex1, gs.center, {backgroundColor: 'rgba(0, 0, 0, 0.3)'}]}>
-          <View style={[gs.wFull, gs.itemsCenter]}>
+      <Modal
+        visible={visible}
+        animationType="fade"
+        transparent
+        statusBarTranslucent
+        // Android hardware back previously did nothing while a dialog was up
+        // (and RN warns without this). Treat it as a cancel.
+        onRequestClose={handleDismissRequest}>
+        <Pressable
+          style={[gs.flex1, gs.center, {backgroundColor: overlayColor}]}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.close')}
+          onPress={handleDismissRequest}>
+          <Pressable style={[gs.wFull, gs.itemsCenter]} onPress={event => event.stopPropagation()}>
             <View style={[gs.roundedTop24, {backgroundColor: accentColor, height: 10, width: '80%'}]} />
             <View
               style={[
@@ -145,12 +186,35 @@ export const DialogProvider: React.FC<DialogProviderProps> = ({children}) => {
                   borderBottomRightRadius: 8,
                 },
               ]}>
-              <View style={[gs.size40, gs.roundedFull, gs.center, gs.mb10, {backgroundColor: accentColor + '20'}]}>
+              <View style={[gs.size40, gs.roundedFull, gs.center, gs.mb10, {backgroundColor: hexToRgba(accentColor, 0.125)}]}>
                 <Icon name={TYPE_ICON[dialogType]} size={22} color={accentColor} />
               </View>
               <PrimaryText size={13} color={colors.primaryText} style={gs.textCenter}>
                 {display?.message}
               </PrimaryText>
+              {display?.bullets?.length ? (
+                <View style={[gs.wFull, gs.mt15, gs.gap12]}>
+                  {display.bullets.map(bullet => (
+                    <View key={bullet.text} style={[gs.row, gs.itemsStart, gs.gap10]}>
+                      <View
+                        style={[
+                          gs.size24,
+                          gs.rounded8,
+                          gs.center,
+                          {backgroundColor: hexToRgba(accentColor, 0.125)},
+                        ]}>
+                        <Icon name={bullet.icon} size={13} color={accentColor} />
+                      </View>
+                      <PrimaryText
+                        size={12}
+                        color={colors.secondaryText}
+                        style={[gs.flex1, gs.textLeft]}>
+                        {bullet.text}
+                      </PrimaryText>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
               <View
                 style={[
                   gs.rowCenter,
@@ -184,8 +248,8 @@ export const DialogProvider: React.FC<DialogProviderProps> = ({children}) => {
                 </TouchableOpacity>
               </View>
             </View>
-          </View>
-        </View>
+          </Pressable>
+        </Pressable>
       </Modal>
     </DialogContext.Provider>
   );
