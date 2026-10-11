@@ -16,6 +16,7 @@ import {fetchCategories, selectActiveCategories} from '../../redux/slice/categor
 import {fetchIncomesByMonth, invalidateIncomeCache} from '../../redux/slice/incomeDataSlice';
 import {createIncome} from '../../watermelondb/services';
 import {formatDate, getISODateTime} from '../../utils/dateUtils';
+import {ensureYearInCache} from '../../utils/availableYearsCache';
 import {incomeAmountSchema, incomeSchema} from '../../utils/validationSchema';
 import {useAppDispatch, useAppSelector} from '../../redux/hooks';
 import {gs} from '../../styles/globalStyles';
@@ -47,6 +48,7 @@ const IncomeEntry = () => {
   const submit = useCallback(async () => {
     if (!valid || selectedCategories.length !== 1) return;
     await createIncome(userId, title.trim(), Number(amount), selectedCategories[0].id, date);
+    ensureYearInCache(userId, Number(yearMonth.slice(0, 4)));
     dispatch(invalidateIncomeCache());
     await dispatch(fetchIncomesByMonth(yearMonth));
     goBack();
