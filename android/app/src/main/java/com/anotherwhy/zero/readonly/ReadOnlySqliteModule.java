@@ -314,7 +314,9 @@ public final class ReadOnlySqliteModule extends ReactContextBaseJavaModule {
             marker.put("attemptId", attemptId);
             marker.put("generation", generation);
             marker.put("sourceFingerprint", sourceFingerprint);
-            marker.put("status", "activated");
+            // Fresh ownership is not activated until the JS coordinator has
+            // initialized and read-verified the exact v4 target.
+            marker.put("status", "writing");
             marker.put("targetFingerprint", targetFingerprint);
             if (!markerClaim.createNewFile()) {
                 promise.reject("TARGET_NOT_FRESH", "Target marker already exists");
@@ -356,6 +358,7 @@ public final class ReadOnlySqliteModule extends ReactContextBaseJavaModule {
         boolean transactionStarted = false;
         try {
             JSONObject snapshot = new JSONObject(snapshotJson);
+            assertWritingTargetMarker(attemptId, generation, sourceFingerprint);
             Set<String> inspectedTables = new HashSet<>(Arrays.asList(INSPECTED_TABLES));
             Iterator<String> snapshotTables = snapshot.keys();
             while (snapshotTables.hasNext()) {
@@ -429,14 +432,7 @@ public final class ReadOnlySqliteModule extends ReactContextBaseJavaModule {
     ) throws IOException, JSONException {
         File markerFile = targetMarkerFile(resolveDatabaseFile(TARGET_DATABASE_NAME));
         WritableMap existing = readMarker(markerFile);
-        if (existing == null || !"writing".equals(existing.getString("status"))) {
-            throw new IOException("Target marker is not in writing state");
-        }
-        if (!attemptId.equals(existing.getString("attemptId"))
-                || generation != existing.getInt("generation")
-                || !sourceFingerprint.equals(existing.getString("sourceFingerprint"))) {
-            throw new IOException("Target marker identity does not match native writer request");
-        }
+        assertWritingTargetMarker(existing, attemptId, generation, sourceFingerprint);
         JSONObject marker = new JSONObject();
         marker.put("attemptId", existing.getString("attemptId"));
         marker.put("generation", existing.getInt("generation"));
@@ -447,6 +443,28 @@ public final class ReadOnlySqliteModule extends ReactContextBaseJavaModule {
         marker.put("status", "verified");
         marker.put("targetFingerprint", targetFingerprint);
         writeMarker(markerFile, marker);
+    }
+
+    private void assertWritingTargetMarker(String attemptId, int generation, String sourceFingerprint)
+            throws IOException {
+        File markerFile = targetMarkerFile(resolveDatabaseFile(TARGET_DATABASE_NAME));
+        assertWritingTargetMarker(readMarker(markerFile), attemptId, generation, sourceFingerprint);
+    }
+
+    private void assertWritingTargetMarker(
+            WritableMap marker,
+            String attemptId,
+            int generation,
+            String sourceFingerprint
+    ) throws IOException {
+        if (marker == null || !"writing".equals(marker.getString("status"))) {
+            throw new IOException("Target marker is not in writing state");
+        }
+        if (!attemptId.equals(marker.getString("attemptId"))
+                || generation != marker.getInt("generation")
+                || !sourceFingerprint.equals(marker.getString("sourceFingerprint"))) {
+            throw new IOException("Target marker identity does not match native writer request");
+        }
     }
 
     private void initializeTargetSchema(SQLiteDatabase database) {

@@ -42,7 +42,9 @@ const checks = [
   ],
   [
     readonly.includes('Unknown target table:') &&
+      readonly.includes('Fresh ownership is not activated until the JS coordinator') &&
       readonly.includes('Target marker identity does not match native writer request') &&
+      readonly.includes('assertWritingTargetMarker(attemptId, generation, sourceFingerprint);') &&
       nativeCommitIndex >= 0 &&
       nativeMarkerMethodIndex > nativeCommitIndex &&
       readonly.includes('marker.put("status", "verified")'),

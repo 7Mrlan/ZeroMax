@@ -1,4 +1,4 @@
-import {getActiveDatabaseName, type ActiveDatabaseName} from './activeDatabase';
+import {getActiveDatabaseName, readFreshTargetOwnership, type ActiveDatabaseName} from './activeDatabase';
 import {
   decideDatabasePreflight,
   decideDatabasePreflightWithTarget,
@@ -8,19 +8,63 @@ import {
 import {probeDatabaseReadOnly, readDatabaseSnapshotReadOnly} from './nativePreflight';
 import type {CopyDataset} from './copyVerification';
 import {readMigrationCheckpoint} from './migrationCheckpoint';
-import {inspectTargetRecovery} from './targetArtifactBridge';
-import {verifyFreshTargetOwnership} from './targetArtifactBridge';
+import {
+  inspectTargetRecovery,
+  normalizeTargetArtifact,
+  verifyFreshTargetOwnership,
+  type TargetArtifactBridge,
+} from './targetArtifactBridge';
 import {decideTargetRecovery, type TargetObservation} from './targetArtifact';
-import {readFreshTargetOwnership} from './activeDatabase';
+import {COPY_TABLES} from './copyVerification';
+import {detectLegacyDatabaseSource} from './legacySchema';
+import {NativeModules} from 'react-native';
 
 export type ReadOnlyProbe = (databaseName: ActiveDatabaseName) => Promise<DatabaseProbeResult>;
 export type ReadOnlySnapshot = (databaseName: ActiveDatabaseName) => Promise<CopyDataset>;
 
 export type TargetRecoveryInspection = () => Promise<TargetObservation>;
+export type FreshTargetInspection = () => Promise<unknown>;
 
 const inspectOwnedTarget = async (): Promise<TargetObservation> => {
   const checkpoint = readMigrationCheckpoint();
   return inspectTargetRecovery(checkpoint.kind === 'valid' ? checkpoint.checkpoint : null);
+};
+
+const inspectFreshTargetArtifact = async (): Promise<unknown> => {
+  const bridge = NativeModules.ZeroReadOnlySqlite as TargetArtifactBridge;
+  if (!bridge || typeof bridge.inspectTargetArtifact !== 'function') {
+    throw new Error('Fresh target artifact bridge is unavailable');
+  }
+  return bridge.inspectTargetArtifact();
+};
+
+const isOwnedFreshTarget = async (
+  targetProbe: DatabaseProbeResult,
+  readSnapshot: ReadOnlySnapshot,
+  inspectFreshTarget: FreshTargetInspection,
+): Promise<boolean> => {
+  const ownership = readFreshTargetOwnership();
+  if (!ownership || targetProbe.kind !== 'metadata' || targetProbe.integrity !== 'ok') return false;
+  if (detectLegacyDatabaseSource(targetProbe.snapshot) !== 'target-v4') return false;
+
+  try {
+    const artifact = normalizeTargetArtifact(await inspectFreshTarget());
+    if (
+      artifact.status !== 'present' ||
+      !artifact.marker ||
+      artifact.marker.attemptId !== ownership.attemptId ||
+      artifact.marker.generation !== ownership.generation ||
+      artifact.marker.sourceFingerprint !== ownership.sourceFingerprint ||
+      artifact.marker.targetFingerprint !== ownership.targetFingerprint ||
+      !['writing', 'verified', 'activated'].includes(artifact.marker.status)
+    ) {
+      return false;
+    }
+    const snapshot = await readSnapshot('watermelon_v4');
+    return COPY_TABLES.every(table => (snapshot[table] ?? []).length === 0);
+  } catch {
+    return false;
+  }
 };
 
 /**
@@ -31,8 +75,9 @@ const inspectOwnedTarget = async (): Promise<TargetObservation> => {
 export const runDatabasePreflight = async (
   activeDatabase: ActiveDatabaseName = getActiveDatabaseName(),
   probe: ReadOnlyProbe = probeDatabaseReadOnly,
-  _readSnapshot: ReadOnlySnapshot = databaseName => readDatabaseSnapshotReadOnly(databaseName),
+  readSnapshot: ReadOnlySnapshot = databaseName => readDatabaseSnapshotReadOnly(databaseName),
   inspectTarget: TargetRecoveryInspection = inspectOwnedTarget,
+  inspectFreshTarget: FreshTargetInspection = inspectFreshTargetArtifact,
 ): Promise<DatabasePreflightDecision> => {
   const result = await probe(activeDatabase);
   if (activeDatabase === 'watermelon_v4') {
@@ -64,6 +109,9 @@ export const runDatabasePreflight = async (
   }
   if (activeDatabase === 'watermelon' && result.kind === 'missing') {
     const target = await probe('watermelon_v4');
+    if (await isOwnedFreshTarget(target, readSnapshot, inspectFreshTarget)) {
+      return {kind: 'fresh-target', databaseName: 'watermelon_v4'};
+    }
     return decideDatabasePreflightWithTarget(activeDatabase, result, target);
   }
   return decideDatabasePreflight(activeDatabase, result);

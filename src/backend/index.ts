@@ -8,6 +8,7 @@ import {
   clearFreshTargetOwnership,
   getActiveDatabaseName,
   persistFreshTargetOwnership,
+  readFreshTargetOwnership,
   setActiveDatabaseName,
 } from './migrations/activeDatabase';
 import {runDatabasePreflight} from './migrations/runPreflight';
@@ -18,7 +19,25 @@ import {
   type AndroidLegacyMigrationBridge,
   type AndroidLegacyMigrationResult,
 } from './migrations/androidLegacyMigration';
-import type {TargetArtifactBridge} from './migrations/targetArtifactBridge';
+import {probeDatabaseReadOnly, readDatabaseSnapshotReadOnly} from './migrations/nativePreflight';
+import {detectLegacyDatabaseSource} from './migrations/legacySchema';
+import {COPY_TABLES} from './migrations/copyVerification';
+import {normalizeTargetArtifact} from './migrations/targetArtifactBridge';
+
+const verifyFreshTargetReady = async (bridge: AndroidLegacyMigrationBridge): Promise<void> => {
+  const probe = await probeDatabaseReadOnly('watermelon_v4', bridge);
+  if (
+    probe.kind !== 'metadata' ||
+    probe.integrity !== 'ok' ||
+    detectLegacyDatabaseSource(probe.snapshot) !== 'target-v4'
+  ) {
+    throw new Error('Fresh target failed exact v4 schema or integrity verification');
+  }
+  const snapshot = await readDatabaseSnapshotReadOnly('watermelon_v4', bridge);
+  if (!COPY_TABLES.every(table => (snapshot[table] ?? []).length === 0)) {
+    throw new Error('Fresh target must be empty before onboarding ownership activation');
+  }
+};
 
 /**
  * Initialize the backend layer.
@@ -40,21 +59,52 @@ const performInitialization = async (): Promise<BackendInitResult> => {
     const bootResult = await runBootGate({
       preflight: () => runDatabasePreflight(getActiveDatabaseName()),
       createFreshTarget: async () => {
-        const bridge = NativeModules.ZeroReadOnlySqlite as TargetArtifactBridge;
-        const ownership = beginFreshTargetOwnership();
+        const bridge = NativeModules.ZeroReadOnlySqlite as AndroidLegacyMigrationBridge;
+        const existingOwnership = readFreshTargetOwnership();
+        const existingArtifact = normalizeTargetArtifact(await bridge.inspectTargetArtifact());
+        const ownership = existingOwnership ?? beginFreshTargetOwnership();
         if (typeof bridge.claimFreshTargetArtifact !== 'function') {
           throw new Error('Fresh target claim bridge is unavailable');
         }
-        await bridge.claimFreshTargetArtifact(
-          ownership.attemptId,
-          ownership.generation,
-          ownership.sourceFingerprint,
-          ownership.targetFingerprint,
-        );
+        const ownsExistingTarget =
+          existingOwnership !== null &&
+          existingArtifact.status === 'present' &&
+          existingArtifact.marker !== null &&
+          existingArtifact.marker.attemptId === ownership.attemptId &&
+          existingArtifact.marker.generation === ownership.generation &&
+          existingArtifact.marker.sourceFingerprint === ownership.sourceFingerprint &&
+          existingArtifact.marker.targetFingerprint === ownership.targetFingerprint &&
+          ['writing', 'verified', 'activated'].includes(existingArtifact.marker.status);
+        if (!ownsExistingTarget) {
+          await bridge.claimFreshTargetArtifact(
+            ownership.attemptId,
+            ownership.generation,
+            ownership.sourceFingerprint,
+            ownership.targetFingerprint,
+          );
+        }
         const target = createTargetDatabase();
         try {
           await target.initializingPromise;
+          await verifyFreshTargetReady(bridge);
+          const artifact = normalizeTargetArtifact(await bridge.inspectTargetArtifact());
+          const markerStatus = artifact.status === 'present' ? artifact.marker?.status : undefined;
+          if (typeof bridge.updateTargetArtifactMarker !== 'function') {
+            throw new Error('Fresh target marker update bridge is unavailable');
+          }
+          // Persist ownership before advancing the marker. If the process
+          // exits between these durable writes, the next preflight can verify
+          // the exact empty target and finish the handoff instead of blocking
+          // on an activated marker with no JS ownership record.
           persistFreshTargetOwnership(ownership);
+          if (markerStatus === 'writing') {
+            await bridge.updateTargetArtifactMarker(ownership.attemptId, 'verified', ownership.targetFingerprint);
+            await bridge.updateTargetArtifactMarker(ownership.attemptId, 'activated', ownership.targetFingerprint);
+          } else if (markerStatus === 'verified') {
+            await bridge.updateTargetArtifactMarker(ownership.attemptId, 'activated', ownership.targetFingerprint);
+          } else if (markerStatus !== 'activated') {
+            throw new Error('Fresh target marker is not owned by this installation');
+          }
           setActiveDatabaseName('watermelon_v4');
           return target.database;
         } catch (error) {
@@ -62,6 +112,17 @@ const performInitialization = async (): Promise<BackendInitResult> => {
             target.close?.();
           } catch {
             // Preserve the initialization error; the marker remains fail-closed.
+          }
+          if (!ownsExistingTarget) {
+            try {
+              await bridge.discardTargetArtifact?.(
+                ownership.attemptId,
+                ownership.generation,
+                ownership.sourceFingerprint,
+              );
+            } catch {
+              // Preserve the initialization error; recovery remains fail-closed.
+            }
           }
           throw error;
         }
