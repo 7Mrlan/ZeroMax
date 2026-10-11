@@ -48,11 +48,16 @@ The flows still need to run on an Android device or emulator.
 
 ## 3. Privacy verification (Lossless Protocol claims)
 
-- [ ] `aapt dump permissions <release apk>` → **no `android.permission.INTERNET`**;
-      storage permissions capped at `maxSdkVersion="32"`
-- [ ] Play Console pre-launch report shows no network access
+- [ ] `aapt dump permissions <release apk>` includes `android.permission.INTERNET`
+      for the explicitly opt-in AI path; storage permissions remain capped at
+      `maxSdkVersion="32"`
+- [ ] With AI disabled (the default), a fresh install makes no network request;
+      with AI enabled, only the configured HTTPS/allow-listed endpoint is used
+- [ ] Play Console pre-launch report and device capture match the privacy copy
+      for optional AI network access
 - [ ] Settings → "What leaves this device" renders and reads correctly
-- [ ] `grep -rn "fetch(\|XMLHttpRequest\|WebSocket" src/` returns nothing
+- [ ] `src/backend/ai/network.ts` remains the only fetch boundary and its
+      HTTPS, host allowlist, timeout, cancellation and response-size tests pass
 
 ## 4. Critical flows (both platforms)
 
