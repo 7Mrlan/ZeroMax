@@ -112,16 +112,23 @@ export const inspectTargetRecovery = async (
   const markerStatusMatches =
     expectedStatus === 'verified'
       ? nativeArtifact.marker.status === 'verified' || nativeArtifact.marker.status === 'activated'
-      : nativeArtifact.marker.status === expectedStatus;
+      : expectedStatus === 'fresh'
+        ? nativeArtifact.marker.status === 'writing'
+        : nativeArtifact.marker.status === expectedStatus;
   if (!markerStatusMatches) {
     return {kind: 'unknown', reason: 'Target artifact marker status does not match the checkpoint'};
   }
 
-  // A writing target has no content proof that ties the file to this attempt.
-  // Never resume or discard it from size/mtime alone; a native marker and
-  // closed adapter lifecycle must be added before this branch can proceed.
+  // A writing target is never resumed. Once the native marker identity has
+  // matched the durable checkpoint, the caller may discard it through the
+  // identity-guarded native API and rebuild from the immutable source backup.
+  // Size/mtime alone never establishes ownership.
   if (expectedStatus !== 'verified') {
-    return {kind: 'unknown', reason: 'Writing target ownership marker is unavailable'};
+    return {
+      kind: 'artifact',
+      attemptId: checkpoint.target.attemptId,
+      status: 'writing',
+    };
   }
 
   if (typeof bridge.probe !== 'function') {

@@ -54,4 +54,34 @@ describe('createAndroidCopyDriver', () => {
     );
     expect(driver.getPreparedTargetDatabase?.()).toBeNull();
   });
+
+  it('closes the isolated JSI adapter before a retry can discard its files', async () => {
+    const unsafeClose = jest.fn();
+    const database = {
+      adapter: {underlyingAdapter: {_dispatcher: {_db: {unsafeClose}}}},
+    };
+    const driver = createAndroidCopyDriver({
+      bridge: {probe: jest.fn(), backupDatabase: jest.fn(), readBackupSnapshot: async () => snapshot},
+      backupId: 'migration-1',
+      createTarget: jest.fn(() => ({database: database as never, initializingPromise: Promise.resolve()})),
+    });
+
+    await driver.prepareTarget();
+    await driver.closePreparedTarget?.();
+
+    expect(unsafeClose).toHaveBeenCalledTimes(1);
+    expect(driver.getPreparedTargetDatabase?.()).toBeNull();
+  });
+
+  it('fails closed when the prepared adapter has no close lifecycle', async () => {
+    const driver = createAndroidCopyDriver({
+      bridge: {probe: jest.fn(), backupDatabase: jest.fn(), readBackupSnapshot: async () => snapshot},
+      backupId: 'migration-1',
+      createTarget: jest.fn(() => ({database: {} as never, initializingPromise: Promise.resolve()})),
+    });
+
+    await driver.prepareTarget();
+    await expect(driver.closePreparedTarget?.()).rejects.toThrow('close lifecycle is unavailable');
+    expect(driver.getPreparedTargetDatabase?.()).not.toBeNull();
+  });
 });

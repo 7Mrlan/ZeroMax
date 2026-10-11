@@ -77,7 +77,7 @@ describe('target artifact bridge', () => {
     ).resolves.toEqual({kind: 'unknown', reason: 'Target file exists without a durable migration checkpoint'});
   });
 
-  it('does not infer ownership for a partial writing target from the checkpoint alone', async () => {
+  it('returns a discardable writing artifact only after marker identity matches', async () => {
     await expect(
       inspectTargetRecovery(checkpoint(), {
         inspectTargetArtifact: async () => ({
@@ -93,7 +93,7 @@ describe('target artifact bridge', () => {
           },
         }),
       }),
-    ).resolves.toEqual({kind: 'unknown', reason: 'Writing target ownership marker is unavailable'});
+    ).resolves.toEqual({kind: 'artifact', attemptId: '1:source-a', status: 'writing'});
   });
 
   it('blocks a marker with a matching attempt id but a different generation or source', async () => {

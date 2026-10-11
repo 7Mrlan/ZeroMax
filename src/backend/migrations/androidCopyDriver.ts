@@ -33,6 +33,34 @@ export const createAndroidCopyDriver = ({
   let targetDatabase: Database | null = null;
   let backup: {backupId: string} | null = null;
 
+  const closePreparedTarget = async (): Promise<void> => {
+    if (!targetDatabase) {
+      return;
+    }
+    if (closeTarget) {
+      await closeTarget();
+      targetDatabase = null;
+      return;
+    }
+
+    // WatermelonDB's JSI adapter exposes the native close operation only as
+    // an internal unsafeClose method. Migration recovery must close this
+    // isolated adapter before the marker-guarded native file deletion; if
+    // the runtime cannot provide it, fail closed instead of deleting a file
+    // that may still be held by SQLite.
+    const adapter = (
+      targetDatabase as unknown as {
+        adapter?: {underlyingAdapter?: {_dispatcher?: {_db?: {unsafeClose?: () => void}}}};
+      }
+    ).adapter;
+    const unsafeClose = adapter?.underlyingAdapter?._dispatcher?._db?.unsafeClose;
+    if (typeof unsafeClose !== 'function') {
+      throw new Error('Prepared target adapter close lifecycle is unavailable');
+    }
+    unsafeClose();
+    targetDatabase = null;
+  };
+
   return {
     readSourceSnapshot: async () => {
       if (!backup) {
@@ -54,15 +82,19 @@ export const createAndroidCopyDriver = ({
       await target.initializingPromise;
       targetDatabase = target.database;
     },
+    closePreparedTarget,
     runTargetTransaction: async (expectedTarget, verify) => {
       if (!targetDatabase) {
         throw new Error('Android copy target has not been prepared');
       }
       const discardTarget = async (): Promise<void> => {
-        if (!closeTarget || !discardTargetArtifact) {
+        if (!discardTargetArtifact) {
           throw new Error('Target close and marker-aware discard lifecycle is unavailable');
         }
-        await closeTarget();
+        await closePreparedTarget();
+        if (targetDatabase) {
+          throw new Error('Prepared target adapter is still open');
+        }
         await discardTargetArtifact();
       };
       const runTransaction = createWatermelonTargetTransaction(
