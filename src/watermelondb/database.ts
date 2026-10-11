@@ -7,6 +7,7 @@ import {selectDatabase} from './databaseSelection';
 let _database: Database | null = null;
 let _databaseError: Error | null = null;
 let _databaseReadyPromise: Promise<void> | null = null;
+let _databaseOwnership: 'none' | 'opened' | 'adopted' = 'none';
 
 /**
  * Returns the database setup error if initialization failed.
@@ -48,6 +49,7 @@ const getDatabase = (): Database => {
         adapter,
         modelClasses: selection.modelClasses,
       });
+      _databaseOwnership = 'opened';
     } catch (error) {
       _databaseError = error instanceof Error ? error : new Error(String(error));
       throw _databaseError;
@@ -79,10 +81,18 @@ export const waitForDatabase = async (): Promise<void> => {
  * Drops only the JS singleton after setup has settled. The SQLite file stays
  * intact, so a boot retry never deletes user data or bypasses migrations.
  */
-export const resetDatabaseInstance = (): void => {
+export const resetDatabaseInstance = (options: {force?: boolean} = {}): void => {
+  // An adopted target may still own a live JSI SQLite connection after a
+  // marker/pointer failure. A normal boot retry must reuse it instead of
+  // constructing a second adapter against the same file; tests or an
+  // explicit process-reset path can pass force=true.
+  if (_databaseOwnership === 'adopted' && !options.force) {
+    return;
+  }
   _database = null;
   _databaseError = null;
   _databaseReadyPromise = null;
+  _databaseOwnership = 'none';
 };
 
 /**
@@ -96,6 +106,7 @@ export const adoptDatabaseInstance = (verifiedDatabase: Database): void => {
   _databaseError = null;
   _database = verifiedDatabase;
   _databaseReadyPromise = Promise.resolve();
+  _databaseOwnership = 'adopted';
 };
 
 export {getDatabase};
