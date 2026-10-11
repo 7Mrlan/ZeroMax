@@ -30,6 +30,13 @@ const sourceText = sourceDirectories
   })
   .join('\n');
 
+const currencies = JSON.parse(fs.readFileSync(path.join(root, 'assets/jsons/currencies.json'), 'utf8'));
+const defaultCategories = JSON.parse(fs.readFileSync(path.join(root, 'assets/jsons/defaultCategories.json'), 'utf8'));
+const tabRoutes = [...sourceText.matchAll(/^\s+([A-Za-z0-9]+Screen): undefined;$/gm)].map(match => match[1]);
+const currencyCodes = new Set(currencies.map(currency => currency.code));
+const categoryIds = new Set(defaultCategories.map(category => category.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')));
+const tabRouteIds = new Set(tabRoutes);
+
 const missing = [];
 for (const file of flowFiles) {
   const content = fs.readFileSync(path.join(flowDirectory, file), 'utf8');
@@ -38,7 +45,14 @@ for (const file of flowFiles) {
   }
   for (const id of content.matchAll(/^\s+id:\s*([^\s#]+)\s*$/gm)) {
     const value = id[1];
-    if (!dynamicIdPrefixes.some(prefix => value.startsWith(prefix)) && !sourceText.includes(`"${value}"`)) {
+    const dynamicPrefix = dynamicIdPrefixes.find(prefix => value.startsWith(prefix));
+    if (dynamicPrefix === 'currency-option-' && !currencyCodes.has(value.slice(dynamicPrefix.length))) {
+      missing.push(`${file}:${value} (currency fixture)`);
+    } else if (dynamicPrefix === 'onboarding-category-' && !categoryIds.has(value.slice(dynamicPrefix.length))) {
+      missing.push(`${file}:${value} (default category fixture)`);
+    } else if (dynamicPrefix === 'zero-tab-' && !tabRouteIds.has(value.slice(dynamicPrefix.length))) {
+      missing.push(`${file}:${value} (TabParamList route)`);
+    } else if (!dynamicPrefix && !sourceText.includes(`"${value}"`)) {
       missing.push(`${file}:${value}`);
     }
   }
