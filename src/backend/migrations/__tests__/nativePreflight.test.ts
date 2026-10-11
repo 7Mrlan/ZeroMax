@@ -98,8 +98,16 @@ describe('readDatabaseSnapshotReadOnly', () => {
     await expect(readDatabaseSnapshotReadOnly('watermelon', bridge)).resolves.toEqual(tables);
   });
 
-  it('fails closed for a missing table or an invalid row id', () => {
-    expect(() => normalizeNativeSnapshot({users: []})).toThrow('invalid rows');
+  it('accepts a legacy snapshot that omits tables absent from its schema', () => {
+    expect(normalizeNativeSnapshot({users: [], categories: [], expenses: []})).toEqual({
+      users: [],
+      categories: [],
+      expenses: [],
+    });
+  });
+
+  it('fails closed for an unknown table or an invalid row id', () => {
+    expect(() => normalizeNativeSnapshot({users: [], unexpected: []})).toThrow('invalid rows');
     expect(() =>
       normalizeNativeSnapshot({
         users: [{id: 1}],

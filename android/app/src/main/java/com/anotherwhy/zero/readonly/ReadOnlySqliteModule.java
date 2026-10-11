@@ -111,7 +111,12 @@ public final class ReadOnlySqliteModule extends ReactContextBaseJavaModule {
             );
             WritableMap snapshot = Arguments.createMap();
             for (String table : INSPECTED_TABLES) {
-                snapshot.putArray(table, readRows(database, table));
+                // Legacy Zero and Zerox files intentionally do not have the
+                // same table set. Omit an absent table so JS can distinguish
+                // "not present in this legacy shape" from an empty table.
+                if (tableExists(database, table)) {
+                    snapshot.putArray(table, readRows(database, table));
+                }
             }
             promise.resolve(snapshot);
         } catch (SQLiteException error) {
@@ -182,6 +187,15 @@ public final class ReadOnlySqliteModule extends ReactContextBaseJavaModule {
             }
         }
         return rows;
+    }
+
+    private boolean tableExists(SQLiteDatabase database, String table) {
+        try (Cursor cursor = database.rawQuery(
+                "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ? LIMIT 1",
+                new String[]{table}
+        )) {
+            return cursor.moveToFirst();
+        }
     }
 
     private void putCursorValue(WritableMap row, String column, Cursor cursor, int index, String table) {

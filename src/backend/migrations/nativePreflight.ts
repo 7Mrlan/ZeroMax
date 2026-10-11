@@ -25,9 +25,14 @@ const NativeProbeResultSchema = z.discriminatedUnion('status', [
   }),
 ]);
 
-const NativeRowsSchema = z.object({
-  ...Object.fromEntries(COPY_TABLES.map(table => [table, z.array(z.object({id: z.string()}).passthrough())])),
-});
+// A legacy source may legitimately omit incomes or budgets. The target
+// read-back verifier remains strict about all COPY_TABLES being present; this
+// boundary only validates that every returned table is allow-listed and every
+// returned row has a stable string id.
+const NativeRowsSchema = z
+  .object(Object.fromEntries(COPY_TABLES.map(table => [table, z.array(z.object({id: z.string()}).passthrough())])))
+  .partial()
+  .strict();
 
 const asError = (error: unknown): Error => (error instanceof Error ? error : new Error(String(error)));
 
