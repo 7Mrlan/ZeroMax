@@ -1,4 +1,4 @@
-import {createAndroidSourceBackup, normalizeBackupDescriptor} from '../backupBridge';
+import {createAndroidSourceBackup, normalizeBackupDescriptor, readAndroidBackupSnapshot} from '../backupBridge';
 
 const descriptor = {
   status: 'backed-up' as const,
@@ -16,11 +16,23 @@ describe('backup bridge', () => {
 
   it('uses the fixed legacy database name', async () => {
     const backupDatabase = jest.fn(async () => descriptor);
-    await expect(createAndroidSourceBackup('migration-1', {backupDatabase})).resolves.toEqual(descriptor);
+    await expect(
+      createAndroidSourceBackup('migration-1', {backupDatabase, readBackupSnapshot: async () => ({})}),
+    ).resolves.toEqual(descriptor);
     expect(backupDatabase).toHaveBeenCalledWith('watermelon', 'migration-1');
   });
 
   it('fails closed when the native backup bridge is unavailable', async () => {
-    await expect(createAndroidSourceBackup('migration-1', {} as never)).rejects.toThrow('unavailable');
+    await expect(
+      createAndroidSourceBackup('migration-1', {readBackupSnapshot: async () => ({})} as never),
+    ).rejects.toThrow('unavailable');
+  });
+
+  it('reads rows only through the fixed backup id', async () => {
+    const readBackupSnapshot = jest.fn(async (backupId: string) => ({users: [{id: backupId}]}));
+    await expect(readAndroidBackupSnapshot('migration-1', {readBackupSnapshot})).resolves.toEqual({
+      users: [{id: 'migration-1'}],
+    });
+    expect(readBackupSnapshot).toHaveBeenCalledWith('migration-1');
   });
 });

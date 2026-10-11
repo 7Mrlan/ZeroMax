@@ -120,20 +120,50 @@ public final class ReadOnlySqliteModule extends ReactContextBaseJavaModule {
                     null,
                     SQLiteDatabase.OPEN_READONLY | SQLiteDatabase.NO_LOCALIZED_COLLATORS
             );
-            WritableMap snapshot = Arguments.createMap();
-            for (String table : INSPECTED_TABLES) {
-                // Legacy Zero and Zerox files intentionally do not have the
-                // same table set. Omit an absent table so JS can distinguish
-                // "not present in this legacy shape" from an empty table.
-                if (tableExists(database, table)) {
-                    snapshot.putArray(table, readRows(database, table));
-                }
-            }
-            promise.resolve(snapshot);
+            promise.resolve(readSnapshotRows(database));
         } catch (SQLiteException error) {
             promise.reject("SQLITE_SNAPSHOT_FAILED", error.getMessage(), error);
         } catch (Exception error) {
             promise.reject("SQLITE_SNAPSHOT_FAILED", error.getMessage(), error);
+        } finally {
+            if (database != null) {
+                database.close();
+            }
+        }
+    }
+
+    /** Reads a previously verified backup artifact, never the active source file. */
+    @ReactMethod
+    public void readBackupSnapshot(String backupId, Promise promise) {
+        if (!isValidBackupId(backupId)) {
+            promise.reject("INVALID_BACKUP_ID", "Invalid backup id");
+            return;
+        }
+        File backupFile = new File(
+                new File(getReactApplicationContext().getNoBackupFilesDir(), "zero-migration-backups"),
+                backupId + "/watermelon.db"
+        );
+        if (!backupFile.isFile()) {
+            promise.reject("BACKUP_MISSING", "Backup database file does not exist");
+            return;
+        }
+
+        SQLiteDatabase database = null;
+        try {
+            database = SQLiteDatabase.openDatabase(
+                    backupFile.getAbsolutePath(),
+                    null,
+                    SQLiteDatabase.OPEN_READONLY | SQLiteDatabase.NO_LOCALIZED_COLLATORS
+            );
+            if (!readIntegrity(database)) {
+                promise.reject("BACKUP_INTEGRITY_FAILED", "Backup database failed SQLite integrity checks");
+                return;
+            }
+            promise.resolve(readSnapshotRows(database));
+        } catch (SQLiteException error) {
+            promise.reject("BACKUP_SNAPSHOT_FAILED", error.getMessage(), error);
+        } catch (Exception error) {
+            promise.reject("BACKUP_SNAPSHOT_FAILED", error.getMessage(), error);
         } finally {
             if (database != null) {
                 database.close();
@@ -305,7 +335,7 @@ public final class ReadOnlySqliteModule extends ReactContextBaseJavaModule {
      */
     @ReactMethod
     public synchronized void backupDatabase(String databaseName, String backupId, Promise promise) {
-        if (!"watermelon".equals(databaseName) || !isValidMarkerText(backupId)) {
+        if (!"watermelon".equals(databaseName) || !isValidBackupId(backupId)) {
             promise.reject("INVALID_BACKUP_REQUEST", "Only a valid watermelon backup id is supported");
             return;
         }
@@ -514,6 +544,10 @@ public final class ReadOnlySqliteModule extends ReactContextBaseJavaModule {
         return value != null && !value.trim().isEmpty() && value.length() <= 768;
     }
 
+    private boolean isValidBackupId(String value) {
+        return value != null && value.matches("[A-Za-z0-9._-]{1,128}");
+    }
+
     private WritableMap readMarker(File markerFile) {
         if (!markerFile.isFile()) {
             return null;
@@ -564,6 +598,19 @@ public final class ReadOnlySqliteModule extends ReactContextBaseJavaModule {
             }
             return output.toString("UTF-8");
         }
+    }
+
+    private WritableMap readSnapshotRows(SQLiteDatabase database) {
+        WritableMap snapshot = Arguments.createMap();
+        for (String table : INSPECTED_TABLES) {
+            // Legacy Zero and Zerox files intentionally do not have the same
+            // table set. Omit an absent table so JS can distinguish missing
+            // schema from an empty table.
+            if (tableExists(database, table)) {
+                snapshot.putArray(table, readRows(database, table));
+            }
+        }
+        return snapshot;
     }
 
     private File resolveDatabaseFile(String databaseName) {
