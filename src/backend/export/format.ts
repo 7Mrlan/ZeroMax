@@ -11,6 +11,7 @@
  *                 changes, only data-level color values).
  *   v4          — Added budgets table (DB schema v3). Exports now include
  *                 budget entries with amount, month, budgetType.
+ *   v5          — Added incomes and category kind/parentName semantics.
  *
  * RULES:
  *   - Bump when the ExportData shape or data semantics change.
@@ -22,6 +23,6 @@
  *   Example: zero_v3_20260321163018.json
  *   The version in the filename matches the version inside the JSON.
  */
-export const CURRENT_EXPORT_VERSION = 4;
+export const CURRENT_EXPORT_VERSION = 5;
 
 export type {ExportData, ExportEnvelope} from './validate';

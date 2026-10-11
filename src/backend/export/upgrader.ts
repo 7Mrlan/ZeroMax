@@ -39,6 +39,11 @@ export const upgradeExportData = (raw: RawExport): ExportData => {
     version = 4;
   }
 
+  if (version < 5) {
+    data = upgradeV4toV5(data);
+    version = 5;
+  }
+
   if (__DEV__ && version < CURRENT_EXPORT_VERSION) {
     console.warn(`Export format v${version} is behind current v${CURRENT_EXPORT_VERSION}`);
   }
@@ -75,7 +80,9 @@ const upgradeV0toV1 = (data: ExportData): ExportData => sanitizeEntities(data);
 const upgradeV1toV2 = (data: ExportData): ExportData => sanitizeEntities(data);
 
 const remapColor = (color: string | undefined): string | undefined => {
-  if (!color) {return color;}
+  if (!color) {
+    return color;
+  }
   return COLOR_REMAP[color.toUpperCase()] ?? color;
 };
 
@@ -102,4 +109,23 @@ const upgradeV2toV3 = (data: ExportData): ExportData => ({
 const upgradeV3toV4 = (data: ExportData): ExportData => ({
   ...data,
   budgets: data.budgets ?? [],
+});
+
+/** v4 → v5: add income collection and make category semantics explicit. */
+const upgradeV4toV5 = (data: ExportData): ExportData => ({
+  ...data,
+  categories: data.categories.map(category => ({
+    ...category,
+    kind: category.kind ?? 'expense',
+    parentName: category.parentName ?? null,
+  })),
+  expenses: data.expenses.map(expense => ({
+    ...expense,
+    category: {
+      ...expense.category,
+      kind: expense.category.kind ?? 'expense',
+      parentName: expense.category.parentName ?? null,
+    },
+  })),
+  incomes: data.incomes ?? [],
 });

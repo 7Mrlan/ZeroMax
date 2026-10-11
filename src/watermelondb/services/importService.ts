@@ -7,6 +7,7 @@ import Currency from '../models/Currency';
 import Debtor from '../models/Debtor';
 import Debt from '../models/Debt';
 import Budget from '../models/Budget';
+import Income from '../models/Income';
 import {buildImportPlan, type ImportStats} from '../../backend/import/planner';
 import {sanitizeString} from '../../backend/sanitize';
 import type {ExportData} from '../../backend/export/format';
@@ -32,21 +33,26 @@ export const importAllData = async (data: ExportData): Promise<ImportResult> => 
   const userId = nanoid(24);
 
   await database.write(async () => {
-    const [users, categories, expenses, currencies, debtors, debts, budgets] =
-      await Promise.all([
-        database.get<User>('users').query().fetch(),
-        database.get<Category>('categories').query().fetch(),
-        database.get<Expense>('expenses').query().fetch(),
-        database.get<Currency>('currencies').query().fetch(),
-        database.get<Debtor>('debtors').query().fetch(),
-        database.get<Debt>('debts').query().fetch(),
-        database.get<Budget>('budgets').query().fetch(),
-      ]);
+    const incomeCollection = database.get<Income>('incomes') as ReturnType<typeof database.get<Income>> | null;
+    if (plan.incomes.length > 0 && !incomeCollection) {
+      throw new Error('The active database does not support income records');
+    }
+    const [users, categories, expenses, incomes, currencies, debtors, debts, budgets] = await Promise.all([
+      database.get<User>('users').query().fetch(),
+      database.get<Category>('categories').query().fetch(),
+      database.get<Expense>('expenses').query().fetch(),
+      incomeCollection ? incomeCollection.query().fetch() : Promise.resolve([]),
+      database.get<Currency>('currencies').query().fetch(),
+      database.get<Debtor>('debtors').query().fetch(),
+      database.get<Debt>('debts').query().fetch(),
+      database.get<Budget>('budgets').query().fetch(),
+    ]);
 
     const destroys = [
       ...users,
       ...categories,
       ...expenses,
+      ...incomes,
       ...currencies,
       ...debtors,
       ...debts,
@@ -59,10 +65,13 @@ export const importAllData = async (data: ExportData): Promise<ImportResult> => 
       user.email = sanitizeString(email, '');
     });
 
-    const categoryIdByName = new Map<string, string>();
-    const newCategories = plan.categories.map(planned => {
+    const categoryIdByKey = new Map<string, string>();
+    const categoryIds = plan.categories.map(planned => {
       const id = nanoid(24);
-      categoryIdByName.set(planned.name, id);
+      categoryIdByKey.set(`${planned.kind}|${planned.parentName ?? ''}|${planned.name}`, id);
+      return {planned, id};
+    });
+    const newCategories = categoryIds.map(({planned, id}) => {
       return database.get<Category>('categories').prepareCreate(cat => {
         cat._raw.id = id;
         cat.name = planned.name;
@@ -70,6 +79,12 @@ export const importAllData = async (data: ExportData): Promise<ImportResult> => 
         cat.userId = userId;
         cat.icon = planned.icon;
         cat.color = planned.color;
+        if (Object.prototype.hasOwnProperty.call(cat._raw, 'kind')) {
+          cat.kind = planned.kind;
+          cat.parentId = planned.parentName
+            ? categoryIdByKey.get(`${planned.kind}|${planned.parentName}|${planned.parentName}`)
+            : undefined;
+        }
       });
     });
 
@@ -105,11 +120,26 @@ export const importAllData = async (data: ExportData): Promise<ImportResult> => 
         expense.title = planned.title;
         expense.amount = planned.amount;
         expense.description = planned.description;
-        expense.categoryId = categoryIdByName.get(planned.categoryName) ?? '';
+        expense.categoryId =
+          categoryIdByKey.get(`${planned.categoryKind}|${planned.categoryParentName ?? ''}|${planned.categoryName}`) ??
+          '';
         expense.userId = userId;
         expense.date = planned.date;
       }),
     );
+
+    const newIncomes = incomeCollection
+      ? plan.incomes.map(planned =>
+          incomeCollection.prepareCreate(income => {
+            income.title = planned.title;
+            income.amount = planned.amount;
+            income.categoryId =
+              categoryIdByKey.get(`income|${planned.categoryParentName ?? ''}|${planned.categoryName}`) ?? '';
+            income.userId = userId;
+            income.date = planned.date;
+          }),
+        )
+      : [];
 
     const newDebts = plan.debts.map(planned =>
       database.get<Debt>('debts').prepareCreate(debt => {
@@ -139,6 +169,7 @@ export const importAllData = async (data: ExportData): Promise<ImportResult> => 
       ...newDebtors,
       ...newCurrencies,
       ...newExpenses,
+      ...newIncomes,
       ...newDebts,
       ...newBudgets,
     );

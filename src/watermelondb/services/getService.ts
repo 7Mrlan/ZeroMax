@@ -6,6 +6,7 @@ import Currency from '../models/Currency';
 import Debtor from '../models/Debtor';
 import Debt from '../models/Debt';
 import Budget from '../models/Budget';
+import Income from '../models/Income';
 import {sanitizeString, DEFAULTS} from '../../backend/sanitize';
 import type {ExportData} from '../../backend/export/format';
 
@@ -17,20 +18,24 @@ export type {ExportData} from '../../backend/export/format';
  */
 export const getAllData = async (): Promise<ExportData | null> => {
   try {
-    const [users, categories, expenses, currencies, debtors, debts, budgets] =
-      await Promise.all([
-        database.get<User>('users').query().fetch(),
-        database.get<Category>('categories').query().fetch(),
-        database.get<Expense>('expenses').query().fetch(),
-        database.get<Currency>('currencies').query().fetch(),
-        database.get<Debtor>('debtors').query().fetch(),
-        database.get<Debt>('debts').query().fetch(),
-        database.get<Budget>('budgets').query().fetch(),
-      ]);
+    const [users, categories, expenses, incomes, currencies, debtors, debts, budgets] = await Promise.all([
+      database.get<User>('users').query().fetch(),
+      database.get<Category>('categories').query().fetch(),
+      database.get<Expense>('expenses').query().fetch(),
+      database.get<Income>('incomes').query().fetch(),
+      database.get<Currency>('currencies').query().fetch(),
+      database.get<Debtor>('debtors').query().fetch(),
+      database.get<Debt>('debts').query().fetch(),
+      database.get<Budget>('budgets').query().fetch(),
+    ]);
 
     const categoryMap = new Map<string, string>();
     categories.forEach(c => {
       categoryMap.set(c.id, c.name);
+    });
+    const parentNameMap = new Map<string, string | null>();
+    categories.forEach(c => {
+      parentNameMap.set(c.id, c.parentId ? (categoryMap.get(c.parentId) ?? null) : null);
     });
 
     const debtorMap = new Map<string, string>();
@@ -48,13 +53,29 @@ export const getAllData = async (): Promise<ExportData | null> => {
         categoryStatus: c.categoryStatus,
         icon: sanitizeString(c.icon, DEFAULTS.icon),
         color: sanitizeString(c.color, DEFAULTS.color),
+        kind: c.kind === 'income' ? 'income' : 'expense',
+        parentName: c.parentId ? (categories.find(parent => parent.id === c.parentId)?.name ?? null) : null,
       })),
       expenses: expenses.map(e => ({
         title: e.title,
         amount: e.amount,
         description: e.description ?? '',
-        category: {name: categoryMap.get(e.categoryId) ?? 'Unknown'},
+        category: {
+          name: categoryMap.get(e.categoryId) ?? 'Unknown',
+          kind: 'expense',
+          parentName: parentNameMap.get(e.categoryId) ?? null,
+        },
         date: e.date,
+      })),
+      incomes: incomes.map(income => ({
+        title: income.title,
+        amount: income.amount,
+        category: {
+          name: categoryMap.get(income.categoryId) ?? 'Unknown',
+          kind: 'income' as const,
+          parentName: parentNameMap.get(income.categoryId) ?? null,
+        },
+        date: income.date,
       })),
       currencies: currencies.map(c => ({
         code: c.code,
@@ -88,4 +109,3 @@ export const getAllData = async (): Promise<ExportData | null> => {
     return null;
   }
 };
-

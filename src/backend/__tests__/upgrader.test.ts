@@ -84,4 +84,14 @@ describe('upgradeExportData', () => {
 
     expect(result.budgets).toEqual(budgets);
   });
+
+  it('upgrades v4 exports with explicit category semantics and incomes', () => {
+    const result = upgradeExportData({
+      key: 'test-key',
+      version: 4,
+      data: makeMinimalData({categories: [{name: 'Salary'}]}),
+    });
+    expect(result.categories[0]).toMatchObject({kind: 'expense', parentName: null});
+    expect(result.incomes).toEqual([]);
+  });
 });

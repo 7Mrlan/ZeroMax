@@ -1,30 +1,15 @@
-/**
- * Pure import planner — turns a validated, upgraded export payload into a
- * deduplicated, fully-resolvable creation plan. No database access, so every
- * rule here is unit-testable.
- *
- * Rules:
- * - Categories dedupe by name, debtors by title. When duplicates exist
- *   (real backups contain them — e.g. "Fuel" twice from the old
- *   import-retry bug), the ACTIVE entry wins; otherwise the first one does.
- * - Soft-delete statuses are preserved (import used to resurrect everything).
- * - Expense/debt references that point at a name missing from the backup are
- *   never dropped: the missing category/debtor is auto-created instead.
- * - Expenses and debts are NOT deduplicated — identical rows are
- *   indistinguishable from legitimately repeated transactions.
- */
-
 import type {ExportData} from '../export/validate';
 import {DEFAULTS, sanitizeString} from '../sanitize';
 
 export interface PlannedCategory {
   name: string;
+  parentName: string | null;
+  kind: 'expense' | 'income';
   status: boolean;
   icon: string;
   color: string;
   autoCreated: boolean;
 }
-
 export interface PlannedDebtor {
   title: string;
   status: boolean;
@@ -33,27 +18,32 @@ export interface PlannedDebtor {
   color: string;
   autoCreated: boolean;
 }
-
 export interface PlannedCurrency {
   code: string;
   symbol: string;
   name: string;
 }
-
 export interface PlannedBudget {
   amount: number;
   month: string;
   budgetType: string;
 }
-
 export interface PlannedExpense {
   title: string;
   amount: number;
   description: string;
   categoryName: string;
+  categoryParentName: string | null;
+  categoryKind: 'expense';
   date: string;
 }
-
+export interface PlannedIncome {
+  title: string;
+  amount: number;
+  categoryName: string;
+  categoryParentName: string | null;
+  date: string;
+}
 export interface PlannedDebt {
   amount: number;
   description: string;
@@ -61,7 +51,6 @@ export interface PlannedDebt {
   date: string;
   type: string;
 }
-
 export interface ImportStats {
   categories: number;
   debtors: number;
@@ -71,34 +60,38 @@ export interface ImportStats {
   budgets: number;
   autoCreatedCategories: number;
   autoCreatedDebtors: number;
+  incomes?: number;
 }
-
 export interface ImportPlan {
   categories: PlannedCategory[];
   debtors: PlannedDebtor[];
   currencies: PlannedCurrency[];
   budgets: PlannedBudget[];
   expenses: PlannedExpense[];
+  incomes: PlannedIncome[];
   debts: PlannedDebt[];
   stats: ImportStats;
 }
 
 const AUTO_CREATED_DEBTOR_TYPE = 'Other';
+const categoryKey = (name: string, kind: 'expense' | 'income', parentName: string | null): string =>
+  `${kind}|${parentName ?? ''}|${name}`;
 
 export const buildImportPlan = (data: ExportData): ImportPlan => {
-  const categoriesByName = new Map<string, PlannedCategory>();
+  const categoriesByKey = new Map<string, PlannedCategory>();
   for (const category of data.categories) {
     const planned: PlannedCategory = {
       name: category.name,
+      parentName: category.parentName ?? null,
+      kind: category.kind ?? 'expense',
       status: category.categoryStatus ?? true,
       icon: sanitizeString(category.icon, DEFAULTS.icon),
       color: sanitizeString(category.color, DEFAULTS.color),
       autoCreated: false,
     };
-    const existing = categoriesByName.get(category.name);
-    if (!existing || (!existing.status && planned.status)) {
-      categoriesByName.set(category.name, planned);
-    }
+    const key = categoryKey(planned.name, planned.kind, planned.parentName);
+    const existing = categoriesByKey.get(key);
+    if (!existing || (!existing.status && planned.status)) categoriesByKey.set(key, planned);
   }
 
   const debtorsByTitle = new Map<string, PlannedDebtor>();
@@ -111,33 +104,18 @@ export const buildImportPlan = (data: ExportData): ImportPlan => {
       color: sanitizeString(debtor.color, DEFAULTS.color),
       autoCreated: false,
     };
-    const existing = debtorsByTitle.get(debtor.title);
-    if (!existing || (!existing.status && planned.status)) {
-      debtorsByTitle.set(debtor.title, planned);
-    }
+    const existing = debtorsByTitle.get(planned.title);
+    if (!existing || (!existing.status && planned.status)) debtorsByTitle.set(planned.title, planned);
   }
 
   const currenciesByCode = new Map<string, PlannedCurrency>();
   for (const currency of data.currencies) {
-    if (!currenciesByCode.has(currency.code)) {
-      currenciesByCode.set(currency.code, {
-        code: currency.code,
-        symbol: currency.symbol,
-        name: currency.name,
-      });
-    }
+    if (!currenciesByCode.has(currency.code)) currenciesByCode.set(currency.code, currency);
   }
-
   const budgetsByKey = new Map<string, PlannedBudget>();
   for (const budget of data.budgets) {
     const key = `${budget.month}|${budget.budgetType}`;
-    if (!budgetsByKey.has(key)) {
-      budgetsByKey.set(key, {
-        amount: budget.amount,
-        month: budget.month,
-        budgetType: budget.budgetType,
-      });
-    }
+    if (!budgetsByKey.has(key)) budgetsByKey.set(key, budget);
   }
 
   const expenses: PlannedExpense[] = data.expenses.map(expense => ({
@@ -145,9 +123,17 @@ export const buildImportPlan = (data: ExportData): ImportPlan => {
     amount: expense.amount,
     description: expense.description ?? '',
     categoryName: expense.category.name,
+    categoryParentName: expense.category.parentName ?? null,
+    categoryKind: 'expense',
     date: expense.date,
   }));
-
+  const incomes: PlannedIncome[] = (data.incomes ?? []).map(income => ({
+    title: income.title,
+    amount: income.amount,
+    categoryName: income.category.name,
+    categoryParentName: income.category.parentName ?? null,
+    date: income.date,
+  }));
   const debts: PlannedDebt[] = data.debts.map(debt => ({
     amount: debt.amount,
     description: debt.description,
@@ -156,14 +142,17 @@ export const buildImportPlan = (data: ExportData): ImportPlan => {
     type: debt.type,
   }));
 
-  // Auto-create anything referenced by a transaction but missing from the
-  // backup's own entity lists (e.g. the 'Unknown' sentinel exported for
-  // dangling ids) — losing the transaction would be far worse.
   let autoCreatedCategories = 0;
-  for (const expense of expenses) {
-    if (!categoriesByName.has(expense.categoryName)) {
-      categoriesByName.set(expense.categoryName, {
-        name: expense.categoryName,
+  for (const transaction of [
+    ...expenses.map(item => ({...item, kind: 'expense' as const})),
+    ...incomes.map(item => ({...item, kind: 'income' as const})),
+  ]) {
+    const key = categoryKey(transaction.categoryName, transaction.kind, transaction.categoryParentName);
+    if (!categoriesByKey.has(key)) {
+      categoriesByKey.set(key, {
+        name: transaction.categoryName,
+        parentName: transaction.categoryParentName,
+        kind: transaction.kind,
         status: true,
         icon: DEFAULTS.icon,
         color: DEFAULTS.color,
@@ -188,27 +177,20 @@ export const buildImportPlan = (data: ExportData): ImportPlan => {
     }
   }
 
-  const categories = Array.from(categoriesByName.values());
+  const categories = Array.from(categoriesByKey.values());
   const debtors = Array.from(debtorsByTitle.values());
   const currencies = Array.from(currenciesByCode.values());
   const budgets = Array.from(budgetsByKey.values());
-
-  return {
-    categories,
-    debtors,
-    currencies,
-    budgets,
-    expenses,
-    debts,
-    stats: {
-      categories: categories.length,
-      debtors: debtors.length,
-      currencies: currencies.length,
-      expenses: expenses.length,
-      debts: debts.length,
-      budgets: budgets.length,
-      autoCreatedCategories,
-      autoCreatedDebtors,
-    },
+  const stats: ImportStats = {
+    categories: categories.length,
+    debtors: debtors.length,
+    currencies: currencies.length,
+    expenses: expenses.length,
+    debts: debts.length,
+    budgets: budgets.length,
+    autoCreatedCategories,
+    autoCreatedDebtors,
   };
+  if (data.incomes !== undefined) stats.incomes = incomes.length;
+  return {categories, debtors, currencies, budgets, expenses, incomes, debts, stats};
 };
