@@ -236,6 +236,40 @@ describe('runAndroidLegacyMigration', () => {
     expect(copyRows).toHaveBeenCalledWith('zero-v3', driver);
   });
 
+  it('closes the prepared target when post-copy verification state cannot be persisted', async () => {
+    const closePreparedTarget = jest.fn(async () => undefined);
+    const driver = {...makeDriver(), closePreparedTarget};
+    const copyRows = jest.fn(async () => ({
+      source: 'zero-v3' as const,
+      sourceFingerprint: 'source-fingerprint',
+      targetFingerprint: 'target-fingerprint',
+      normalization: {dataset: source, transforms: []},
+      verification: {} as never,
+    }));
+    const bridge = {
+      probe: jest.fn(),
+      readSnapshot: jest.fn(async () => source),
+      backupDatabase: jest.fn(),
+      readBackupSnapshot: jest.fn(),
+      inspectTargetArtifact: jest.fn(async () => ({status: 'missing'})),
+      claimTargetArtifact: jest.fn(async () => undefined),
+      updateTargetArtifactMarker: jest.fn(async () => {
+        throw new Error('marker write failed');
+      }),
+    };
+
+    await expect(
+      runAndroidLegacyMigration({
+        bridge,
+        source: 'zero-v3',
+        backupId: 'migration-1',
+        createDriver: () => driver,
+        copyRows,
+      }),
+    ).rejects.toThrow('marker write failed');
+    expect(closePreparedTarget).toHaveBeenCalledTimes(1);
+  });
+
   it('stops before target claim when live and backup fingerprints differ', async () => {
     const driver = {...makeDriver(), readSourceSnapshot: jest.fn(async () => ({...source, users: []}))};
     const claimTargetArtifact = jest.fn();

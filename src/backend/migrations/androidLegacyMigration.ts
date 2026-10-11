@@ -195,19 +195,31 @@ export const runAndroidLegacyMigration = async ({
     }
     throw error;
   }
-  await updateTargetArtifactMarker(currentCheckpoint.target.attemptId, 'verified', copy.targetFingerprint, bridge);
-  currentCheckpoint = updateMigrationCheckpoint(currentCheckpoint, current => ({
-    ...current,
-    state: 'verified',
-    target: {...current.target, status: 'verified', fingerprint: copy.targetFingerprint},
-  }));
+  try {
+    await updateTargetArtifactMarker(currentCheckpoint.target.attemptId, 'verified', copy.targetFingerprint, bridge);
+    currentCheckpoint = updateMigrationCheckpoint(currentCheckpoint, current => ({
+      ...current,
+      state: 'verified',
+      target: {...current.target, status: 'verified', fingerprint: copy.targetFingerprint},
+    }));
 
-  const targetDatabase = driver.getPreparedTargetDatabase?.();
-  if (!targetDatabase) {
-    throw new Error('Verified target database instance is unavailable for adoption');
+    const targetDatabase = driver.getPreparedTargetDatabase?.();
+    if (!targetDatabase) {
+      throw new Error('Verified target database instance is unavailable for adoption');
+    }
+    verifiedTargetInstances.set(currentCheckpoint.target.attemptId, targetDatabase);
+    return {checkpoint: currentCheckpoint, copy, targetDatabase};
+  } catch (error) {
+    // The copy may have committed rows before marker/checkpoint/adoption
+    // failed. Close the isolated JSI adapter before a later reconcile can
+    // identity-check and discard the writing artifact.
+    try {
+      await driver.closePreparedTarget?.();
+    } catch {
+      // Preserve the original failure; recovery remains fail-closed.
+    }
+    throw error;
   }
-  verifiedTargetInstances.set(currentCheckpoint.target.attemptId, targetDatabase);
-  return {checkpoint: currentCheckpoint, copy, targetDatabase};
 };
 
 export interface AndroidLegacyActivationDependencies {
