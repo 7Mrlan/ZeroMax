@@ -31,4 +31,4 @@ maestro test .maestro/categories.yaml
 
 ## 未完成项
 
-当前没有 Android 设备运行证据，也没有 iOS VoiceOver 证据。设备回归后将把命令、设备型号、API/系统版本、构建 commit 和失败截图记录到本文件，之后再把对应路线图任务标记为完成。
+当前已有 API35 x86_64 模拟器的 fresh v4/JSI 冷启动证据，但五条 Maestro flow、TalkBack 和 iOS VoiceOver 仍未执行。设备回归后将把命令、设备型号、API/系统版本、构建 commit 和失败截图记录到本文件，之后再把对应路线图任务标记为完成。
