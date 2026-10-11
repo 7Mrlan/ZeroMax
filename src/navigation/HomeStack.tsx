@@ -13,6 +13,7 @@ import SettingsScreen from '../screens/SettingsScreen';
 import DiagnosticsScreen from '../screens/DiagnosticsScreen';
 import AddTransactionsScreen from '../screens/AddTransactionsScreen';
 import AddEntryScreen from '../screens/AddEntryScreen';
+import AiQueueScreen from '../screens/AiQueueScreen';
 import UpdateTransactionScreen from '../screens/UpdateTransactionScreen';
 import AddCategoryScreen from '../screens/AddCategoryScreen';
 import UpdateCategoryScreen from '../screens/UpdateCategoryScreen';
@@ -120,6 +121,7 @@ const HomeStack = () => {
       <Stack.Screen name="SettingsScreen" component={SettingsScreen} />
       <Stack.Screen name="AddTransactionsScreen" component={AddTransactionsScreen} />
       <Stack.Screen name="AddEntryScreen" component={AddEntryScreen} />
+      <Stack.Screen name="AiQueueScreen" component={AiQueueScreen} />
       <Stack.Screen name="UpdateTransactionScreen" component={UpdateTransactionScreen} />
       <Stack.Screen name="AddCategoryScreen" component={AddCategoryScreen} />
       <Stack.Screen name="UpdateCategoryScreen" component={UpdateCategoryScreen} />

@@ -171,6 +171,18 @@
     "categoryLabel": "Income category",
     "addCategoryButton": "Add income category"
   },
+  "ai": {
+    "queueTitle": "AI bookkeeping queue",
+    "privacyNotice": "AI is off by default. Requests use your configured HTTPS endpoint; keys stay in secure device storage.",
+    "empty": "No AI tasks yet",
+    "retry": "Retry",
+    "status": {
+      "queued": "Queued",
+      "running": "Processing",
+      "created": "Added to your records",
+      "failed": "Failed"
+    }
+  },
   "category": {
     "addTitle": "Add Category",
     "editTitle": "Edit Category",

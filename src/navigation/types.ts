@@ -13,6 +13,7 @@ export type HomeStackParamList = {
   DiagnosticsScreen: undefined;
   AddTransactionsScreen: undefined;
   AddEntryScreen: undefined;
+  AiQueueScreen: undefined;
   UpdateTransactionScreen: {
     expenseId: string;
     expenseTitle: string;

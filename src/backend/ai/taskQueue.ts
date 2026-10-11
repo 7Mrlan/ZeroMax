@@ -19,6 +19,7 @@ export interface AiTask {
 
 const TASKS_KEY = 'ai.tasks.v1';
 const MAX_TASKS = 20;
+const listeners = new Set<() => void>();
 const TaskSchema = z
   .object({
     version: z.literal(1),
@@ -50,6 +51,12 @@ const readTasks = (): AiTask[] => {
 
 const writeTasks = (tasks: AiTask[]): void => {
   StorageService.setItemSync(TASKS_KEY, JSON.stringify(tasks.slice(0, MAX_TASKS)));
+  listeners.forEach(listener => listener());
+};
+
+export const subscribeAiTasks = (listener: () => void): (() => void) => {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
 };
 
 export const getAiTasks = (): AiTask[] =>
@@ -115,6 +122,15 @@ export const failAiTask = (taskId: string, errorMessage: string): AiTask | null 
   const failed = {...current, status: 'failed' as const, errorMessage: errorMessage.slice(0, 1_000), updatedAt: now()};
   writeTasks(tasks.map(task => (task.taskId === taskId ? failed : task)));
   return failed;
+};
+
+export const retryAiTask = (taskId: string): AiTask | null => {
+  const tasks = readTasks();
+  const current = tasks.find(task => task.taskId === taskId);
+  if (!current || current.status !== 'failed') return current ?? null;
+  const retried = {...current, status: 'queued' as const, errorMessage: undefined, updatedAt: now()};
+  writeTasks(tasks.map(task => (task.taskId === taskId ? retried : task)));
+  return retried;
 };
 
 export const recordIdempotencyKey = (task: Pick<AiTask, 'idempotencyKey'>, itemLocalId: string): string =>
