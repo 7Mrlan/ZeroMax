@@ -72,5 +72,6 @@ describe('legacy database source detection', () => {
     expect(detectLegacyDatabaseSource({...targetV4, tables: {...targetV4.tables, expenses: ['title']}})).toBe(
       'unknown',
     );
+    expect(detectLegacyDatabaseSource({...targetV4, version: 5})).toBe('unknown');
   });
 });

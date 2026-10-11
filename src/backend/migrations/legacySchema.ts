@@ -51,7 +51,7 @@ export const detectLegacyDatabaseSource = (snapshot: LegacySchemaSnapshot): Lega
     return 'zerox-v3';
   }
 
-  if (snapshot.version >= 4 && hasIncomeTable && hasBudgetTable && hasIncomeCategories && hasExpenseDescription) {
+  if (snapshot.version === 4 && hasIncomeTable && hasBudgetTable && hasIncomeCategories && hasExpenseDescription) {
     return 'target-v4';
   }
 
