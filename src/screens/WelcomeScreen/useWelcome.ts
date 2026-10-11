@@ -1,25 +1,25 @@
 import {useCallback} from 'react';
+import {useNavigation} from '@react-navigation/native';
+import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import useThemeColors from '../../hooks/useThemeColors';
-import {deleteAllData} from '../../watermelondb/services';
-import {navigate} from '../../utils/navigationUtils';
+import type {OnboardingStackParamList} from '../../navigation/types';
+
+type WelcomeNavigation = NativeStackNavigationProp<OnboardingStackParamList, 'WelcomeScreen'>;
 
 const useWelcome = () => {
   const colors = useThemeColors();
+  const navigation = useNavigation<WelcomeNavigation>();
 
   const handleAlreadyUser = useCallback(() => {
-    navigate('ExistingUserScreen');
-  }, []);
+    navigation.push('ExistingUserScreen');
+  }, [navigation]);
 
-  const handleNewUser = useCallback(async () => {
-    try {
-      await deleteAllData();
-    } catch (error) {
-      if (__DEV__) {
-        console.error('Error deleting data for new user:', error);
-      }
-    }
-    navigate('PersonalizeScreen');
-  }, []);
+  const handleNewUser = useCallback(() => {
+    // BootGate only presents Welcome for a fresh/empty target. Keep the
+    // transition synchronous; a destructive full-database writer here can
+    // block the first JSI frame and strand the user on Welcome.
+    navigation.push('PersonalizeScreen');
+  }, [navigation]);
 
   return {
     colors,
