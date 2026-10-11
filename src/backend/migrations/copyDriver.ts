@@ -26,6 +26,8 @@ export interface LegacyCopyResult {
   source: Extract<LegacyDatabaseSource, 'zero-v3' | 'zerox-v3'>;
   /** Content marker for durable resume checks; not a cryptographic hash. */
   sourceFingerprint: string;
+  /** Fingerprint of the normalized rows expected in the verified target. */
+  targetFingerprint: string;
   normalization: CopyNormalizationResult;
   verification: CopyVerificationReport;
 }
@@ -58,5 +60,11 @@ export const copyLegacyRows = async (
     }
     return report;
   });
-  return {source, sourceFingerprint, normalization, verification};
+  return {
+    source,
+    sourceFingerprint,
+    targetFingerprint: fingerprintCopyDataset(normalization.dataset),
+    normalization,
+    verification,
+  };
 };
