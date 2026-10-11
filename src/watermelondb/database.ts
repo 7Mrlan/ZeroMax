@@ -1,10 +1,8 @@
 import {Database} from '@nozbe/watermelondb';
 import SQLiteAdapter from '@nozbe/watermelondb/adapters/sqlite';
 
-import {schema} from './schema';
-import {migrations} from './migrations';
-import {User, Category, Expense, Currency, Debtor, Debt, Budget} from './models';
 import {getActiveDatabaseName} from '../backend/migrations/activeDatabase';
+import {selectDatabase} from './databaseSelection';
 
 let _database: Database | null = null;
 let _databaseError: Error | null = null;
@@ -23,10 +21,15 @@ const getDatabase = (): Database => {
 
   if (!_database) {
     try {
+      // The selection prevents a verified v4 pointer from being opened with
+      // v3 models. BootGate must still run the native readonly preflight
+      // before this function so a missing or stale target cannot be created.
+      const databaseName = getActiveDatabaseName();
+      const selection = selectDatabase(databaseName);
       const adapter = new SQLiteAdapter({
-        dbName: getActiveDatabaseName(),
-        schema,
-        migrations,
+        dbName: databaseName,
+        schema: selection.schema,
+        ...(selection.migrations ? {migrations: selection.migrations} : {}),
         jsi: true,
         onSetUpError: error => {
           _databaseError = error instanceof Error ? error : new Error(String(error));
@@ -43,7 +46,7 @@ const getDatabase = (): Database => {
 
       _database = new Database({
         adapter,
-        modelClasses: [User, Category, Expense, Currency, Debtor, Debt, Budget],
+        modelClasses: selection.modelClasses,
       });
     } catch (error) {
       _databaseError = error instanceof Error ? error : new Error(String(error));
