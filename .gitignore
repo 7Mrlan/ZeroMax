@@ -81,3 +81,9 @@ yarn-error.log
 !.yarn/sdks
 !.yarn/versions
 /references
+# Local upstream comparison checkouts; the merged app lives at repository root.
+/zero/
+/zerox/
+
+# Local Ruby bundler configuration.
+/.bundle/
