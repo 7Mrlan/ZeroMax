@@ -2,9 +2,29 @@ import {runDatabasePreflight} from '../runPreflight';
 
 describe('runDatabasePreflight', () => {
   it('routes a missing legacy file to the fresh v4 target', async () => {
-    await expect(runDatabasePreflight('watermelon', async () => ({kind: 'missing'}))).resolves.toEqual({
+    const probe = jest.fn(async () => ({kind: 'missing'}) as const);
+    await expect(runDatabasePreflight('watermelon', probe)).resolves.toEqual({
       kind: 'fresh-target',
       databaseName: 'watermelon_v4',
+    });
+    expect(probe).toHaveBeenNthCalledWith(1, 'watermelon');
+    expect(probe).toHaveBeenNthCalledWith(2, 'watermelon_v4');
+  });
+
+  it('blocks an inactive target left behind by an interrupted attempt', async () => {
+    await expect(
+      runDatabasePreflight('watermelon', async databaseName =>
+        databaseName === 'watermelon'
+          ? {kind: 'missing'}
+          : {
+              kind: 'metadata',
+              integrity: 'ok',
+              snapshot: {version: 4, tables: {}, indexes: {}},
+            },
+      ),
+    ).resolves.toEqual({
+      kind: 'blocked',
+      reason: 'An inactive target database exists and requires durable migration recovery',
     });
   });
 

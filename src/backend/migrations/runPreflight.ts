@@ -1,5 +1,10 @@
 import {getActiveDatabaseName, type ActiveDatabaseName} from './activeDatabase';
-import {decideDatabasePreflight, type DatabasePreflightDecision, type DatabaseProbeResult} from './preflight';
+import {
+  decideDatabasePreflight,
+  decideDatabasePreflightWithTarget,
+  type DatabasePreflightDecision,
+  type DatabaseProbeResult,
+} from './preflight';
 import {probeDatabaseReadOnly} from './nativePreflight';
 
 export type ReadOnlyProbe = (databaseName: ActiveDatabaseName) => Promise<DatabaseProbeResult>;
@@ -14,5 +19,9 @@ export const runDatabasePreflight = async (
   probe: ReadOnlyProbe = probeDatabaseReadOnly,
 ): Promise<DatabasePreflightDecision> => {
   const result = await probe(activeDatabase);
+  if (activeDatabase === 'watermelon' && result.kind === 'missing') {
+    const target = await probe('watermelon_v4');
+    return decideDatabasePreflightWithTarget(activeDatabase, result, target);
+  }
   return decideDatabasePreflight(activeDatabase, result);
 };

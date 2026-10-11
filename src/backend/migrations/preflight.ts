@@ -55,3 +55,33 @@ export const decideDatabasePreflight = (
 
   return {kind: 'blocked', reason: 'The active database schema is unknown or unsupported'};
 };
+
+/**
+ * A missing legacy file is only a fresh install when the inactive target is
+ * also missing. An existing target needs checkpoint ownership/recovery before
+ * any writable adapter is constructed.
+ */
+export const decideDatabasePreflightWithTarget = (
+  activeDatabase: ActiveDatabaseName,
+  activeProbe: DatabaseProbeResult,
+  targetProbe: DatabaseProbeResult,
+): DatabasePreflightDecision => {
+  if (activeDatabase !== 'watermelon' || activeProbe.kind !== 'missing') {
+    return decideDatabasePreflight(activeDatabase, activeProbe);
+  }
+
+  if (targetProbe.kind === 'missing') {
+    return {kind: 'fresh-target', databaseName: 'watermelon_v4'};
+  }
+  if (targetProbe.kind === 'error') {
+    return {kind: 'blocked', reason: 'The inactive target database could not be inspected', error: targetProbe.error};
+  }
+  if (targetProbe.integrity === 'failed') {
+    return {kind: 'blocked', reason: 'The inactive target database failed SQLite integrity checks'};
+  }
+
+  return {
+    kind: 'blocked',
+    reason: 'An inactive target database exists and requires durable migration recovery',
+  };
+};
