@@ -19,10 +19,13 @@ const passedVerification = {
   rowCountsMatch: true,
   amountSumsMatch: true,
   idsAndRelationsMatch: true,
+  schemaAndIndexesMatch: true,
+  reopenedReadWrite: true,
 };
 
 const makeDriver = (overrides: Partial<DualDatabaseUpgradeDriver> = {}): DualDatabaseUpgradeDriver => ({
   inspectLegacySchema: async () => zeroV3,
+  ensureBackup: jest.fn(async () => undefined),
   persistState: jest.fn(async (_state: UpgradeState) => undefined),
   copyToTarget: jest.fn(async () => undefined),
   verifyTarget: jest.fn(async () => passedVerification),
@@ -39,6 +42,7 @@ describe('runDualDatabaseUpgrade', () => {
     expect(driver.persistState).toHaveBeenCalledWith('verified');
     expect(driver.persistState).toHaveBeenCalledWith('activated');
     expect(driver.activateTarget).toHaveBeenCalledTimes(1);
+    expect(driver.ensureBackup).toHaveBeenCalledTimes(1);
   });
 
   it('keeps the old database active when verification fails', async () => {
@@ -56,5 +60,20 @@ describe('runDualDatabaseUpgrade', () => {
     expect(driver.copyToTarget).not.toHaveBeenCalled();
     expect(driver.activateTarget).not.toHaveBeenCalled();
     expect(driver.persistState).toHaveBeenLastCalledWith('failed');
+  });
+
+  it('preserves the copy error if failure-state persistence also fails', async () => {
+    const persistState = jest.fn(async (state: UpgradeState) => {
+      if (state === 'failed') {
+        throw new Error('state store unavailable');
+      }
+    });
+    const driver = makeDriver({
+      persistState,
+      copyToTarget: jest.fn(async () => {
+        throw new Error('copy failed');
+      }),
+    });
+    await expect(runDualDatabaseUpgrade(driver)).rejects.toThrow('copy failed');
   });
 });
