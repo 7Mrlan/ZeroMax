@@ -51,6 +51,9 @@ jobs:
       - name: Secret scan
         run: pnpm run security:secrets
 
+      - name: iOS native source contract
+        run: pnpm run ios:contract:check
+
       - name: Production dependency audit
         run: pnpm run audit:high
 
