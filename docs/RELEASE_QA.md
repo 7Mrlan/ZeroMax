@@ -40,6 +40,13 @@ API 32. The temporary keystore and `android/keystore.properties` were deleted
 afterward. This is test-signing evidence, not a production signing or store
 readiness result.
 
+The same test-signed release APK was installed on the API35 `zero-api35`
+emulator without Metro. After a fresh app install, logcat showed the embedded
+Hermes app starting, WatermelonDB JSI registration, `watermelon_v4.db` opening,
+and schema version 4 setup with no FATAL/JSI fallback. This is a release
+startup smoke only; migration crash recovery, performance, real hardware and
+production signing remain open.
+
 ## 2. Build the real artifact
 
 - [ ] `pnpm run version:set` — versionName and versionCode both bumped
