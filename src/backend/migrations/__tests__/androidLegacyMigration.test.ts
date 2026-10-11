@@ -5,6 +5,7 @@ jest.mock('../../../utils/asyncStorageService', () => ({
 
 import {
   reconcileExistingTarget,
+  assertLiveSourceFingerprint,
   reopenVerifiedTarget,
   activateAndroidLegacyMigration,
   runAndroidLegacyMigration,
@@ -163,6 +164,13 @@ describe('runAndroidLegacyMigration', () => {
         fingerprint: targetFingerprint,
       },
     });
+  });
+
+  it('blocks verified recovery when the legacy source fingerprint changed', () => {
+    expect(() => assertLiveSourceFingerprint(source, fingerprintCopyDataset(source))).not.toThrow();
+    expect(() => assertLiveSourceFingerprint({...source, users: []}, fingerprintCopyDataset(source))).toThrow(
+      'Legacy source changed before verified target recovery',
+    );
   });
 
   it('reuses one verified JSI adapter for repeated same-attempt recovery', async () => {

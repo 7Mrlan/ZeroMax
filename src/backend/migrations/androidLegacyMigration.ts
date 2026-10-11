@@ -48,6 +48,15 @@ export type ExistingTargetRecovery =
   | {kind: 'rebuild'}
   | {kind: 'reuse'; checkpoint: MigrationCheckpoint; observation: Extract<TargetObservation, {kind: 'artifact'}>};
 
+export const assertLiveSourceFingerprint = (
+  snapshot: Parameters<typeof fingerprintCopyDataset>[0],
+  expected: string,
+): void => {
+  if (fingerprintCopyDataset(snapshot) !== expected) {
+    throw new Error('Legacy source changed before verified target recovery');
+  }
+};
+
 /**
  * Reconciles an old target before a new migration generation can claim the
  * fixed v4 path. A matched writing marker is discarded and rebuilt; a
@@ -140,6 +149,8 @@ export const runAndroidLegacyMigration = async ({
     }
     const recovery = await reconcileExistingTarget(previous.checkpoint, bridge);
     if (recovery.kind === 'reuse') {
+      const liveSnapshot = await readDatabaseSnapshotReadOnly('watermelon', bridge);
+      assertLiveSourceFingerprint(liveSnapshot, previous.checkpoint.sourceFingerprint);
       return reopenVerifiedTarget(recovery.checkpoint, recovery.observation, createTarget);
     }
   } else {
