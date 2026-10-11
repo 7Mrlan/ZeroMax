@@ -41,6 +41,19 @@ describe('verifyCopiedRows', () => {
     });
   });
 
+  it('accepts SQLite numeric booleans after Watermelon raw decoding', () => {
+    const target = cloneExpectedTarget();
+    target.categories![0] = {...target.categories![0], category_status: true};
+    target.debtors = [{id: 'd1', title: 'Bank', user_id: 'u1', debtor_status: true, _status: 'created', _changed: ''}];
+    const expected = cloneExpectedTarget();
+    expected.categories![0] = {...expected.categories![0], category_status: 1};
+    expected.debtors = [{id: 'd1', title: 'Bank', user_id: 'u1', debtor_status: 1, _status: 'created', _changed: ''}];
+    expect(
+      verifyCopiedRows({source: {...source, debtors: expected.debtors}, expectedTarget: expected, actualTarget: target})
+        .ok,
+    ).toBe(true);
+  });
+
   it('rejects a copy that changes an amount or Watermelon metadata', () => {
     const target = cloneExpectedTarget();
     target.expenses![0] = {...target.expenses![0], amount: 13, _changed: 'b'};

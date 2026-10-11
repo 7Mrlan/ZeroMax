@@ -79,7 +79,18 @@ const amountsMatch = (left: ReadonlyArray<CopyRow>, right: ReadonlyArray<CopyRow
   );
 };
 
-const valuesMatch = (left: unknown, right: unknown): boolean => Object.is(left, right);
+const valuesMatch = (left: unknown, right: unknown): boolean => {
+  if (Object.is(left, right)) return true;
+  // SQLite stores Watermelon boolean fields as 0/1, while unsafeFetchRaw may
+  // expose the same target value as false/true after model decoding.
+  if (typeof left === 'number' && typeof right === 'boolean') {
+    return (left === 1 && right) || (left === 0 && !right);
+  }
+  if (typeof right === 'number' && typeof left === 'boolean') {
+    return (right === 1 && left) || (right === 0 && !left);
+  }
+  return false;
+};
 
 const VALID_STATUSES = new Set(['created', 'updated', 'deleted', 'synced']);
 
