@@ -18,6 +18,14 @@ pnpm run test:ci      # jest — full suite incl. App render smoke test
 cd android && ./gradlew assembleDebug
 ```
 
+The GitHub Actions `android-debug-artifact` job repeats the Android debug
+build in a clean JDK 17 environment, runs `pnpm run android:artifact:check`,
+and uploads the APK for manual QA. This is a static artifact gate only: it
+does not prove device startup, database migration/recovery, frame pacing,
+16 KB page runtime behaviour, release signing, or iOS compatibility. Those
+checks remain in the device and platform sections below and must not be
+marked complete from a green CI build alone.
+
 ## 2. Build the real artifact
 
 - [ ] `pnpm run version:set` — versionName and versionCode both bumped

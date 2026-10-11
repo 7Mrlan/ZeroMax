@@ -57,3 +57,46 @@ jobs:
       - name: Commit message gate
         if: github.event_name == 'pull_request'
         run: pnpm exec commitlint --from "${{ github.event.pull_request.base.sha }}" --to "${{ github.sha }}"
+
+  # This job intentionally stays independent from the JS quality job. An
+  # upstream audit advisory must not hide whether a clean Android build can
+  # still produce the static artifact used for manual QA. It is not a device
+  # smoke test and does not create a signed release artifact.
+  android-debug-artifact:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Enable pnpm
+        run: corepack enable && corepack prepare pnpm@11.19.0 --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Assemble debug APK
+        working-directory: android
+        run: ./gradlew :app:assembleDebug --no-daemon --stacktrace
+
+      - name: Validate debug artifact contents
+        run: pnpm run android:artifact:check
+
+      - name: Upload debug APK for manual QA
+        uses: actions/upload-artifact@v4
+        with:
+          name: zero-android-debug-${{ github.sha }}
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7
