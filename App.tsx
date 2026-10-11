@@ -36,6 +36,11 @@ const InitializationErrorFallback = ({result, onRetry}: InitializationErrorFallb
       <Text style={dbStyles.subtitle}>
         {i18n.t(result.kind === 'migration' ? 'migrationError.message' : 'databaseError.message')}
       </Text>
+      {__DEV__ ? (
+        <Text testID="initialization-error-detail" style={dbStyles.subtitle}>
+          {result.error.message}
+        </Text>
+      ) : null}
       {result.retryable ? (
         <TouchableOpacity
           onPress={onRetry}
