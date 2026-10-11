@@ -26,6 +26,11 @@ does not prove device startup, database migration/recovery, frame pacing,
 checks remain in the device and platform sections below and must not be
 marked complete from a green CI build alone.
 
+The local reproducible toolchain used for the latest clean build was JDK
+17.0.20.1, Android platform 37.0, Build Tools 37.0.0 and NDK 28.0.12916984.
+It produced a debug APK successfully; it did not provide device, signing or
+runtime performance evidence.
+
 ## 2. Build the real artifact
 
 - [ ] `pnpm run version:set` — versionName and versionCode both bumped
