@@ -24,7 +24,7 @@ export const requestAiCompletion = async (
   fetchImpl: AiFetch = fetch as unknown as AiFetch,
 ): Promise<AiParserResponse> => {
   if (!settings.enabled) throw new Error('AI network access is disabled');
-  const apiKey = secretStore.get()?.trim();
+  const apiKey = (await secretStore.get())?.trim();
   if (!apiKey) throw new Error('AI API key is unavailable in secure storage');
   const endpoint = normalizeAiEndpoint(settings.apiBaseUrl, allowedHosts);
   let lastError: Error | null = null;

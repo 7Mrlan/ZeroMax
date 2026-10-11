@@ -1,9 +1,10 @@
 import StorageService from '../../utils/asyncStorageService';
+import {NativeModules} from 'react-native';
 
 export interface AiSecretStore {
-  get: () => string | null;
-  set: (value: string) => void;
-  clear: () => void;
+  get: () => string | null | Promise<string | null>;
+  set: (value: string) => void | Promise<void>;
+  clear: () => void | Promise<void>;
 }
 
 export interface AiSettings {
@@ -44,8 +45,26 @@ export const getMissingAiSettingsFields = (settings: AiSettings, secret: string 
   return missing;
 };
 
-export const saveAiSecret = (secretStore: AiSecretStore, secret: string): void => {
+export const saveAiSecret = async (secretStore: AiSecretStore, secret: string): Promise<void> => {
   const trimmed = secret.trim();
   if (!trimmed) throw new Error('API key cannot be empty');
-  secretStore.set(trimmed);
+  await secretStore.set(trimmed);
+};
+
+export const createNativeAiSecretStore = (): AiSecretStore => {
+  const native = (
+    NativeModules as {
+      ZeroSecureSecrets?: {
+        getSecret: (name: string) => Promise<string | null>;
+        setSecret: (name: string, value: string) => Promise<void>;
+        clearSecret: (name: string) => Promise<void>;
+      };
+    }
+  ).ZeroSecureSecrets;
+  if (!native) throw new Error('Secure secret native module is unavailable');
+  return {
+    get: () => native.getSecret('ai_api_key'),
+    set: value => native.setSecret('ai_api_key', value),
+    clear: () => native.clearSecret('ai_api_key'),
+  };
 };
