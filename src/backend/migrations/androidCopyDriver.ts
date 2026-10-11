@@ -11,6 +11,8 @@ export interface AndroidCopyDriverDependencies {
   backupId: string;
   createBackup?: (backupId: string, bridge: AndroidBackupBridge) => Promise<{backupId: string}>;
   readBackupSnapshot?: (backupId: string, bridge: AndroidBackupBridge) => Promise<CopyDataset>;
+  closeTarget?: () => Promise<void>;
+  discardTargetArtifact?: () => Promise<void>;
   createTarget?: typeof createTargetDatabase;
 }
 
@@ -24,6 +26,8 @@ export const createAndroidCopyDriver = ({
   backupId,
   createBackup = createAndroidSourceBackup,
   readBackupSnapshot = readAndroidBackupSnapshot,
+  closeTarget,
+  discardTargetArtifact,
   createTarget = createTargetDatabase,
 }: AndroidCopyDriverDependencies): LegacyCopyDriver => {
   let targetDatabase: Database | null = null;
@@ -52,7 +56,11 @@ export const createAndroidCopyDriver = ({
         throw new Error('Android copy target has not been prepared');
       }
       const discardTarget = async (): Promise<void> => {
-        await targetDatabase?.unsafeResetDatabase();
+        if (!closeTarget || !discardTargetArtifact) {
+          throw new Error('Target close and marker-aware discard lifecycle is unavailable');
+        }
+        await closeTarget();
+        await discardTargetArtifact();
       };
       const runTransaction = createWatermelonTargetTransaction(
         targetDatabase as unknown as TargetDatabaseLike,

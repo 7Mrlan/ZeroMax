@@ -10,7 +10,7 @@ import {detectLegacyDatabaseSource} from './legacySchema';
 export interface TargetArtifactBridge {
   inspectTargetArtifact: () => Promise<unknown>;
   /** Optional until native marker + closed-adapter deletion is implemented. */
-  discardTargetArtifact?: () => Promise<unknown>;
+  discardTargetArtifact?: (attemptId: string, generation: number, sourceFingerprint: string) => Promise<unknown>;
   claimTargetArtifact?: (attemptId: string, generation: number, sourceFingerprint: string) => Promise<unknown>;
   updateTargetArtifactMarker?: (
     attemptId: string,
@@ -176,7 +176,7 @@ export const discardOwnedTargetArtifact = async (
   if (!bridge || typeof bridge.discardTargetArtifact !== 'function') {
     throw new Error('Target artifact discard bridge is unavailable');
   }
-  await bridge.discardTargetArtifact();
+  await bridge.discardTargetArtifact(checkpoint.target.attemptId, checkpoint.generation, checkpoint.sourceFingerprint);
 };
 
 export const claimTargetArtifact = async (

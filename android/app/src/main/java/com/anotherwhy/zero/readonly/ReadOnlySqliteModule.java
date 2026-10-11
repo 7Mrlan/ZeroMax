@@ -328,6 +328,55 @@ public final class ReadOnlySqliteModule extends ReactContextBaseJavaModule {
         }
     }
 
+    /** Deletes an inactive target only when its durable marker matches exactly. */
+    @ReactMethod
+    public synchronized void discardTargetArtifact(
+            String attemptId,
+            int generation,
+            String sourceFingerprint,
+            Promise promise
+    ) {
+        if (!isValidMarkerText(attemptId) || !isValidMarkerText(sourceFingerprint) || generation <= 0) {
+            promise.reject("INVALID_TARGET_MARKER", "Invalid target discard identity");
+            return;
+        }
+        File databaseFile = resolveDatabaseFile(TARGET_DATABASE_NAME);
+        File markerFile = targetMarkerFile(databaseFile);
+        WritableMap marker = readMarker(markerFile);
+        if (marker == null
+                || !attemptId.equals(marker.getString("attemptId"))
+                || generation != marker.getInt("generation")
+                || !sourceFingerprint.equals(marker.getString("sourceFingerprint"))) {
+            promise.reject("TARGET_MARKER_OWNER_MISMATCH", "Target marker does not match discard identity");
+            return;
+        }
+        if ("activated".equals(marker.getString("status"))) {
+            promise.reject("TARGET_ACTIVE", "Activated target cannot be discarded");
+            return;
+        }
+
+        File[] files = new File[]{
+                databaseFile,
+                new File(databaseFile.getAbsolutePath() + "-wal"),
+                new File(databaseFile.getAbsolutePath() + "-shm"),
+                markerFile,
+                new File(markerFile.getAbsolutePath() + ".tmp")
+        };
+        try {
+            for (File file : files) {
+                if (file.exists() && !file.delete()) {
+                    promise.reject("TARGET_DISCARD_FAILED", "Could not delete " + file.getName());
+                    return;
+                }
+            }
+            WritableMap result = Arguments.createMap();
+            result.putString("status", "discarded");
+            promise.resolve(result);
+        } catch (Exception error) {
+            promise.reject("TARGET_DISCARD_FAILED", error.getMessage(), error);
+        }
+    }
+
     /**
      * Creates a non-overwritable source backup while the source is opened
      * read-only. The database and both SQLite sidecars are hashed before and
