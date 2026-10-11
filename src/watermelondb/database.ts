@@ -4,6 +4,7 @@ import SQLiteAdapter from '@nozbe/watermelondb/adapters/sqlite';
 import {schema} from './schema';
 import {migrations} from './migrations';
 import {User, Category, Expense, Currency, Debtor, Debt, Budget} from './models';
+import {getActiveDatabaseName} from '../backend/migrations/activeDatabase';
 
 let _database: Database | null = null;
 let _databaseError: Error | null = null;
@@ -23,6 +24,7 @@ const getDatabase = (): Database => {
   if (!_database) {
     try {
       const adapter = new SQLiteAdapter({
+        dbName: getActiveDatabaseName(),
         schema,
         migrations,
         jsi: true,
