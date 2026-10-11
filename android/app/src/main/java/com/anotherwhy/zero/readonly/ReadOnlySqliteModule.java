@@ -214,6 +214,10 @@ public final class ReadOnlySqliteModule extends ReactContextBaseJavaModule {
         if (!databaseExists) {
             WritableMap orphaned = Arguments.createMap();
             orphaned.putString("status", "orphaned");
+            WritableMap orphanMarker = readMarker(markerFile);
+            if (orphanMarker != null) {
+                orphaned.putMap("marker", orphanMarker);
+            }
             promise.resolve(orphaned);
             return;
         }

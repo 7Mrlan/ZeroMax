@@ -114,6 +114,29 @@ describe('runDatabasePreflight', () => {
     }
   });
 
+  it('retries an owned marker left before fresh target file creation', async () => {
+    const ownership = {
+      attemptId: 'fresh-2-test',
+      generation: 2,
+      sourceFingerprint: FRESH_TARGET_SOURCE_FINGERPRINT,
+      targetFingerprint: FRESH_TARGET_FINGERPRINT,
+    } as const;
+    persistFreshTargetOwnership(ownership);
+    try {
+      await expect(
+        runDatabasePreflight(
+          'watermelon',
+          async () => ({kind: 'missing'}) as never,
+          async () => ({}),
+          async () => ({kind: 'missing'}),
+          async () => ({status: 'orphaned', marker: {...ownership, status: 'writing'}}),
+        ),
+      ).resolves.toEqual({kind: 'fresh-target', databaseName: 'watermelon_v4'});
+    } finally {
+      clearFreshTargetOwnership();
+    }
+  });
+
   it('routes known legacy metadata to copy without constructing an adapter', async () => {
     await expect(
       runDatabasePreflight('watermelon', async () => ({

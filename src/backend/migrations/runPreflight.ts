@@ -44,22 +44,27 @@ const isOwnedFreshTarget = async (
   inspectFreshTarget: FreshTargetInspection,
 ): Promise<boolean> => {
   const ownership = readFreshTargetOwnership();
-  if (!ownership || targetProbe.kind !== 'metadata' || targetProbe.integrity !== 'ok') return false;
-  if (detectLegacyDatabaseSource(targetProbe.snapshot) !== 'target-v4') return false;
+  if (!ownership) return false;
 
   try {
     const artifact = normalizeTargetArtifact(await inspectFreshTarget());
+    const marker = artifact.status === 'present' || artifact.status === 'orphaned' ? artifact.marker : undefined;
     if (
-      artifact.status !== 'present' ||
-      !artifact.marker ||
-      artifact.marker.attemptId !== ownership.attemptId ||
-      artifact.marker.generation !== ownership.generation ||
-      artifact.marker.sourceFingerprint !== ownership.sourceFingerprint ||
-      artifact.marker.targetFingerprint !== ownership.targetFingerprint ||
-      !['writing', 'verified', 'activated'].includes(artifact.marker.status)
+      !marker ||
+      marker.attemptId !== ownership.attemptId ||
+      marker.generation !== ownership.generation ||
+      marker.sourceFingerprint !== ownership.sourceFingerprint ||
+      marker.targetFingerprint !== ownership.targetFingerprint ||
+      !['writing', 'verified', 'activated'].includes(marker.status)
     ) {
       return false;
     }
+    if (targetProbe.kind === 'missing') {
+      return artifact.status === 'orphaned';
+    }
+    if (artifact.status !== 'present') return false;
+    if (targetProbe.kind !== 'metadata' || targetProbe.integrity !== 'ok') return false;
+    if (detectLegacyDatabaseSource(targetProbe.snapshot) !== 'target-v4') return false;
     const snapshot = await readSnapshot('watermelon_v4');
     return COPY_TABLES.every(table => (snapshot[table] ?? []).length === 0);
   } catch {

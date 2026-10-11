@@ -75,6 +75,19 @@ const performInitialization = async (): Promise<BackendInitResult> => {
           existingArtifact.marker.sourceFingerprint === ownership.sourceFingerprint &&
           existingArtifact.marker.targetFingerprint === ownership.targetFingerprint &&
           ['writing', 'verified', 'activated'].includes(existingArtifact.marker.status);
+        const ownsOrphanedTarget =
+          existingOwnership !== null &&
+          existingArtifact.status === 'orphaned' &&
+          existingArtifact.marker !== undefined &&
+          existingArtifact.marker.attemptId === ownership.attemptId &&
+          existingArtifact.marker.generation === ownership.generation &&
+          existingArtifact.marker.sourceFingerprint === ownership.sourceFingerprint &&
+          existingArtifact.marker.targetFingerprint === ownership.targetFingerprint &&
+          ['writing', 'verified', 'activated'].includes(existingArtifact.marker.status);
+        if (ownsOrphanedTarget) {
+          await bridge.discardTargetArtifact?.(ownership.attemptId, ownership.generation, ownership.sourceFingerprint);
+        }
+        persistFreshTargetOwnership(ownership);
         if (!ownsExistingTarget) {
           await bridge.claimFreshTargetArtifact(
             ownership.attemptId,
@@ -92,11 +105,6 @@ const performInitialization = async (): Promise<BackendInitResult> => {
           if (typeof bridge.updateTargetArtifactMarker !== 'function') {
             throw new Error('Fresh target marker update bridge is unavailable');
           }
-          // Persist ownership before advancing the marker. If the process
-          // exits between these durable writes, the next preflight can verify
-          // the exact empty target and finish the handoff instead of blocking
-          // on an activated marker with no JS ownership record.
-          persistFreshTargetOwnership(ownership);
           if (markerStatus === 'writing') {
             await bridge.updateTargetArtifactMarker(ownership.attemptId, 'verified', ownership.targetFingerprint);
             await bridge.updateTargetArtifactMarker(ownership.attemptId, 'activated', ownership.targetFingerprint);

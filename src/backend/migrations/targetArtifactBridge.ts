@@ -39,7 +39,7 @@ const MarkerSchema = z
   .strict();
 const NativeArtifactSchema = z.discriminatedUnion('status', [
   z.object({status: z.literal('missing')}).strict(),
-  z.object({status: z.literal('orphaned')}).strict(),
+  z.object({status: z.literal('orphaned'), marker: MarkerSchema.optional()}).strict(),
   z.object({status: z.literal('invalid-marker')}).strict(),
   z
     .object({
