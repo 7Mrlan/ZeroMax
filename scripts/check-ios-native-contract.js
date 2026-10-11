@@ -41,6 +41,7 @@ forbidText(readOnly, 'sqlite3_exec', 'must keep all inspection SQL parameterized
 
 requireText(secure, 'RCT_EXPORT_MODULE(ZeroSecureSecrets)', 'secure module export');
 requireText(secure, 'SecItemCopyMatching', 'Keychain read');
+requireText(secure, '#import <Security/Security.h>', 'Security framework header');
 requireText(secure, 'SecItemUpdate', 'Keychain update');
 requireText(secure, 'SecItemAdd', 'Keychain insert');
 requireText(secure, 'SecItemDelete', 'Keychain delete');
@@ -54,5 +55,6 @@ for (const file of ['ZeroReadOnlySqlite.m', 'ZeroReadOnlySqlite.h', 'ZeroSecureS
 }
 requireText(project, 'ZeroReadOnlySqlite.m in Sources', 'readonly source build phase');
 requireText(project, 'ZeroSecureSecrets.m in Sources', 'secure source build phase');
+requireText(project, 'Security.framework in Frameworks', 'Security framework link');
 
 console.log('iOS native source contract validated (static only; Xcode/Pods/device smoke remains external).');
