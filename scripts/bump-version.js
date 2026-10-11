@@ -3,7 +3,7 @@
 /**
  * Bumps the app version across package.json, Android, and iOS.
  *
- * Usage: pnpm run version:set 2.3
+ * Usage: pnpm run version:set 2.7.0
  *
  * - Sets the version string in package.json, build.gradle, and project.pbxproj
  * - Auto-increments the build number (versionCode / CURRENT_PROJECT_VERSION)
@@ -15,7 +15,11 @@ const path = require('path');
 const newVersion = process.argv[2];
 if (!newVersion) {
   console.error('Usage: pnpm run version:set <version>');
-  console.error('Example: pnpm run version:set 2.3');
+  console.error('Example: pnpm run version:set 2.7.0');
+  process.exit(1);
+}
+if (!/^\d+\.\d+\.\d+$/.test(newVersion)) {
+  console.error('Version must use semantic three-part form, for example 2.7.0');
   process.exit(1);
 }
 
