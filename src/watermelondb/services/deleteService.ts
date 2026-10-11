@@ -23,19 +23,13 @@ export const deleteAllData = async (): Promise<void> => {
       const budgets = await database.get<Budget>('budgets').query().fetch();
 
       // Batch delete all records
-      const allRecords = [
-        ...users,
-        ...categories,
-        ...expenses,
-        ...currencies,
-        ...debtors,
-        ...debts,
-        ...budgets,
-      ];
+      const allRecords = [...users, ...categories, ...expenses, ...currencies, ...debtors, ...debts, ...budgets];
 
-      await database.batch(
-        ...allRecords.map(record => record.prepareDestroyPermanently()),
-      );
+      if (allRecords.length === 0) {
+        return;
+      }
+
+      await database.batch(...allRecords.map(record => record.prepareDestroyPermanently()));
     });
   } catch (error) {
     if (__DEV__) {
@@ -44,4 +38,3 @@ export const deleteAllData = async (): Promise<void> => {
     throw error;
   }
 };
-
