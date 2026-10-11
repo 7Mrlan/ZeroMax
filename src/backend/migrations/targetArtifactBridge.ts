@@ -1,6 +1,6 @@
 import {NativeModules} from 'react-native';
 import {z} from 'zod';
-import type {ActiveDatabaseName} from './activeDatabase';
+import type {ActiveDatabaseName, FreshTargetOwnership} from './activeDatabase';
 import {fingerprintCopyDataset} from './copyFingerprint';
 import {probeDatabaseReadOnly, readDatabaseSnapshotReadOnly, type ReadOnlySqliteBridge} from './nativePreflight';
 import type {MigrationCheckpoint} from './migrationCheckpoint';
@@ -12,6 +12,12 @@ export interface TargetArtifactBridge {
   /** Optional until native marker + closed-adapter deletion is implemented. */
   discardTargetArtifact?: (attemptId: string, generation: number, sourceFingerprint: string) => Promise<unknown>;
   claimTargetArtifact?: (attemptId: string, generation: number, sourceFingerprint: string) => Promise<unknown>;
+  claimFreshTargetArtifact?: (
+    attemptId: string,
+    generation: number,
+    sourceFingerprint: string,
+    targetFingerprint: string,
+  ) => Promise<unknown>;
   updateTargetArtifactMarker?: (
     attemptId: string,
     status: 'writing' | 'verified' | 'activated',
@@ -54,6 +60,26 @@ export const normalizeTargetArtifact = (value: unknown): z.infer<typeof NativeAr
     throw new Error('Target artifact bridge returned an invalid result');
   }
   return parsed.data;
+};
+
+export const verifyFreshTargetOwnership = async (
+  ownership: FreshTargetOwnership,
+  bridge: TargetArtifactBridge = NativeModules.ZeroReadOnlySqlite as TargetArtifactBridge,
+): Promise<boolean> => {
+  if (!bridge || typeof bridge.inspectTargetArtifact !== 'function') return false;
+  try {
+    const artifact = normalizeTargetArtifact(await bridge.inspectTargetArtifact());
+    return (
+      artifact.status === 'present' &&
+      artifact.marker?.status === 'activated' &&
+      artifact.marker.attemptId === ownership.attemptId &&
+      artifact.marker.generation === ownership.generation &&
+      artifact.marker.sourceFingerprint === ownership.sourceFingerprint &&
+      artifact.marker.targetFingerprint === ownership.targetFingerprint
+    );
+  } catch {
+    return false;
+  }
 };
 
 const statusForCheckpoint = (checkpoint: MigrationCheckpoint): 'fresh' | 'writing' | 'verified' => {

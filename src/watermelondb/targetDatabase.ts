@@ -19,6 +19,7 @@ export const createTargetDatabase = (
 ): {
   database: Database;
   initializingPromise: Promise<void>;
+  close?: () => void;
 } => {
   if (dbName !== TARGET_DATABASE_NAME) {
     throw new Error('Target database factory only accepts the fixed v4 database name');
@@ -33,5 +34,12 @@ export const createTargetDatabase = (
     adapter,
     modelClasses: [TargetUser, TargetCategory, Expense, Income, Currency, Debtor, Debt, Budget],
   });
-  return {database, initializingPromise: adapter.initializingPromise};
+  const close = (): void => {
+    const unsafeClose = (
+      database as unknown as {adapter?: {underlyingAdapter?: {_dispatcher?: {_db?: {unsafeClose?: () => void}}}}}
+    ).adapter?.underlyingAdapter?._dispatcher?._db?.unsafeClose;
+    if (typeof unsafeClose !== 'function') throw new Error('Target adapter close lifecycle is unavailable');
+    unsafeClose();
+  };
+  return {database, initializingPromise: adapter.initializingPromise, close};
 };

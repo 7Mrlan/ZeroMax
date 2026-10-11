@@ -3,6 +3,7 @@ jest.mock('../../../utils/asyncStorageService', () => ({
   default: {
     getItemSync: jest.fn(),
     setItemSync: jest.fn(),
+    removeItemSync: jest.fn(),
   },
 }));
 
@@ -11,6 +12,9 @@ import {
   LEGACY_DATABASE_NAME,
   TARGET_DATABASE_NAME,
   getActiveDatabaseName,
+  beginFreshTargetOwnership,
+  persistFreshTargetOwnership,
+  readFreshTargetOwnership,
   setActiveDatabaseName,
 } from '../activeDatabase';
 
@@ -37,5 +41,17 @@ describe('active database pointer', () => {
   it('writes the pointer only when the caller activates a verified target', () => {
     setActiveDatabaseName(TARGET_DATABASE_NAME);
     expect(mockedStorage.setItemSync).toHaveBeenCalledWith('active_database_name', TARGET_DATABASE_NAME);
+  });
+
+  it('round-trips fresh target ownership through MMKV', () => {
+    const ownership = beginFreshTargetOwnership();
+    persistFreshTargetOwnership(ownership);
+    const write = mockedStorage.setItemSync.mock.calls.find(([key]) => key === 'fresh_target_ownership_v1');
+    expect(write?.[1]).toBe(JSON.stringify(ownership));
+
+    mockedStorage.getItemSync.mockImplementation(key =>
+      key === 'fresh_target_ownership_v1' ? (write?.[1] ?? null) : null,
+    );
+    expect(readFreshTargetOwnership()).toEqual(ownership);
   });
 });

@@ -4,6 +4,7 @@ import {
   inspectTargetRecovery,
   normalizeTargetArtifact,
   updateTargetArtifactMarker,
+  verifyFreshTargetOwnership,
 } from '../targetArtifactBridge';
 import type {MigrationCheckpoint} from '../migrationCheckpoint';
 import {fingerprintCopyDataset} from '../copyFingerprint';
@@ -213,6 +214,26 @@ describe('target artifact bridge', () => {
     expect(claim).toHaveBeenCalledWith('1:source-a', 1, 'source-a');
     await expect(updateTargetArtifactMarker('1:source-a', 'verified', 'target-a', bridge)).resolves.toBeUndefined();
     expect(update).toHaveBeenCalledWith('1:source-a', 'verified', 'target-a');
+  });
+
+  it('verifies a fresh target marker against the MMKV ownership record', async () => {
+    const ownership = {
+      attemptId: 'fresh-1-test',
+      generation: 1,
+      sourceFingerprint: 'fresh-install-v1' as const,
+      targetFingerprint: 'fresh-target-v1' as const,
+    };
+    const bridge = {
+      inspectTargetArtifact: async () => ({
+        status: 'present' as const,
+        database: {size: 10, lastModified: 20},
+        wal: null,
+        shm: null,
+        marker: {...ownership, status: 'activated' as const},
+      }),
+    };
+    await expect(verifyFreshTargetOwnership(ownership, bridge)).resolves.toBe(true);
+    await expect(verifyFreshTargetOwnership({...ownership, attemptId: 'foreign'}, bridge)).resolves.toBe(false);
   });
 
   it('refuses to discard a writing artifact without a native ownership marker', async () => {

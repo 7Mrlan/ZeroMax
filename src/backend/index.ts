@@ -3,7 +3,13 @@ import {resetMigrationFailureForRetry, runMigrations} from './migrations/runner'
 import {appendErrorLog} from '../utils/errorLog';
 import {adoptDatabaseInstance, resetDatabaseInstance, waitForDatabase} from '../watermelondb/database';
 import {createTargetDatabase} from '../watermelondb/targetDatabase';
-import {getActiveDatabaseName, setActiveDatabaseName} from './migrations/activeDatabase';
+import {
+  beginFreshTargetOwnership,
+  clearFreshTargetOwnership,
+  getActiveDatabaseName,
+  persistFreshTargetOwnership,
+  setActiveDatabaseName,
+} from './migrations/activeDatabase';
 import {runDatabasePreflight} from './migrations/runPreflight';
 import {runBootGate} from './migrations/bootGate';
 import {
@@ -12,6 +18,7 @@ import {
   type AndroidLegacyMigrationBridge,
   type AndroidLegacyMigrationResult,
 } from './migrations/androidLegacyMigration';
+import type {TargetArtifactBridge} from './migrations/targetArtifactBridge';
 
 /**
  * Initialize the backend layer.
@@ -33,10 +40,31 @@ const performInitialization = async (): Promise<BackendInitResult> => {
     const bootResult = await runBootGate({
       preflight: () => runDatabasePreflight(getActiveDatabaseName()),
       createFreshTarget: async () => {
+        const bridge = NativeModules.ZeroReadOnlySqlite as TargetArtifactBridge;
+        const ownership = beginFreshTargetOwnership();
+        if (typeof bridge.claimFreshTargetArtifact !== 'function') {
+          throw new Error('Fresh target claim bridge is unavailable');
+        }
+        await bridge.claimFreshTargetArtifact(
+          ownership.attemptId,
+          ownership.generation,
+          ownership.sourceFingerprint,
+          ownership.targetFingerprint,
+        );
         const target = createTargetDatabase();
-        await target.initializingPromise;
-        setActiveDatabaseName('watermelon_v4');
-        return target.database;
+        try {
+          await target.initializingPromise;
+          persistFreshTargetOwnership(ownership);
+          setActiveDatabaseName('watermelon_v4');
+          return target.database;
+        } catch (error) {
+          try {
+            target.close?.();
+          } catch {
+            // Preserve the initialization error; the marker remains fail-closed.
+          }
+          throw error;
+        }
       },
       migrateLegacy: async source => {
         const bridge = NativeModules.ZeroReadOnlySqlite as AndroidLegacyMigrationBridge;
@@ -54,6 +82,7 @@ const performInitialization = async (): Promise<BackendInitResult> => {
             adoptedByMigration = true;
           },
         });
+        clearFreshTargetOwnership();
         return preparedLegacyMigration.targetDatabase;
       },
       adoptDatabase: database => {

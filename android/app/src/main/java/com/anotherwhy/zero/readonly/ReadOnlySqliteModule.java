@@ -271,6 +271,57 @@ public final class ReadOnlySqliteModule extends ReactContextBaseJavaModule {
         }
     }
 
+    /** Claims a fresh-install target with its final ownership marker in one native call. */
+    @ReactMethod
+    public synchronized void claimFreshTargetArtifact(
+            String attemptId,
+            int generation,
+            String sourceFingerprint,
+            String targetFingerprint,
+            Promise promise
+    ) {
+        if (!isValidMarkerText(attemptId)
+                || !isValidMarkerText(sourceFingerprint)
+                || !isValidMarkerText(targetFingerprint)
+                || generation <= 0) {
+            promise.reject("INVALID_TARGET_MARKER", "Invalid fresh target marker identity");
+            return;
+        }
+
+        File databaseFile = resolveDatabaseFile(TARGET_DATABASE_NAME);
+        File markerFile = targetMarkerFile(databaseFile);
+        if (databaseFile.exists()
+                || new File(databaseFile.getAbsolutePath() + "-wal").exists()
+                || new File(databaseFile.getAbsolutePath() + "-shm").exists()
+                || markerFile.exists()) {
+            promise.reject("TARGET_NOT_FRESH", "Target database or marker already exists");
+            return;
+        }
+
+        JSONObject marker = new JSONObject();
+        try {
+            marker.put("attemptId", attemptId);
+            marker.put("generation", generation);
+            marker.put("sourceFingerprint", sourceFingerprint);
+            marker.put("status", "activated");
+            marker.put("targetFingerprint", targetFingerprint);
+            if (!markerFile.createNewFile()) {
+                promise.reject("TARGET_NOT_FRESH", "Target marker already exists");
+                return;
+            }
+            try {
+                writeMarker(markerFile, marker);
+            } catch (Exception error) {
+                //noinspection ResultOfMethodCallIgnored
+                markerFile.delete();
+                throw error;
+            }
+            promise.resolve(Arguments.createMap());
+        } catch (Exception error) {
+            promise.reject("TARGET_MARKER_FAILED", error.getMessage(), error);
+        }
+    }
+
     /** Advances a marker only for the attempt that originally claimed it. */
     @ReactMethod
     public synchronized void updateTargetArtifactMarker(

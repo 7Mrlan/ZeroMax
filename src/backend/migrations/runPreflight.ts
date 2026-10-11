@@ -9,7 +9,9 @@ import {probeDatabaseReadOnly, readDatabaseSnapshotReadOnly} from './nativePrefl
 import type {CopyDataset} from './copyVerification';
 import {readMigrationCheckpoint} from './migrationCheckpoint';
 import {inspectTargetRecovery} from './targetArtifactBridge';
+import {verifyFreshTargetOwnership} from './targetArtifactBridge';
 import {decideTargetRecovery, type TargetObservation} from './targetArtifact';
+import {readFreshTargetOwnership} from './activeDatabase';
 
 export type ReadOnlyProbe = (databaseName: ActiveDatabaseName) => Promise<DatabaseProbeResult>;
 export type ReadOnlySnapshot = (databaseName: ActiveDatabaseName) => Promise<CopyDataset>;
@@ -40,7 +42,11 @@ export const runDatabasePreflight = async (
     }
     const checkpoint = readMigrationCheckpoint();
     if (checkpoint.kind !== 'valid') {
-      return {kind: 'blocked', reason: 'The active target has no valid durable migration checkpoint'};
+      const ownership = readFreshTargetOwnership();
+      if (!ownership || !(await verifyFreshTargetOwnership(ownership))) {
+        return {kind: 'blocked', reason: 'The active target has no valid durable ownership evidence'};
+      }
+      return decision;
     }
     try {
       const observation = await inspectTarget();
