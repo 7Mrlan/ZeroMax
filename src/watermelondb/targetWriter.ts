@@ -1,4 +1,10 @@
-import {COPY_TABLES, type CopyDataset, type CopyRow, type CopyTable} from '../backend/migrations/copyVerification';
+import {
+  COPY_TABLES,
+  type CopyDataset,
+  type CopyRow,
+  type CopyTable,
+  type CopyVerificationReport,
+} from '../backend/migrations/copyVerification';
 import type {LegacyCopyDriver} from '../backend/migrations/copyDriver';
 
 interface RawCollection {
@@ -32,6 +38,14 @@ const readTargetSnapshot = async (database: TargetDatabaseLike): Promise<CopyDat
     snapshot[table] = await database.get(table).query().unsafeFetchRaw();
   }
   return snapshot;
+};
+
+export const verifyWatermelonTargetSnapshot = async (
+  database: TargetDatabaseLike,
+  verify: (actualTarget: CopyDataset) => CopyVerificationReport,
+): Promise<CopyVerificationReport> => {
+  const actualTarget = await readTargetSnapshot(database);
+  return verify(actualTarget);
 };
 
 /**

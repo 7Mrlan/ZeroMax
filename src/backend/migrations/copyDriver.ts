@@ -24,6 +24,8 @@ export interface LegacyCopyDriver {
   closePreparedTarget?: () => Promise<void>;
   /** Exposes the verified target instance so BootGate can adopt it without opening a second adapter. */
   getPreparedTargetDatabase?: () => unknown;
+  /** Native writer may advance the marker before returning to JS. */
+  targetMarkerActivated?: boolean;
 }
 
 export interface LegacyCopyResult {

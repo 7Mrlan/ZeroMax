@@ -1,13 +1,21 @@
 import type {Database} from '@nozbe/watermelondb';
 import {createAndroidSourceBackup, readAndroidBackupSnapshot, type AndroidBackupBridge} from './backupBridge';
+import {fingerprintCopyDataset} from './copyFingerprint';
 import type {CopyDataset} from './copyVerification';
 import type {ReadOnlySqliteBridge} from './nativePreflight';
 import type {LegacyCopyDriver} from './copyDriver';
 import {createTargetDatabase} from '../../watermelondb/targetDatabase';
-import {createWatermelonTargetTransaction, type TargetDatabaseLike} from '../../watermelondb/targetWriter';
+import {
+  createWatermelonTargetTransaction,
+  verifyWatermelonTargetSnapshot,
+  type TargetDatabaseLike,
+} from '../../watermelondb/targetWriter';
 
 export interface AndroidCopyDriverDependencies {
-  bridge?: ReadOnlySqliteBridge & AndroidBackupBridge;
+  bridge?: ReadOnlySqliteBridge &
+    AndroidBackupBridge & {
+      writeTargetSnapshot?: (snapshotJson: string, targetFingerprint: string) => Promise<unknown>;
+    };
   backupId: string;
   createBackup?: (backupId: string, bridge: AndroidBackupBridge) => Promise<{backupId: string}>;
   readBackupSnapshot?: (backupId: string, bridge: AndroidBackupBridge) => Promise<CopyDataset>;
@@ -32,6 +40,8 @@ export const createAndroidCopyDriver = ({
 }: AndroidCopyDriverDependencies): LegacyCopyDriver => {
   let targetDatabase: Database | null = null;
   let backup: {backupId: string} | null = null;
+  let nativeTargetWrite: ((snapshotJson: string, targetFingerprint: string) => Promise<unknown>) | undefined;
+  let nativeMarkerActivated = false;
 
   const closePreparedTarget = async (): Promise<void> => {
     if (!targetDatabase) {
@@ -81,10 +91,11 @@ export const createAndroidCopyDriver = ({
       const target = createTarget();
       await target.initializingPromise;
       targetDatabase = target.database;
+      nativeTargetWrite = (bridge as AndroidCopyDriverDependencies['bridge'])?.writeTargetSnapshot;
     },
     closePreparedTarget,
     runTargetTransaction: async (expectedTarget, verify) => {
-      if (!targetDatabase) {
+      if (!targetDatabase && !nativeTargetWrite) {
         throw new Error('Android copy target has not been prepared');
       }
       const discardTarget = async (): Promise<void> => {
@@ -97,6 +108,16 @@ export const createAndroidCopyDriver = ({
         }
         await discardTargetArtifact();
       };
+      if (nativeTargetWrite) {
+        await nativeTargetWrite(JSON.stringify(expectedTarget), fingerprintCopyDataset(expectedTarget));
+        nativeMarkerActivated = true;
+        try {
+          return await verifyWatermelonTargetSnapshot(targetDatabase as unknown as TargetDatabaseLike, verify);
+        } catch (error) {
+          await discardTarget();
+          throw error;
+        }
+      }
       const runTransaction = createWatermelonTargetTransaction(
         targetDatabase as unknown as TargetDatabaseLike,
         discardTarget,
@@ -104,5 +125,8 @@ export const createAndroidCopyDriver = ({
       return runTransaction(expectedTarget, verify);
     },
     getPreparedTargetDatabase: () => targetDatabase,
+    get targetMarkerActivated() {
+      return nativeMarkerActivated;
+    },
   };
 };

@@ -3,6 +3,7 @@ package com.anotherwhy.zero.readonly;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteException;
+import android.content.ContentValues;
 
 import androidx.annotation.NonNull;
 
@@ -15,6 +16,7 @@ import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.bridge.WritableMap;
 
 import org.json.JSONException;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.File;
@@ -29,6 +31,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.Iterator;
 
 /**
  * Read-only metadata probe for the migration preflight.
@@ -327,6 +330,75 @@ public final class ReadOnlySqliteModule extends ReactContextBaseJavaModule {
         } catch (Exception error) {
             promise.reject("TARGET_MARKER_FAILED", error.getMessage(), error);
         }
+    }
+
+    /** Writes a verified normalized target snapshot while no Watermelon adapter owns the file. */
+    @ReactMethod
+    public synchronized void writeTargetSnapshot(String snapshotJson, String targetFingerprint, Promise promise) {
+        if (snapshotJson == null || snapshotJson.length() > 16 * 1024 * 1024 || !isValidMarkerText(targetFingerprint)) {
+            promise.reject("INVALID_TARGET_SNAPSHOT", "Target snapshot is missing or too large");
+            return;
+        }
+        SQLiteDatabase database = null;
+        boolean transactionStarted = false;
+        try {
+            JSONObject snapshot = new JSONObject(snapshotJson);
+            database = SQLiteDatabase.openDatabase(
+                    resolveDatabaseFile(TARGET_DATABASE_NAME).getAbsolutePath(),
+                    null,
+                    SQLiteDatabase.OPEN_READWRITE | SQLiteDatabase.NO_LOCALIZED_COLLATORS
+            );
+            database.beginTransaction();
+            transactionStarted = true;
+            for (String table : INSPECTED_TABLES) {
+                if (!snapshot.has(table)) continue;
+                JSONArray rows = snapshot.getJSONArray(table);
+                Set<String> allowed = allowedColumns(table);
+                for (int rowIndex = 0; rowIndex < rows.length(); rowIndex += 1) {
+                    JSONObject row = rows.getJSONObject(rowIndex);
+                    ContentValues values = new ContentValues();
+                    Iterator<String> keys = row.keys();
+                    while (keys.hasNext()) {
+                        String column = keys.next();
+                        if (!allowed.contains(column)) {
+                            throw new JSONException("Unknown target column: " + table + "." + column);
+                        }
+                        Object value = row.get(column);
+                        if (value == JSONObject.NULL) values.putNull(column);
+                        else if (value instanceof Boolean) values.put(column, (Boolean) value);
+                        else if (value instanceof Number) values.put(column, ((Number) value).doubleValue());
+                        else if (value instanceof String) values.put(column, (String) value);
+                        else throw new JSONException("Unsupported target value: " + table + "." + column);
+                    }
+                    database.insertOrThrow(table, null, values);
+                }
+            }
+            database.setTransactionSuccessful();
+            activateTargetMarkerAfterNativeWrite(targetFingerprint);
+            promise.resolve(Arguments.createMap());
+        } catch (Exception error) {
+            promise.reject("TARGET_WRITE_FAILED", error.getMessage(), error);
+        } finally {
+            if (database != null) {
+                if (transactionStarted) database.endTransaction();
+                database.close();
+            }
+        }
+    }
+
+    private void activateTargetMarkerAfterNativeWrite(String targetFingerprint) throws IOException, JSONException {
+        File markerFile = targetMarkerFile(resolveDatabaseFile(TARGET_DATABASE_NAME));
+        WritableMap existing = readMarker(markerFile);
+        if (existing == null || !"writing".equals(existing.getString("status"))) {
+            throw new IOException("Target marker is not in writing state");
+        }
+        JSONObject marker = new JSONObject();
+        marker.put("attemptId", existing.getString("attemptId"));
+        marker.put("generation", existing.getInt("generation"));
+        marker.put("sourceFingerprint", existing.getString("sourceFingerprint"));
+        marker.put("status", "activated");
+        marker.put("targetFingerprint", targetFingerprint);
+        writeMarker(markerFile, marker);
     }
 
     /** Advances a marker only for the attempt that originally claimed it. */

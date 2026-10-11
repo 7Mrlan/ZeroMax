@@ -78,7 +78,7 @@ const expectedIndexes = (source: Exclude<LegacyDatabaseSource, 'unknown'>): Reco
 };
 
 const indexesMatch = (snapshot: LegacySchemaSnapshot, source: Exclude<LegacyDatabaseSource, 'unknown'>): boolean => {
-  if (!snapshot.indexes) return true;
+  if (!snapshot.indexes || Object.keys(snapshot.indexes).length === 0) return true;
   const expected = expectedIndexes(source);
   const actualTables = Object.keys(snapshot.indexes).sort();
   const expectedTables = Object.keys(expected).sort();

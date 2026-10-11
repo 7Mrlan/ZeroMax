@@ -37,6 +37,7 @@ export interface AndroidLegacyMigrationResult {
   checkpoint: MigrationCheckpoint;
   copy: LegacyCopyResult;
   targetDatabase: unknown;
+  targetMarkerActivated?: boolean;
 }
 
 // A failed activation can be retried in the same JS runtime. Keep the
@@ -284,7 +285,7 @@ export const runAndroidLegacyMigration = async ({
       throw new Error('Verified target database instance is unavailable for adoption');
     }
     verifiedTargetInstances.set(currentCheckpoint.target.attemptId, targetDatabase);
-    return {checkpoint: currentCheckpoint, copy, targetDatabase};
+    return {checkpoint: currentCheckpoint, copy, targetDatabase, targetMarkerActivated: driver.targetMarkerActivated};
   } catch (error) {
     // The copy may have committed rows before marker/checkpoint/adoption
     // failed. Close the isolated JSI adapter before a later reconcile can
@@ -311,12 +312,14 @@ export const activateAndroidLegacyMigration = async (
 ): Promise<AndroidLegacyMigrationResult> => {
   setActiveDatabaseName('watermelon_v4');
   adoptDatabase(result.targetDatabase);
-  await updateTargetArtifactMarker(
-    result.checkpoint.target.attemptId,
-    'activated',
-    result.copy.targetFingerprint,
-    bridge,
-  );
+  if (!result.targetMarkerActivated) {
+    await updateTargetArtifactMarker(
+      result.checkpoint.target.attemptId,
+      'activated',
+      result.copy.targetFingerprint,
+      bridge,
+    );
+  }
   const checkpoint = updateMigrationCheckpoint(result.checkpoint, current => ({
     ...current,
     state: 'activated',

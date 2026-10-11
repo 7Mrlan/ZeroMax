@@ -33,6 +33,10 @@ const checks = [
     'native target markers must use atomic ownership writes',
   ],
   [
+    readonly.includes('writeTargetSnapshot') && readonly.includes('insertOrThrow'),
+    'native target writer must validate and commit normalized rows',
+  ],
+  [
     database.includes("prop === '$$typeof'") && database.includes('Symbol.toStringTag'),
     'database proxy must ignore React Refresh metadata probes',
   ],

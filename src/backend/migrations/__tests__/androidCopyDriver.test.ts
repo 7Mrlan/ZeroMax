@@ -84,4 +84,25 @@ describe('createAndroidCopyDriver', () => {
     await expect(driver.closePreparedTarget?.()).rejects.toThrow('close lifecycle is unavailable');
     expect(driver.getPreparedTargetDatabase?.()).not.toBeNull();
   });
+
+  it('uses the native target writer and verifies rows through Watermelon readback', async () => {
+    const writeTargetSnapshot = jest.fn(async () => undefined);
+    const database = {
+      get: jest.fn(() => ({query: () => ({unsafeFetchRaw: async () => []})})),
+    };
+    const driver = createAndroidCopyDriver({
+      bridge: {
+        probe: jest.fn(),
+        backupDatabase: jest.fn(),
+        readBackupSnapshot: async () => snapshot,
+        writeTargetSnapshot,
+      },
+      backupId: 'migration-1',
+      createTarget: jest.fn(() => ({database: database as never, initializingPromise: Promise.resolve()})),
+    });
+
+    await driver.prepareTarget();
+    await expect(driver.runTargetTransaction(snapshot, () => ({ok: true}) as never)).resolves.toEqual({ok: true});
+    expect(writeTargetSnapshot).toHaveBeenCalledWith(JSON.stringify(snapshot), expect.any(String));
+  });
 });
