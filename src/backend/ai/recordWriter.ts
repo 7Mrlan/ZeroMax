@@ -21,7 +21,7 @@ interface WriterLike {
   batch: (records: ReadonlyArray<unknown>) => Promise<void>;
 }
 
-interface AiDatabaseLike {
+export interface AiDatabaseLike {
   get: (table: string) => RawCollection;
   write: (work: (writer: WriterLike) => Promise<void>, description?: string) => Promise<void>;
 }
