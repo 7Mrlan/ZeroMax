@@ -3,7 +3,11 @@ jest.mock('../../../utils/asyncStorageService', () => ({
   default: {getItemSync: jest.fn(() => null), setItemSync: jest.fn(), removeItemSync: jest.fn()},
 }));
 
-import {activateAndroidLegacyMigration, runAndroidLegacyMigration} from '../androidLegacyMigration';
+import {
+  activateAndroidLegacyMigration,
+  runAndroidLegacyMigration,
+  type AndroidLegacyMigrationResult,
+} from '../androidLegacyMigration';
 import type {LegacyCopyDriver} from '../copyDriver';
 
 const source = {
@@ -108,7 +112,7 @@ describe('runAndroidLegacyMigration', () => {
       claimTargetArtifact: jest.fn(),
       updateTargetArtifactMarker: jest.fn(async () => undefined),
     };
-    const result = {
+    const result: AndroidLegacyMigrationResult = {
       checkpoint: {
         schemaVersion: 1,
         generation: 1,
