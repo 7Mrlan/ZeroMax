@@ -29,6 +29,11 @@ describe('active database pointer', () => {
     expect(getActiveDatabaseName()).toBe(TARGET_DATABASE_NAME);
   });
 
+  it('fails closed to the legacy database for an unknown pointer', () => {
+    mockedStorage.getItemSync.mockReturnValue('unexpected_database');
+    expect(getActiveDatabaseName()).toBe(LEGACY_DATABASE_NAME);
+  });
+
   it('writes the pointer only when the caller activates a verified target', () => {
     setActiveDatabaseName(TARGET_DATABASE_NAME);
     expect(mockedStorage.setItemSync).toHaveBeenCalledWith('active_database_name', TARGET_DATABASE_NAME);
