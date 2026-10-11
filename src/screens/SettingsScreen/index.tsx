@@ -357,6 +357,14 @@ const SettingsScreen = () => {
           <View style={[gs.mx16, styles.separator, {backgroundColor: colors.secondaryAccent}]} />
           <SettingsRow
             colors={colors}
+            icon="lock"
+            label={t('ai.settingsTitle')}
+            subtitle={t('ai.settingsSubtitle')}
+            onPress={() => navigate('AiSettingsScreen')}
+          />
+          <View style={[gs.mx16, styles.separator, {backgroundColor: colors.secondaryAccent}]} />
+          <SettingsRow
+            colors={colors}
             icon="calendar-days"
             label={t('settings.weekStart')}
             value={weekStartLabel}
