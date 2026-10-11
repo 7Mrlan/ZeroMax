@@ -1,7 +1,7 @@
 /**
- * Runner-agnostic mock for `react-native-mmkv` (no native runtime in tests).
+ * Jest mock for `react-native-mmkv` (no native runtime in tests).
  * In-memory map so code that writes then reads behaves realistically.
- * Used by jest.setup.js (jest.mock) and bun-preload.ts (mock.module).
+ * Used by jest.setup.js (jest.mock).
  */
 
 type Stored = string | number | boolean;

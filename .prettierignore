@@ -4,5 +4,7 @@ ios/
 vendor/
 coverage/
 node_modules/
+zero/
+zerox/
 bun.lock
 *.lock

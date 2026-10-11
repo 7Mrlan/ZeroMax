@@ -31,51 +31,59 @@ Zero is a lightweight, open-source expense tracking app for Android & iOS. Built
 ## Features
 
 ### Expense Tracking
+
 Add, edit, and delete transactions with customizable categories.
 
 ### Category Management
+
 Create your own categories with custom icons and colors.
 
 ### Insights & Reports
+
 - Monthly spending breakdown with pie charts
 - Heatmap calendar showing daily expenses
 - Average per day calculations
 
 ### Debt Tracking
+
 Track money you owe or are owed. Manage debtors and individual debts.
 
 ### Customization
+
 - Light & Dark themes (+ system default)
 - Multiple currency symbols
 - Personalized username
 
 ### Data Control
+
 - Export all data as JSON
 - Import on new device
 - Delete all data option
 
 ### Privacy First
+
 - 100% offline — no internet required
 - All data stored locally on device
 - Zero data collection
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|------------|
-| Framework | React Native 0.84 |
-| Language | TypeScript 5.8 (strict) |
-| Database | WatermelonDB (SQLite + JSI) |
-| State | Redux Toolkit + Redux Persist |
-| Validation | Zod 4 |
-| UI | Custom atomic components + Lucide icons |
-| Navigation | React Navigation 7 |
-| Lists | FlashList (performant lists) |
-| Storage | MMKV (preferences & persistence) |
+| Layer      | Technology                              |
+| ---------- | --------------------------------------- |
+| Framework  | React Native 0.86.2                     |
+| Language   | TypeScript 5.8 (strict)                 |
+| Database   | WatermelonDB (SQLite + JSI)             |
+| State      | Redux Toolkit + Redux Persist           |
+| Validation | Zod 4                                   |
+| UI         | Custom atomic components + Lucide icons |
+| Navigation | React Navigation 7                      |
+| Lists      | FlashList (performant lists)            |
+| Storage    | MMKV (preferences & persistence)        |
 
 ### Why WatermelonDB?
 
 We migrated from Realm to WatermelonDB because:
+
 - **Realm is deprecated** — MongoDB announced end of support
 - **SQLite is battle-tested** — Powers millions of apps
 - **Lazy loading** — Only loads data when needed
@@ -114,8 +122,9 @@ src/
 ## Getting Started
 
 ### Prerequisites
-- Node.js >= 22.11.0
-- Bun (package manager)
+
+- Node.js >= 22.13.0
+- pnpm 11 (package manager)
 - Android Studio / Xcode
 
 ### Installation
@@ -126,16 +135,17 @@ git clone https://github.com/indranilbhuin/zero.git
 cd zero
 
 # Install dependencies
-bun install
+corepack enable
+pnpm install
 
 # iOS only
 cd ios && bundle exec pod install && cd ..
 
 # Run the app
-bun run android  # or bun run ios
+pnpm run android  # or pnpm run ios
 
 # Type-check
-bun run typecheck
+pnpm run typecheck
 ```
 
 ## Contributing

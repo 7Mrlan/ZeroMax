@@ -11,8 +11,8 @@
  * with no telemetry cannot discover a broken restore in the field; a user
  * discovers it while trying to recover a lost phone.
  *
- * Lives in the root `__tests__/` directory, which bunfig.toml excludes, because
- * it needs jest.mock hoisting to swap the native SQLite adapter for LokiJS —
+ * Lives in the root `__tests__/` directory because it needs jest.mock hoisting
+ * to swap the native SQLite adapter for LokiJS —
  * the same reason App.test.tsx lives here.
  */
 import type {Database} from '@nozbe/watermelondb';
@@ -51,10 +51,10 @@ jest.mock('../src/watermelondb/database', () => {
   return {database: db, getDatabase: () => db, getDatabaseError: () => null, default: db};
 });
 
- 
 const {database} = require('../src/watermelondb/database') as {database: Database};
- 
-const {importAllData} = require('../src/watermelondb/services/importService') as typeof import('../src/watermelondb/services/importService');
+
+const {importAllData} =
+  require('../src/watermelondb/services/importService') as typeof import('../src/watermelondb/services/importService');
 
 const backup = (overrides: Partial<ExportData> = {}): ExportData => ({
   users: [{username: 'Ada', email: ''}],
@@ -183,9 +183,7 @@ describe('importAllData', () => {
     await importAllData(
       backup({
         users: [{username: 'Grace', email: ''}],
-        expenses: [
-          {title: 'Only one', amount: 1, description: '', category: {name: 'Fuel'}, date: '2026-08-09'},
-        ],
+        expenses: [{title: 'Only one', amount: 1, description: '', category: {name: 'Fuel'}, date: '2026-08-09'}],
       }),
     );
 
@@ -209,15 +207,13 @@ describe('importAllData', () => {
     // atomic, this is exactly the point where the device would be left with
     // its old data destroyed and the new data half-written.
     const budgets = database.get<Budget>('budgets');
-    const spy = jest
-      .spyOn(budgets, 'prepareCreate')
-      .mockImplementation(() => {
-        throw new Error('simulated failure mid-import');
-      });
+    const spy = jest.spyOn(budgets, 'prepareCreate').mockImplementation(() => {
+      throw new Error('simulated failure mid-import');
+    });
 
-    await expect(
-      importAllData(backup({users: [{username: 'Grace', email: ''}]})),
-    ).rejects.toThrow('simulated failure mid-import');
+    await expect(importAllData(backup({users: [{username: 'Grace', email: ''}]}))).rejects.toThrow(
+      'simulated failure mid-import',
+    );
 
     spy.mockRestore();
 

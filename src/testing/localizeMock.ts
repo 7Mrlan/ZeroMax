@@ -1,9 +1,5 @@
 /**
- * Runner-agnostic mock for `react-native-localize`.
- *
- * Registered as the module implementation by BOTH test runners:
- * - jest: `jest.mock('react-native-localize', ...)` in jest.setup.js
- * - bun:  `mock.module('react-native-localize', ...)` in bun-preload.ts
+ * Jest mock for `react-native-localize`, registered in jest.setup.js.
  *
  * Tests import the setters directly (same module instance as the mock) to
  * change the simulated device locale. Remember that src/utils/locale.ts
@@ -17,9 +13,7 @@ export interface MockLocale {
   isRTL: boolean;
 }
 
-const DEFAULT_LOCALES: MockLocale[] = [
-  {languageTag: 'en-US', languageCode: 'en', countryCode: 'US', isRTL: false},
-];
+const DEFAULT_LOCALES: MockLocale[] = [{languageTag: 'en-US', languageCode: 'en', countryCode: 'US', isRTL: false}];
 
 let locales: MockLocale[] = DEFAULT_LOCALES;
 let numberFormatSettings = {decimalSeparator: '.', groupingSeparator: ','};
@@ -32,10 +26,7 @@ export const setMockLocales = (next: MockLocale[]): void => {
   locales = next;
 };
 
-export const setMockNumberFormatSettings = (next: {
-  decimalSeparator: string;
-  groupingSeparator: string;
-}): void => {
+export const setMockNumberFormatSettings = (next: {decimalSeparator: string; groupingSeparator: string}): void => {
   numberFormatSettings = next;
 };
 

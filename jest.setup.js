@@ -12,14 +12,10 @@ jest.mock('@react-native-documents/picker', () => ({
   types: {allFiles: 'public.item'},
 }));
 
-jest.mock('react-native-worklets', () =>
-  require('react-native-worklets/src/mock'),
-);
+jest.mock('react-native-worklets', () => require('react-native-worklets/src/mock'));
 
-jest.mock('react-native-reanimated', () =>
-  require('react-native-reanimated/mock'),
-);
+jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock'));
 
-// Shared runner-agnostic mocks (also registered by bun-preload.ts for `bun test`)
+// Shared mocks used by the Jest test runner.
 jest.mock('react-native-localize', () => require('./src/testing/localizeMock'));
 jest.mock('react-native-mmkv', () => require('./src/testing/mmkvMock'));

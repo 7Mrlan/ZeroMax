@@ -3,7 +3,7 @@
 /**
  * Bumps the app version across package.json, Android, and iOS.
  *
- * Usage: bun run version:set 2.3
+ * Usage: pnpm run version:set 2.3
  *
  * - Sets the version string in package.json, build.gradle, and project.pbxproj
  * - Auto-increments the build number (versionCode / CURRENT_PROJECT_VERSION)
@@ -14,8 +14,8 @@ const path = require('path');
 
 const newVersion = process.argv[2];
 if (!newVersion) {
-  console.error('Usage: bun run version:set <version>');
-  console.error('Example: bun run version:set 2.3');
+  console.error('Usage: pnpm run version:set <version>');
+  console.error('Example: pnpm run version:set 2.3');
   process.exit(1);
 }
 

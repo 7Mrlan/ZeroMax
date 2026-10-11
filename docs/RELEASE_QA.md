@@ -11,16 +11,16 @@ a build is sound are the automated gate below and this manual pass.
 ## 1. Automated gate (must be green before building)
 
 ```bash
-bun run typecheck    # tsc --strict
-bun run lint         # eslint (flat config, ESLint 9)
-bun run test         # jest — full suite incl. App render smoke test
-bun test             # bun — pure suites, fast second opinion
+pnpm run format:check # prettier
+pnpm run typecheck    # tsc --strict
+pnpm run lint         # eslint (flat config, ESLint 9)
+pnpm run test:ci      # jest — full suite incl. App render smoke test
 cd android && ./gradlew assembleDebug
 ```
 
 ## 2. Build the real artifact
 
-- [ ] `bun run version:set` — versionName and versionCode both bumped
+- [ ] `pnpm run version:set` — versionName and versionCode both bumped
 - [ ] `cd android && ./gradlew bundleRelease`
 - [ ] iOS: `bundle exec pod install` then Archive from Xcode
 - [ ] Install the release build on device (not Metro, not debug)

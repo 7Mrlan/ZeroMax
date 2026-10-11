@@ -10,9 +10,7 @@ const reactNativeConfig = require('@react-native/eslint-config/flat');
 // This codebase is TypeScript-only, and the pinned ft-flow@2 calls
 // context.getAllComments(), removed in ESLint 9 — it crashes the whole run.
 // Dropping the block is correct here rather than force-resolving ft-flow@3.
-const withoutFlowRules = reactNativeConfig.filter(
-  entry => !entry.plugins?.['ft-flow'],
-);
+const withoutFlowRules = reactNativeConfig.filter(entry => !entry.plugins?.['ft-flow']);
 
 module.exports = [
   {
@@ -23,12 +21,14 @@ module.exports = [
       'coverage/**',
       'vendor/**',
       'node_modules/**',
+      'zero/**',
+      'zerox/**',
     ],
   },
   ...withoutFlowRules,
   {
     // Test setup/preload files run in the test runner, not the app.
-    files: ['jest.setup.js', 'jest.config.js', 'bun-preload.ts', 'src/testing/**'],
+    files: ['jest.setup.js', 'jest.config.js', 'src/testing/**'],
     languageOptions: {
       globals: {jest: 'readonly', require: 'readonly', module: 'writable'},
     },

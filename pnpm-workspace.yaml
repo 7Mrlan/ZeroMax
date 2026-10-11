@@ -1,0 +1,4 @@
+# Metro/ESLint use the native resolver when available.
+# This is the only install script explicitly allowed by the lockfile policy.
+allowBuilds:
+  unrs-resolver: true

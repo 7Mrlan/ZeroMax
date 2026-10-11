@@ -1,0 +1,4 @@
+#!/usr/bin/env sh
+set -e
+pnpm run typecheck
+pnpm run test:ci
