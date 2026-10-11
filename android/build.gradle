@@ -19,3 +19,12 @@ buildscript {
 }
 
 apply plugin: "com.facebook.react.rootproject"
+
+// AGP 9 disables library BuildConfig generation by default. WatermelonDB 0.28
+// still references its library BuildConfig.DEBUG in the native driver, so
+// enable only this dependency's generated class without patching node_modules.
+project(':nozbe_watermelondb') {
+    afterEvaluate {
+        android.buildFeatures.buildConfig = true
+    }
+}

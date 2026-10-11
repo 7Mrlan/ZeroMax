@@ -75,7 +75,9 @@
     "@react-native-community/cli-platform-android": "20.2.0",
     "@react-native-community/cli-platform-ios": "20.2.0",
     "@react-native/babel-preset": "0.87.1",
+    "@react-native/codegen": "0.87.1",
     "@react-native/eslint-config": "0.87.1",
+    "@react-native/gradle-plugin": "0.87.1",
     "@react-native/jest-preset": "0.87.1",
     "@react-native/metro-config": "0.87.1",
     "@react-native/typescript-config": "0.87.1",
@@ -96,8 +98,7 @@
     "prettier": "3.9.6",
     "react-native-svg-transformer": "^1.5.3",
     "react-test-renderer": "19.3.0",
-    "typescript": "7.0.2",
-    "@react-native/gradle-plugin": "0.87.1"
+    "typescript": "7.0.2"
   },
   "engines": {
     "node": ">= 22.13.0"
