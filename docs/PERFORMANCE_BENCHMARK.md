@@ -1,6 +1,6 @@
 # Runtime performance benchmark contract
 
-This repository currently has no connected Android device or emulator. No FPS, TTI, jank, memory, or database throughput percentage is claimed until this contract is executed.
+API35 emulator-5554 is connected, but this contract has not produced a repeatable benchmark yet. No FPS, TTI, jank, memory, or database throughput percentage is claimed.
 
 Build Zero `d7725cd`, Zerox `a21abd6`, and the candidate with the same release Hermes/Fabric settings on the same Android device/API. Use fixtures with 100, 1,000, and 10,000 records distributed across 1 and 100 days. Collect at least 30 samples per metric and store median/P95 plus raw samples in `performance/latest.json`.
 

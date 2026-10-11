@@ -28,8 +28,9 @@ marked complete from a green CI build alone.
 
 The local reproducible toolchain used for the latest clean build was JDK
 17.0.20.1, Android platform 37.0, Build Tools 37.0.0 and NDK 28.0.12916984.
-It produced a debug APK successfully; it did not provide device, signing or
-runtime performance evidence.
+It produced a debug APK successfully; API35 emulator-5554 is connected and has
+provided JSI/fresh-start smoke evidence, but this still does not provide
+release signing or runtime performance evidence.
 
 ## 2. Build the real artifact
 
