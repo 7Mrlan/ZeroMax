@@ -1,23 +1,6 @@
-import {
-  verifyCopiedRows,
-  type CopyDataset,
-  type CopyRow,
-  type CopyTable,
-  type CopyVerificationReport,
-} from './copyVerification';
+import {verifyCopiedRows, type CopyDataset, type CopyVerificationReport} from './copyVerification';
 import {normalizeLegacyRows, type CopyNormalizationResult} from './copyNormalization';
 import type {LegacyDatabaseSource} from './legacySchema';
-
-const COPY_WRITE_ORDER: ReadonlyArray<CopyTable> = [
-  'users',
-  'categories',
-  'currencies',
-  'debtors',
-  'expenses',
-  'incomes',
-  'debts',
-  'budgets',
-];
 
 /**
  * Native/Watermelon adapter boundary for a copy-on-write migration. The
@@ -28,11 +11,14 @@ export interface LegacyCopyDriver {
   readSourceSnapshot: () => Promise<CopyDataset>;
   ensureBackup: () => Promise<void>;
   prepareTarget: () => Promise<void>;
-  beginTargetTransaction: () => Promise<void>;
-  writeTargetRows: (table: CopyTable, rows: ReadonlyArray<CopyRow>) => Promise<void>;
-  readTargetSnapshot: () => Promise<CopyDataset>;
-  commitTargetTransaction: () => Promise<void>;
-  rollbackTargetTransaction: () => Promise<void>;
+  /**
+   * Writes every table, reads the target back, invokes verify, and commits
+   * only when verify returns an ok report. The driver owns rollback semantics.
+   */
+  runTargetTransaction: (
+    expectedTarget: CopyDataset,
+    verify: (actualTarget: CopyDataset) => CopyVerificationReport,
+  ) => Promise<CopyVerificationReport>;
 }
 
 export interface LegacyCopyResult {
@@ -57,36 +43,16 @@ export const copyLegacyRows = async (
   const sourceRows = await driver.readSourceSnapshot();
   const normalization = normalizeLegacyRows(source, sourceRows);
   await driver.prepareTarget();
-
-  let transactionStarted = false;
-  try {
-    await driver.beginTargetTransaction();
-    transactionStarted = true;
-    for (const table of COPY_WRITE_ORDER) {
-      await driver.writeTargetRows(table, normalization.dataset[table] ?? []);
-    }
-
-    const actualTarget = await driver.readTargetSnapshot();
-    const verification = verifyCopiedRows({
+  const verification = await driver.runTargetTransaction(normalization.dataset, actualTarget => {
+    const report = verifyCopiedRows({
       source: sourceRows,
       expectedTarget: normalization.dataset,
       actualTarget,
     });
-    if (!verification.ok) {
-      throw copyError(verification);
+    if (!report.ok) {
+      throw copyError(report);
     }
-
-    await driver.commitTargetTransaction();
-    return {source, normalization, verification};
-  } catch (error) {
-    if (transactionStarted) {
-      try {
-        await driver.rollbackTargetTransaction();
-      } catch {
-        // Preserve the original copy/verification error. Recovery will inspect
-        // the durable migration state before deciding whether to discard target.
-      }
-    }
-    throw error;
-  }
+    return report;
+  });
+  return {source, normalization, verification};
 };
