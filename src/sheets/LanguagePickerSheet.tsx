@@ -9,6 +9,7 @@ import {gs} from '../styles/globalStyles';
 
 const LANGUAGES = [
   {code: 'en', label: 'English'},
+  {code: 'zh', label: '中文'},
 ] as const;
 
 const LanguagePickerSheet: React.FC<SheetProps<'language-picker-sheet'>> = React.memo(props => {
