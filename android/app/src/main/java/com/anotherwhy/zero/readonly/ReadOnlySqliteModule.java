@@ -22,6 +22,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
@@ -183,12 +185,13 @@ public final class ReadOnlySqliteModule extends ReactContextBaseJavaModule {
         File shmFile = new File(databaseFile.getAbsolutePath() + "-shm");
         File markerFile = targetMarkerFile(databaseFile);
         File markerTemporary = new File(markerFile.getAbsolutePath() + ".tmp");
+        File markerClaim = targetMarkerClaimFile(markerFile);
         boolean databaseExists = databaseFile.isFile();
         boolean walExists = walFile.isFile();
         boolean shmExists = shmFile.isFile();
         boolean markerExists = markerFile.isFile();
 
-        if (markerTemporary.exists()) {
+        if (markerTemporary.exists() || markerClaim.exists()) {
             WritableMap invalid = Arguments.createMap();
             invalid.putString("status", "invalid-marker");
             promise.resolve(invalid);
@@ -236,10 +239,12 @@ public final class ReadOnlySqliteModule extends ReactContextBaseJavaModule {
 
         File databaseFile = resolveDatabaseFile(TARGET_DATABASE_NAME);
         File markerFile = targetMarkerFile(databaseFile);
+        File markerClaim = targetMarkerClaimFile(markerFile);
         if (databaseFile.exists()
                 || new File(databaseFile.getAbsolutePath() + "-wal").exists()
                 || new File(databaseFile.getAbsolutePath() + "-shm").exists()
-                || markerFile.exists()) {
+                || markerFile.exists()
+                || markerClaim.exists()) {
             promise.reject("TARGET_NOT_FRESH", "Target database or marker already exists");
             return;
         }
@@ -250,19 +255,17 @@ public final class ReadOnlySqliteModule extends ReactContextBaseJavaModule {
             marker.put("generation", generation);
             marker.put("sourceFingerprint", sourceFingerprint);
             marker.put("status", "writing");
-            if (!markerFile.createNewFile()) {
+            if (!markerClaim.createNewFile()) {
                 promise.reject("TARGET_NOT_FRESH", "Target marker already exists");
                 return;
             }
             try {
                 writeMarker(markerFile, marker);
             } catch (Exception error) {
-                // A partial marker is never treated as recoverable. Remove it
-                // only when the initial claim itself failed.
-                //noinspection ResultOfMethodCallIgnored
-                markerFile.delete();
                 throw error;
             }
+            //noinspection ResultOfMethodCallIgnored
+            markerClaim.delete();
             WritableMap result = Arguments.createMap();
             result.putString("status", "claimed");
             promise.resolve(result);
@@ -290,10 +293,12 @@ public final class ReadOnlySqliteModule extends ReactContextBaseJavaModule {
 
         File databaseFile = resolveDatabaseFile(TARGET_DATABASE_NAME);
         File markerFile = targetMarkerFile(databaseFile);
+        File markerClaim = targetMarkerClaimFile(markerFile);
         if (databaseFile.exists()
                 || new File(databaseFile.getAbsolutePath() + "-wal").exists()
                 || new File(databaseFile.getAbsolutePath() + "-shm").exists()
-                || markerFile.exists()) {
+                || markerFile.exists()
+                || markerClaim.exists()) {
             promise.reject("TARGET_NOT_FRESH", "Target database or marker already exists");
             return;
         }
@@ -305,17 +310,17 @@ public final class ReadOnlySqliteModule extends ReactContextBaseJavaModule {
             marker.put("sourceFingerprint", sourceFingerprint);
             marker.put("status", "activated");
             marker.put("targetFingerprint", targetFingerprint);
-            if (!markerFile.createNewFile()) {
+            if (!markerClaim.createNewFile()) {
                 promise.reject("TARGET_NOT_FRESH", "Target marker already exists");
                 return;
             }
             try {
                 writeMarker(markerFile, marker);
             } catch (Exception error) {
-                //noinspection ResultOfMethodCallIgnored
-                markerFile.delete();
                 throw error;
             }
+            //noinspection ResultOfMethodCallIgnored
+            markerClaim.delete();
             promise.resolve(Arguments.createMap());
         } catch (Exception error) {
             promise.reject("TARGET_MARKER_FAILED", error.getMessage(), error);
@@ -411,7 +416,8 @@ public final class ReadOnlySqliteModule extends ReactContextBaseJavaModule {
                 new File(databaseFile.getAbsolutePath() + "-wal"),
                 new File(databaseFile.getAbsolutePath() + "-shm"),
                 markerFile,
-                new File(markerFile.getAbsolutePath() + ".tmp")
+                new File(markerFile.getAbsolutePath() + ".tmp"),
+                targetMarkerClaimFile(markerFile)
         };
         try {
             for (File file : files) {
@@ -640,6 +646,10 @@ public final class ReadOnlySqliteModule extends ReactContextBaseJavaModule {
         return new File(databaseFile.getAbsolutePath() + TARGET_MARKER_SUFFIX);
     }
 
+    private File targetMarkerClaimFile(File markerFile) {
+        return new File(markerFile.getAbsolutePath() + ".claim");
+    }
+
     private boolean isValidMarkerText(String value) {
         return value != null && !value.trim().isEmpty() && value.length() <= 768;
     }
@@ -682,9 +692,20 @@ public final class ReadOnlySqliteModule extends ReactContextBaseJavaModule {
     }
 
     private void writeMarker(File markerFile, JSONObject marker) throws IOException {
-        try (FileOutputStream output = new FileOutputStream(markerFile, false)) {
+        File markerTemporary = new File(markerFile.getAbsolutePath() + ".tmp");
+        try (FileOutputStream output = new FileOutputStream(markerTemporary, false)) {
             output.write(marker.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
             output.getFD().sync();
+        }
+        try {
+            Files.move(
+                    markerTemporary.toPath(),
+                    markerFile.toPath(),
+                    StandardCopyOption.ATOMIC_MOVE,
+                    StandardCopyOption.REPLACE_EXISTING
+            );
+        } catch (UnsupportedOperationException error) {
+            Files.move(markerTemporary.toPath(), markerFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
         }
     }
 
