@@ -73,6 +73,21 @@ describe('createAndroidCopyDriver', () => {
     expect(driver.getPreparedTargetDatabase?.()).toBeNull();
   });
 
+  it('prefers the target factory close lifecycle over adapter internals', async () => {
+    const close = jest.fn();
+    const driver = createAndroidCopyDriver({
+      bridge: {probe: jest.fn(), backupDatabase: jest.fn(), readBackupSnapshot: async () => snapshot},
+      backupId: 'migration-1',
+      createTarget: jest.fn(() => ({database: {} as never, initializingPromise: Promise.resolve(), close})),
+    });
+
+    await driver.prepareTarget();
+    await driver.closePreparedTarget?.();
+
+    expect(close).toHaveBeenCalledTimes(1);
+    expect(driver.getPreparedTargetDatabase?.()).toBeNull();
+  });
+
   it('fails closed when the prepared adapter has no close lifecycle', async () => {
     const driver = createAndroidCopyDriver({
       bridge: {probe: jest.fn(), backupDatabase: jest.fn(), readBackupSnapshot: async () => snapshot},

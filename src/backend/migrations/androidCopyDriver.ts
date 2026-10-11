@@ -45,6 +45,7 @@ export const createAndroidCopyDriver = ({
   createTarget = createTargetDatabase,
 }: AndroidCopyDriverDependencies): LegacyCopyDriver => {
   let targetDatabase: Database | null = null;
+  let targetAdapterClose: (() => void) | null = null;
   let backup: {backupId: string} | null = null;
   let nativeTargetWrite:
     | ((
@@ -69,6 +70,14 @@ export const createAndroidCopyDriver = ({
     if (closeTarget) {
       await closeTarget();
       targetDatabase = null;
+      targetAdapterClose = null;
+      return;
+    }
+
+    if (targetAdapterClose) {
+      targetAdapterClose();
+      targetDatabase = null;
+      targetAdapterClose = null;
       return;
     }
 
@@ -88,6 +97,7 @@ export const createAndroidCopyDriver = ({
     }
     unsafeClose();
     targetDatabase = null;
+    targetAdapterClose = null;
   };
 
   return {
@@ -112,6 +122,7 @@ export const createAndroidCopyDriver = ({
       const target = createTarget();
       await target.initializingPromise;
       targetDatabase = target.database;
+      targetAdapterClose = target.close ?? null;
     },
     closePreparedTarget,
     runTargetTransaction: async (expectedTarget, verify) => {
@@ -142,10 +153,16 @@ export const createAndroidCopyDriver = ({
         const reopened = createTarget();
         await reopened.initializingPromise;
         targetDatabase = reopened.database;
+        targetAdapterClose = reopened.close ?? null;
         try {
           return await verifyWatermelonTargetSnapshot(targetDatabase as unknown as TargetDatabaseLike, verify);
         } catch (error) {
-          await discardTarget();
+          try {
+            await discardTarget();
+          } catch {
+            // Preserve the read-back/verification error. The marker remains
+            // durable so the next boot can reconcile it safely.
+          }
           throw error;
         }
       }
