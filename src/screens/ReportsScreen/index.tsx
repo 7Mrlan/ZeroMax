@@ -37,6 +37,7 @@ const ReportsScreen = () => {
     availableYears,
     handleMonthYearSelect,
     totalAmountForMonth,
+    totalIncomeForMonth,
     daysInMonth,
     todayTotal,
     isCurrentMonth,
@@ -295,6 +296,15 @@ const ReportsScreen = () => {
             {formatAmount(totalAmountForMonth / daysInMonth)}
           </PrimaryText>
         </View>
+      </View>
+      <View
+        style={[gs.rowBetweenCenter, gs.px12, gs.py10, gs.rounded8, gs.mt6, {backgroundColor: colors.secondaryAccent}]}>
+        <PrimaryText size={12} color={colors.secondaryText}>
+          {t('reports.incomeTotal')}
+        </PrimaryText>
+        <PrimaryText size={14} weight="semibold" variant="number" color={colors.accentGreen}>
+          +{formatAmount(totalIncomeForMonth)}
+        </PrimaryText>
       </View>
 
       {currentBudget ? (

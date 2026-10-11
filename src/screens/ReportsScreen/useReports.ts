@@ -15,6 +15,7 @@ const MONTHS = getMonthNames();
 import {useFocusEffect} from '@react-navigation/native';
 import {getWeekStartDay, rotateWeekdays, type WeekStartDay} from '../../utils/weekStart';
 import {fetchExpensesByMonth, selectExpenseData} from '../../redux/slice/expenseDataSlice';
+import {fetchIncomesByMonth, selectIncomeData} from '../../redux/slice/incomeDataSlice';
 import {selectMonthIndex, selectYear, setMonthSelection} from '../../redux/slice/monthSelectionSlice';
 import {selectCurrencyCode, selectCurrencySymbol} from '../../redux/slice/currencyDataSlice';
 import {selectUserId} from '../../redux/slice/userIdSlice';
@@ -44,6 +45,7 @@ const useReports = () => {
   const selectedMonth = MONTHS[selectedMonthIndex];
 
   const filteredTransactions = useAppSelector(selectExpenseData) as TransactionWithCategory[];
+  const incomeTransactions = useAppSelector(selectIncomeData);
   const currencySymbol = useAppSelector(selectCurrencySymbol);
   const currencyCode = useAppSelector(selectCurrencyCode);
 
@@ -74,6 +76,7 @@ const useReports = () => {
   useEffect(() => {
     if (userId) {
       dispatch(fetchExpensesByMonth(yearMonth));
+      dispatch(fetchIncomesByMonth(yearMonth));
       dispatch(fetchBudgetsByMonth(yearMonth));
     }
   }, [dispatch, userId, yearMonth]);
@@ -88,24 +91,38 @@ const useReports = () => {
   );
 
   const totalAmountForMonth = useMemo(
-    () => (filteredTransactions ?? []).reduce((sum: number, transaction: TransactionWithCategory) => sum + transaction.amount, 0),
+    () =>
+      (filteredTransactions ?? []).reduce(
+        (sum: number, transaction: TransactionWithCategory) => sum + transaction.amount,
+        0,
+      ),
     [filteredTransactions],
+  );
+
+  const totalIncomeForMonth = useMemo(
+    () => incomeTransactions.reduce((sum, transaction) => sum + transaction.amount, 0),
+    [incomeTransactions],
   );
 
   const daysInMonth = useMemo(() => getDaysInMonth(selectedYear, selectedMonth), [selectedYear, selectedMonth]);
 
   const todayTotal = useMemo(() => {
     const isCurrentMonth = selectedYear === CURRENT_YEAR && selectedMonthIndex === CURRENT_MONTH_INDEX;
-    if (!isCurrentMonth) {return 0;}
+    if (!isCurrentMonth) {
+      return 0;
+    }
     const todayStr = formatDate(new Date(), 'YYYY-MM-DD');
     return (filteredTransactions ?? []).reduce(
-      (sum: number, t: TransactionWithCategory) => (t.date.startsWith(todayStr) ? sum + t.amount : sum), 0,
+      (sum: number, t: TransactionWithCategory) => (t.date.startsWith(todayStr) ? sum + t.amount : sum),
+      0,
     );
   }, [filteredTransactions, selectedYear, selectedMonthIndex]);
 
   const handleBudgetSave = useCallback(
     async (amount: number, everyMonth: boolean) => {
-      if (!userId) {return;}
+      if (!userId) {
+        return;
+      }
       const month = everyMonth ? `recurring:${yearMonth}` : yearMonth;
       await upsertBudget(userId, amount, month);
       dispatch(fetchBudgetsByMonth(yearMonth));
@@ -114,7 +131,9 @@ const useReports = () => {
   );
 
   const handleBudgetRemove = useCallback(async () => {
-    if (!currentBudget) {return;}
+    if (!currentBudget) {
+      return;
+    }
     await deleteBudget(currentBudget.id);
     dispatch(fetchBudgetsByMonth(yearMonth));
   }, [currentBudget, yearMonth, dispatch]);
@@ -131,6 +150,7 @@ const useReports = () => {
     availableYears,
     handleMonthYearSelect,
     totalAmountForMonth,
+    totalIncomeForMonth,
     daysInMonth,
     todayTotal,
     isCurrentMonth: selectedYear === CURRENT_YEAR && selectedMonthIndex === CURRENT_MONTH_INDEX,

@@ -103,6 +103,7 @@
     "title": "Reports",
     "total": "Total",
     "avgPerDay": "Avg/day",
+    "incomeTotal": "Income",
     "setBudget": "Set a monthly budget",
     "less": "Less",
     "more": "More"

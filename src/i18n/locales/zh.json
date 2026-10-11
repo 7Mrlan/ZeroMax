@@ -103,6 +103,7 @@
     "title": "统计",
     "total": "总计",
     "avgPerDay": "日均",
+    "incomeTotal": "收入",
     "setBudget": "设置月度预算",
     "less": "少",
     "more": "多"
