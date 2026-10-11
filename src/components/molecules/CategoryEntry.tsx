@@ -21,6 +21,7 @@ import {FlashList} from '@shopify/flash-list';
 import {SheetManager} from 'react-native-actions-sheet';
 import {useAppDispatch, useAppSelector} from '../../redux/hooks';
 import {gs} from '../../styles/globalStyles';
+import {getDefaultCategoryKey, type DefaultCategoryKey} from '../../i18n/defaultCategories';
 
 const categoryStyles = StyleSheet.create({
   separator: {height: 0.5},
@@ -67,6 +68,30 @@ const CategoryEntry: React.FC<CategoryEntryProps> = ({type, route, kind = 'expen
   );
   const [selectedCategories, setSelectedCategories] = useState<Array<CategorySelection>>([]);
 
+  const localizedDefaults = useMemo<Record<DefaultCategoryKey, string>>(
+    () => ({
+      food: t('defaultCategories.food'),
+      transportation: t('defaultCategories.transportation'),
+      entertainment: t('defaultCategories.entertainment'),
+      healthcare: t('defaultCategories.healthcare'),
+      shopping: t('defaultCategories.shopping'),
+      travel: t('defaultCategories.travel'),
+      utilities: t('defaultCategories.utilities'),
+      education: t('defaultCategories.education'),
+      gifts: t('defaultCategories.gifts'),
+      other: t('defaultCategories.other'),
+    }),
+    [t],
+  );
+  const localizedDefaultCategories = useMemo(
+    () =>
+      defaultCategories.map(category => {
+        const key = getDefaultCategoryKey(category.name);
+        return {...category, name: key ? localizedDefaults[key] : category.name};
+      }),
+    [localizedDefaults],
+  );
+
   const selectedCategoryNames = useMemo(() => new Set(selectedCategories.map(c => c.name)), [selectedCategories]);
 
   const allCategories = useAppSelector(selectCategoryData);
@@ -86,8 +111,8 @@ const CategoryEntry: React.FC<CategoryEntryProps> = ({type, route, kind = 'expen
     [allCategories],
   );
   const filteredCategories = useMemo(
-    () => defaultCategories.filter(category => !existingCategoryNamesSet.has(category.name)),
-    [existingCategoryNamesSet],
+    () => localizedDefaultCategories.filter(category => !existingCategoryNamesSet.has(category.name)),
+    [existingCategoryNamesSet, localizedDefaultCategories],
   );
 
   const userId = useAppSelector(selectUserId);
