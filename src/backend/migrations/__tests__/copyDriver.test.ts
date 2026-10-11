@@ -45,6 +45,7 @@ describe('copyLegacyRows', () => {
     const driver = makeDriver();
     const result = await copyLegacyRows('zero-v3', driver);
     expect(result.verification.ok).toBe(true);
+    expect(result.sourceFingerprint).toMatch(/^[0-9a-f]{16}$/);
     expect((driver.ensureBackup as jest.Mock).mock.invocationCallOrder[0]).toBeLessThan(
       (driver.readSourceSnapshot as jest.Mock).mock.invocationCallOrder[0],
     );

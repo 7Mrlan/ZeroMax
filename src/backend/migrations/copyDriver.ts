@@ -1,5 +1,6 @@
 import {verifyCopiedRows, type CopyDataset, type CopyVerificationReport} from './copyVerification';
 import {normalizeLegacyRows, type CopyNormalizationResult} from './copyNormalization';
+import {fingerprintCopyDataset} from './copyFingerprint';
 import type {LegacyDatabaseSource} from './legacySchema';
 
 /**
@@ -23,6 +24,8 @@ export interface LegacyCopyDriver {
 
 export interface LegacyCopyResult {
   source: Extract<LegacyDatabaseSource, 'zero-v3' | 'zerox-v3'>;
+  /** Content marker for durable resume checks; not a cryptographic hash. */
+  sourceFingerprint: string;
   normalization: CopyNormalizationResult;
   verification: CopyVerificationReport;
 }
@@ -41,6 +44,7 @@ export const copyLegacyRows = async (
 ): Promise<LegacyCopyResult> => {
   await driver.ensureBackup();
   const sourceRows = await driver.readSourceSnapshot();
+  const sourceFingerprint = fingerprintCopyDataset(sourceRows);
   const normalization = normalizeLegacyRows(source, sourceRows);
   await driver.prepareTarget();
   const verification = await driver.runTargetTransaction(normalization.dataset, actualTarget => {
@@ -54,5 +58,5 @@ export const copyLegacyRows = async (
     }
     return report;
   });
-  return {source, normalization, verification};
+  return {source, sourceFingerprint, normalization, verification};
 };
