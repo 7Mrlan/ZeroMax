@@ -14,7 +14,7 @@ const snapshot: CopyDataset = {
 
 describe('createAndroidCopyDriver', () => {
   it('reads the fixed legacy database through the readonly bridge', async () => {
-    const probe = jest.fn(async () => ({
+    const readBackupSnapshot = jest.fn(async () => ({
       users: [],
       categories: [],
       expenses: [],
@@ -24,20 +24,27 @@ describe('createAndroidCopyDriver', () => {
       debts: [],
       budgets: [],
     }));
+    const backupDatabase = jest.fn(async () => ({
+      status: 'backed-up',
+      backupId: 'migration-1',
+      files: [{name: 'watermelon.db', size: 1, lastModified: 1, sha256: 'a'.repeat(64)}],
+    }));
     const driver = createAndroidCopyDriver({
-      bridge: {probe: jest.fn(), readSnapshot: probe},
-      ensureBackup: jest.fn(async () => undefined),
+      bridge: {probe: jest.fn(), backupDatabase, readBackupSnapshot},
+      backupId: 'migration-1',
       createTarget: jest.fn(() => ({database: {} as never, initializingPromise: Promise.resolve()})),
     });
 
+    await expect(driver.readSourceSnapshot()).rejects.toThrow('backup has not been created');
+    await driver.ensureBackup();
     await expect(driver.readSourceSnapshot()).resolves.toEqual(snapshot);
-    expect(probe).toHaveBeenCalledWith('watermelon');
+    expect(readBackupSnapshot).toHaveBeenCalledWith('migration-1');
   });
 
   it('requires target preparation before running a transaction', async () => {
     const driver = createAndroidCopyDriver({
-      bridge: {probe: jest.fn(), readSnapshot: async () => snapshot},
-      ensureBackup: jest.fn(async () => undefined),
+      bridge: {probe: jest.fn(), backupDatabase: jest.fn(), readBackupSnapshot: async () => snapshot},
+      backupId: 'migration-1',
       createTarget: jest.fn(() => ({database: {} as never, initializingPromise: Promise.resolve()})),
     });
 

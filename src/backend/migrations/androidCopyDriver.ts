@@ -1,12 +1,16 @@
 import type {Database} from '@nozbe/watermelondb';
-import {readDatabaseSnapshotReadOnly, type ReadOnlySqliteBridge} from './nativePreflight';
+import {createAndroidSourceBackup, readAndroidBackupSnapshot, type AndroidBackupBridge} from './backupBridge';
+import type {CopyDataset} from './copyVerification';
+import type {ReadOnlySqliteBridge} from './nativePreflight';
 import type {LegacyCopyDriver} from './copyDriver';
 import {createTargetDatabase} from '../../watermelondb/targetDatabase';
 import {createWatermelonTargetTransaction, type TargetDatabaseLike} from '../../watermelondb/targetWriter';
 
 export interface AndroidCopyDriverDependencies {
-  bridge?: ReadOnlySqliteBridge;
-  ensureBackup: () => Promise<void>;
+  bridge?: ReadOnlySqliteBridge & AndroidBackupBridge;
+  backupId: string;
+  createBackup?: (backupId: string, bridge: AndroidBackupBridge) => Promise<{backupId: string}>;
+  readBackupSnapshot?: (backupId: string, bridge: AndroidBackupBridge) => Promise<CopyDataset>;
   createTarget?: typeof createTargetDatabase;
 }
 
@@ -17,14 +21,24 @@ export interface AndroidCopyDriverDependencies {
  */
 export const createAndroidCopyDriver = ({
   bridge,
-  ensureBackup,
+  backupId,
+  createBackup = createAndroidSourceBackup,
+  readBackupSnapshot = readAndroidBackupSnapshot,
   createTarget = createTargetDatabase,
 }: AndroidCopyDriverDependencies): LegacyCopyDriver => {
   let targetDatabase: Database | null = null;
+  let backup: {backupId: string} | null = null;
 
   return {
-    readSourceSnapshot: () => readDatabaseSnapshotReadOnly('watermelon', bridge),
-    ensureBackup,
+    readSourceSnapshot: async () => {
+      if (!backup) {
+        throw new Error('Android source backup has not been created');
+      }
+      return readBackupSnapshot(backup.backupId, bridge as AndroidBackupBridge);
+    },
+    ensureBackup: async () => {
+      backup = await createBackup(backupId, bridge as AndroidBackupBridge);
+    },
     prepareTarget: async () => {
       if (targetDatabase) {
         throw new Error('Android copy target has already been prepared');

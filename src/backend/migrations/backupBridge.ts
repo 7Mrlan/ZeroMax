@@ -42,7 +42,11 @@ export const createAndroidSourceBackup = async (
   if (!bridge || typeof bridge.backupDatabase !== 'function') {
     throw new Error('Native source backup bridge is unavailable');
   }
-  return normalizeBackupDescriptor(await bridge.backupDatabase('watermelon', backupId));
+  const descriptor = normalizeBackupDescriptor(await bridge.backupDatabase('watermelon', backupId));
+  if (descriptor.backupId !== backupId) {
+    throw new Error('Native backup descriptor id does not match the requested backup');
+  }
+  return descriptor;
 };
 
 export const readAndroidBackupSnapshot = async (
