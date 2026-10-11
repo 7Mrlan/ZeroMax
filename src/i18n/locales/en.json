@@ -177,6 +177,7 @@
     "queueTask": "Queue task",
     "processNext": "Process next",
     "processFailed": "Could not process AI task",
+    "cancel": "Cancel queued task",
     "privacyNotice": "AI is off by default. Requests use your configured HTTPS endpoint; keys stay in secure device storage.",
     "empty": "No AI tasks yet",
     "retry": "Retry",
@@ -197,7 +198,8 @@
       "queued": "Queued",
       "running": "Processing",
       "created": "Added to your records",
-      "failed": "Failed"
+      "failed": "Failed",
+      "cancelled": "Cancelled"
     }
   },
   "category": {

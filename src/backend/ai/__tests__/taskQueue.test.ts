@@ -9,6 +9,7 @@ jest.mock('../../../utils/asyncStorageService', () => ({
 import StorageService from '../../../utils/asyncStorageService';
 import {
   claimNextAiTask,
+  cancelQueuedAiTask,
   completeAiTask,
   createAiTask,
   recordIdempotencyKey,
@@ -47,5 +48,14 @@ describe('AI task queue', () => {
     const task = createAiTask('same text', 'prompt');
     expect(recordIdempotencyKey(task, 'item-1')).toMatch(/^ai-[^:]+:item-1$/);
     expect(storage.setItemSync).toHaveBeenCalled();
+  });
+
+  it('cancels a queued task without changing a claimed task', () => {
+    const queued = createAiTask('queued', 'prompt');
+    expect(cancelQueuedAiTask(queued.taskId)?.status).toBe('cancelled');
+
+    const running = createAiTask('running', 'prompt');
+    claimNextAiTask();
+    expect(cancelQueuedAiTask(running.taskId)?.status).toBe('running');
   });
 });

@@ -2,7 +2,7 @@ import {nanoid} from 'nanoid';
 import {z} from 'zod';
 import StorageService from '../../utils/asyncStorageService';
 
-export type AiTaskStatus = 'queued' | 'running' | 'created' | 'failed';
+export type AiTaskStatus = 'queued' | 'running' | 'created' | 'failed' | 'cancelled';
 
 export interface AiTask {
   version: 1;
@@ -27,7 +27,7 @@ const TaskSchema = z
     idempotencyKey: z.string().min(1).max(128),
     input: z.string().max(10_000),
     prompt: z.string().max(50_000),
-    status: z.enum(['queued', 'running', 'created', 'failed']),
+    status: z.enum(['queued', 'running', 'created', 'failed', 'cancelled']),
     createdAt: z.string(),
     updatedAt: z.string(),
     errorMessage: z.string().max(1_000).optional(),
@@ -131,6 +131,16 @@ export const retryAiTask = (taskId: string): AiTask | null => {
   const retried = {...current, status: 'queued' as const, errorMessage: undefined, updatedAt: now()};
   writeTasks(tasks.map(task => (task.taskId === taskId ? retried : task)));
   return retried;
+};
+
+/** Cancels only a queued task; a running request needs an AbortSignal owner. */
+export const cancelQueuedAiTask = (taskId: string): AiTask | null => {
+  const tasks = readTasks();
+  const current = tasks.find(task => task.taskId === taskId);
+  if (!current || current.status !== 'queued') return current ?? null;
+  const cancelled = {...current, status: 'cancelled' as const, updatedAt: now()};
+  writeTasks(tasks.map(task => (task.taskId === taskId ? cancelled : task)));
+  return cancelled;
 };
 
 export const recordIdempotencyKey = (task: Pick<AiTask, 'idempotencyKey'>, itemLocalId: string): string =>

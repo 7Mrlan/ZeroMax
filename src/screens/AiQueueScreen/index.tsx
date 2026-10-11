@@ -7,7 +7,14 @@ import AppHeader from '../../components/atoms/AppHeader';
 import PrimaryText from '../../components/atoms/PrimaryText';
 import PrimaryButton from '../../components/atoms/PrimaryButton';
 import useThemeColors from '../../hooks/useThemeColors';
-import {createAiTask, getAiTasks, retryAiTask, subscribeAiTasks, type AiTask} from '../../backend/ai/taskQueue';
+import {
+  cancelQueuedAiTask,
+  createAiTask,
+  getAiTasks,
+  retryAiTask,
+  subscribeAiTasks,
+  type AiTask,
+} from '../../backend/ai/taskQueue';
 import {createNativeAiSecretStore, getAiSettings} from '../../backend/ai/settings';
 import {runNextAiTask} from '../../backend/ai/coordinator';
 import {getAllCategoriesByUserId} from '../../watermelondb/services';
@@ -73,6 +80,17 @@ const AiQueueScreen = () => {
             onPress={() => retry(item.taskId)}
             colors={colors}
             buttonTitle={t('ai.retry')}
+            variant="ghost"
+            size="sm"
+            fullWidth={false}
+          />
+        ) : null}
+        {item.status === 'queued' ? (
+          <PrimaryButton
+            testID={`ai-cancel-${item.taskId}`}
+            onPress={() => cancelQueuedAiTask(item.taskId)}
+            colors={colors}
+            buttonTitle={t('ai.cancel')}
             variant="ghost"
             size="sm"
             fullWidth={false}
