@@ -29,6 +29,7 @@ const categoryStyles = StyleSheet.create({
 
 interface CategorySelection {
   name: string;
+  originalName?: string;
   icon?: string;
   color?: string;
 }
@@ -87,7 +88,7 @@ const CategoryEntry: React.FC<CategoryEntryProps> = ({type, route, kind = 'expen
     () =>
       defaultCategories.map(category => {
         const key = getDefaultCategoryKey(category.name);
-        return {...category, name: key ? localizedDefaults[key] : category.name};
+        return {...category, originalName: category.name, name: key ? localizedDefaults[key] : category.name};
       }),
     [localizedDefaults],
   );
@@ -111,7 +112,11 @@ const CategoryEntry: React.FC<CategoryEntryProps> = ({type, route, kind = 'expen
     [allCategories],
   );
   const filteredCategories = useMemo(
-    () => localizedDefaultCategories.filter(category => !existingCategoryNamesSet.has(category.name)),
+    () =>
+      localizedDefaultCategories.filter(
+        category =>
+          !existingCategoryNamesSet.has(category.name) && !existingCategoryNamesSet.has(category.originalName ?? ''),
+      ),
     [existingCategoryNamesSet, localizedDefaultCategories],
   );
 
