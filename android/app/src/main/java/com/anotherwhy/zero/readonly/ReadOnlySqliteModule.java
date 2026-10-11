@@ -22,6 +22,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
@@ -293,6 +295,214 @@ public final class ReadOnlySqliteModule extends ReactContextBaseJavaModule {
             promise.resolve(Arguments.createMap());
         } catch (Exception error) {
             promise.reject("TARGET_MARKER_FAILED", error.getMessage(), error);
+        }
+    }
+
+    /**
+     * Creates a non-overwritable source backup while the source is opened
+     * read-only. The database and both SQLite sidecars are hashed before and
+     * after copying; any concurrent source change invalidates the backup.
+     */
+    @ReactMethod
+    public synchronized void backupDatabase(String databaseName, String backupId, Promise promise) {
+        if (!"watermelon".equals(databaseName) || !isValidMarkerText(backupId)) {
+            promise.reject("INVALID_BACKUP_REQUEST", "Only a valid watermelon backup id is supported");
+            return;
+        }
+
+        File databaseFile = resolveDatabaseFile(databaseName);
+        File[] sourceFiles = sqliteFiles(databaseFile);
+        FileState[] before = captureStates(sourceFiles);
+        if (before[0] == null) {
+            promise.reject("DATABASE_MISSING", "Source database file does not exist");
+            return;
+        }
+
+        SQLiteDatabase database = null;
+        File backupDirectory = new File(
+                new File(getReactApplicationContext().getNoBackupFilesDir(), "zero-migration-backups"),
+                backupId
+        );
+        try {
+            database = SQLiteDatabase.openDatabase(
+                    databaseFile.getAbsolutePath(),
+                    null,
+                    SQLiteDatabase.OPEN_READONLY | SQLiteDatabase.NO_LOCALIZED_COLLATORS
+            );
+            if (!readIntegrity(database)) {
+                promise.reject("SOURCE_INTEGRITY_FAILED", "Source database failed SQLite integrity checks");
+                return;
+            }
+            if (backupDirectory.exists() || !backupDirectory.mkdirs()) {
+                promise.reject("BACKUP_ALREADY_EXISTS", "Backup destination already exists");
+                return;
+            }
+
+            File[] backupFiles = new File[]{
+                    new File(backupDirectory, databaseFile.getName()),
+                    new File(backupDirectory, databaseFile.getName() + "-wal"),
+                    new File(backupDirectory, databaseFile.getName() + "-shm")
+            };
+            for (int index = 0; index < sourceFiles.length; index += 1) {
+                if (before[index] != null) {
+                    copyFile(sourceFiles[index], backupFiles[index]);
+                }
+            }
+
+            FileState[] after = captureStates(sourceFiles);
+            if (!sameSnapshot(before, after)) {
+                deleteRecursively(backupDirectory);
+                promise.reject("SOURCE_CHANGED", "Source database changed while the backup was copied");
+                return;
+            }
+            FileState[] copied = captureStates(backupFiles);
+            if (!sameContent(before, copied)) {
+                deleteRecursively(backupDirectory);
+                promise.reject("BACKUP_VERIFY_FAILED", "Backup content does not match the source");
+                return;
+            }
+
+            WritableMap result = Arguments.createMap();
+            result.putString("status", "backed-up");
+            result.putString("backupId", backupId);
+            result.putArray("files", describeStates(before));
+            promise.resolve(result);
+        } catch (SQLiteException error) {
+            deleteRecursively(backupDirectory);
+            promise.reject("BACKUP_FAILED", error.getMessage(), error);
+        } catch (Exception error) {
+            deleteRecursively(backupDirectory);
+            promise.reject("BACKUP_FAILED", error.getMessage(), error);
+        } finally {
+            if (database != null) {
+                database.close();
+            }
+        }
+    }
+
+    private File[] sqliteFiles(File databaseFile) {
+        return new File[]{
+                databaseFile,
+                new File(databaseFile.getAbsolutePath() + "-wal"),
+                new File(databaseFile.getAbsolutePath() + "-shm")
+        };
+    }
+
+    private FileState[] captureStates(File[] files) {
+        FileState[] states = new FileState[files.length];
+        for (int index = 0; index < files.length; index += 1) {
+            states[index] = files[index].isFile() ? fileState(files[index]) : null;
+        }
+        return states;
+    }
+
+    private FileState fileState(File file) {
+        try {
+            return new FileState(file.getName(), file.length(), file.lastModified(), sha256(file));
+        } catch (IOException error) {
+            throw new IllegalStateException("Could not hash " + file.getName(), error);
+        }
+    }
+
+    private String sha256(File file) throws IOException {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            try (FileInputStream input = new FileInputStream(file)) {
+                byte[] buffer = new byte[64 * 1024];
+                int count;
+                while ((count = input.read(buffer)) >= 0) {
+                    digest.update(buffer, 0, count);
+                }
+            }
+            StringBuilder result = new StringBuilder(64);
+            for (byte value : digest.digest()) {
+                result.append(String.format(java.util.Locale.US, "%02x", value));
+            }
+            return result.toString();
+        } catch (NoSuchAlgorithmException error) {
+            throw new IllegalStateException("SHA-256 is unavailable", error);
+        }
+    }
+
+    private boolean sameContent(FileState[] left, FileState[] right) {
+        if (left.length != right.length) {
+            return false;
+        }
+        for (int index = 0; index < left.length; index += 1) {
+            if (left[index] == null || right[index] == null) {
+                if (left[index] != right[index]) {
+                    return false;
+                }
+            } else if (left[index].size != right[index].size || !left[index].sha256.equals(right[index].sha256)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean sameSnapshot(FileState[] left, FileState[] right) {
+        if (!sameContent(left, right)) {
+            return false;
+        }
+        for (int index = 0; index < left.length; index += 1) {
+            if (left[index] != null && left[index].lastModified != right[index].lastModified) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private WritableArray describeStates(FileState[] states) {
+        WritableArray result = Arguments.createArray();
+        for (FileState state : states) {
+            if (state != null) {
+                WritableMap item = Arguments.createMap();
+                item.putString("name", state.name);
+                item.putDouble("size", state.size);
+                item.putDouble("lastModified", state.lastModified);
+                item.putString("sha256", state.sha256);
+                result.pushMap(item);
+            }
+        }
+        return result;
+    }
+
+    private void copyFile(File source, File destination) throws IOException {
+        try (FileInputStream input = new FileInputStream(source);
+             FileOutputStream output = new FileOutputStream(destination, false)) {
+            byte[] buffer = new byte[64 * 1024];
+            int count;
+            while ((count = input.read(buffer)) >= 0) {
+                output.write(buffer, 0, count);
+            }
+            output.getFD().sync();
+        }
+    }
+
+    private void deleteRecursively(File file) {
+        if (file.isDirectory()) {
+            File[] children = file.listFiles();
+            if (children != null) {
+                for (File child : children) {
+                    deleteRecursively(child);
+                }
+            }
+        }
+        //noinspection ResultOfMethodCallIgnored
+        file.delete();
+    }
+
+    private static final class FileState {
+        private final String name;
+        private final long size;
+        private final long lastModified;
+        private final String sha256;
+
+        private FileState(String name, long size, long lastModified, String sha256) {
+            this.name = name;
+            this.size = size;
+            this.lastModified = lastModified;
+            this.sha256 = sha256;
         }
     }
 
