@@ -129,6 +129,11 @@ accessibility, migration-recovery, network, performance or iOS validation.
 - [ ] Cold start time and list scroll feel unchanged vs the previous release
 - [ ] Settings → Diagnostics lists recorded errors and clears them
 
+The local API32 emulator request path was exercised on 2026-10-12, but Android
+12 re-granted both legacy storage permissions when the targetSdk 36 app called
+`requestMultiple`; this is recorded in `ANDROID_LOCAL_BUILD.md` and does not
+close the denied-permission item.
+
 ## 8. Sign-off
 
 - [ ] Automated gate green

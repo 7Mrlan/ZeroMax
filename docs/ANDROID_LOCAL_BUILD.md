@@ -50,3 +50,5 @@ page runtime、签名或商店发布。
 锁定 fixture：在 app 私有 legacy `watermelon.db` 上用 Android `/system/bin/sqlite3` 保持 `BEGIN EXCLUSIVE`，启动 BootGate 后错误页显示 `database is locked (code 5 SQLITE_BUSY)`，没有打开 writable adapter 或覆盖源库；释放事务后点击 Retry，Zero v3 迁移完成并 marker=`activated`。该证据覆盖 locked source fail-closed/retry，仍不替代权限拒绝和性能矩阵。
 
 权限边界复核：API35 test-signed release 的 manifest 只把 `READ_EXTERNAL_STORAGE`/`WRITE_EXTERNAL_STORAGE` 声明到 `maxSdkVersion=32`；API35 `dumpsys package com.anotherwhy.zero` 的 requested permissions 只有 INTERNET 和应用内部签名权限，因此 API35 上不存在可拒绝的外部存储运行时权限。`requestStoragePermission()` 在 API > 32 直接返回 true，API <= 32 才调用 `PermissionsAndroid.requestMultiple` 并由 Settings/Existing User 在 false 时给出打开设置的路径。真实“拒绝权限”仍需 API32 或更低设备，当前主机只有 API35 AVD，不能把该项标记为通过。
+
+2026-10-12 追加 API32 AVD `zero-api32`（Android 12/API 32、`sdk_gphone64_x86_64`）验证：安装 test-signed release 后，`dumpsys package` 确认两个存储权限已声明且初始为 denied；通过 Settings → Export data 触发 `requestMultiple` 后，系统自动将两项变为 granted，导出提示为成功。随后用 `pm revoke` 和 appops deny 预置再重试，系统仍在请求阶段恢复为 granted，未出现可断言的用户拒绝对话框。该结果证明 API32 AVD 可覆盖权限声明和请求路径，但不能证明拒绝分支；拒绝分支仍需真实用户在系统设置中手动关闭权限或另一台系统镜像，保持发布阻断。

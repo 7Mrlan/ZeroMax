@@ -17,7 +17,7 @@ maestro test .maestro/categories.yaml
 
 所有独立流程先清理应用状态并包含自己的 onboarding 前置步骤；真实设备回归时应额外保存 Maestro 输出和设备/系统版本。AI 流程不得填写真实 API key，网络访问保持关闭。
 
-本次通过所用包为 `android/app/build/outputs/apk/release/app-release.apk`，SHA-256 `ed278d82fa75e795f55a859db966b6fb5f90abbda207e81f8639180bb51762b0`；二进制构建时的代码基准为 `8f736b9`，流程夹具修正随后收口在 `58d36b4`。该包使用一次性本地 test keystore 签名，不能作为商店发布签名证据。
+本次通过所用包为 `android/app/build/outputs/apk/release/app-release.apk`，SHA-256 `ed278d82fa75e795f55a859db966b6fb5f90abbda207e81f8639180bb51762b0`；二进制构建时的代码基准为 `8f736b9`，流程夹具修正随后收口在 `58d36b4`，最终 Home 返回断言在 `da4cb3a`。该包使用一次性本地 test keystore 签名，不能作为商店发布签名证据。
 
 ## 流程覆盖
 
