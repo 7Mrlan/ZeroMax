@@ -12,7 +12,7 @@ export type DatabaseProbeResult =
   | {kind: 'error'; error: Error};
 
 export type DatabasePreflightDecision =
-  | {kind: 'fresh'; databaseName: 'watermelon'}
+  | {kind: 'fresh-target'; databaseName: 'watermelon_v4'}
   | {kind: 'copy-legacy'; source: Extract<LegacyDatabaseSource, 'zero-v3' | 'zerox-v3'>}
   | {kind: 'open-target'; databaseName: 'watermelon_v4'}
   | {kind: 'blocked'; reason: string; error?: Error};
@@ -28,7 +28,7 @@ export const decideDatabasePreflight = (
 ): DatabasePreflightDecision => {
   if (probe.kind === 'missing') {
     return activeDatabase === 'watermelon'
-      ? {kind: 'fresh', databaseName: 'watermelon'}
+      ? {kind: 'fresh-target', databaseName: 'watermelon_v4'}
       : {kind: 'blocked', reason: 'The active target database is missing'};
   }
 

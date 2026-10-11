@@ -35,10 +35,10 @@ const metadata = (snapshot: LegacySchemaSnapshot, integrity: 'ok' | 'failed' = '
 });
 
 describe('decideDatabasePreflight', () => {
-  it('allows a genuinely missing legacy file to initialize as fresh', () => {
+  it('routes a genuinely missing legacy file to a fresh v4 target', () => {
     expect(decideDatabasePreflight('watermelon', {kind: 'missing'})).toEqual({
-      kind: 'fresh',
-      databaseName: 'watermelon',
+      kind: 'fresh-target',
+      databaseName: 'watermelon_v4',
     });
   });
 
