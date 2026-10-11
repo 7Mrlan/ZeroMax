@@ -34,3 +34,5 @@ maestro test .maestro/categories.yaml
 当前已有 API35 x86_64 模拟器的 fresh v4/JSI 冷启动证据；onboarding flow 已实际尝试但未取得完整通过，其他四条 Maestro flow、TalkBack 和 iOS VoiceOver 尚无通过证据。设备回归后将把命令、设备型号、API/系统版本、构建 commit 和失败截图记录到本文件，之后再把对应路线图任务标记为完成。
 
 2026-10-12 的真实尝试：Maestro 2.11.0 在 API35 emulator-5554 上启动 debug APK，曾到达 Welcome，但 `onboarding-name` 未取得稳定通过；早期失败与 Welcome 清库 writer 阻塞有关，`18bfcf3` 已移除该首帧等待并改用 typed onboarding push。重启 Metro 后仍受首次 bundle/React host 启动时序影响，尚未取得完整 flow 证据，因此仍保持 blocker。
+
+2026-10-12 release E2E 复测：test-signed release（无 Metro）已稳定通过 Splash→Welcome→Personalize、输入姓名、键盘隐藏和 Continue；此前 `.maestro/onboarding.yaml` 缺少 `hideKeyboard`，已补齐。随后 flow 仍在分类入口阶段未取得完整通过，当前继续保持 E2E blocker；debug Metro 首次 bundle 时序也会导致 selector 等待超时。
