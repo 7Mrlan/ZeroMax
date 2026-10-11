@@ -1,13 +1,11 @@
 import React from 'react';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import HomeScreen from '../screens/HomeScreen';
-import {createBottomTabNavigator, type BottomTabBarButtonProps} from '@react-navigation/bottom-tabs';
-import {Platform, Pressable, Text, View} from 'react-native';
+import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
+import {Text, View} from 'react-native';
 import type {HomeStackParamList, TabParamList} from './types';
 import {useTranslation} from 'react-i18next';
 import Icon from '../components/atoms/Icons';
-import useThemeColors from '../hooks/useThemeColors';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import ReportsScreen from '../screens/ReportsScreen';
 import DebtsScreen from '../screens/DebtsScreen';
 import CategoryScreen from '../screens/CategoryScreen';
@@ -26,6 +24,7 @@ import EverydayTransactionScreen from '../screens/EverydayTransactionScreen';
 import CategoryTransactionScreen from '../screens/CategoryTransactionScreen';
 import UpdateDebtorScreen from '../screens/UpdateDebtorScreen';
 import {gs} from '../styles/globalStyles';
+import AnimatedTabBar from './AnimatedTabBar';
 
 const screenOptions = {
   headerShown: false,
@@ -90,36 +89,14 @@ const CategoriesIcon = ({color}: {color: string}) => {
 const Stack = createNativeStackNavigator<HomeStackParamList>();
 const Tab = createBottomTabNavigator<TabParamList>();
 
-// `ref` is dropped: @react-navigation types it more loosely than Pressable
-// accepts under React 19, and a custom tab button has no use for it.
-const TabBarButton = ({ref: _ref, ...props}: BottomTabBarButtonProps) => (
-  <Pressable {...props} android_ripple={{color: 'transparent'}} />
-);
-
 const TabStack = () => {
-  const colors = useThemeColors();
-  const insets = useSafeAreaInsets();
-
-  const bottomPadding = Math.max(insets.bottom, 8);
-
-  const tabBarStyle = {
-    backgroundColor: colors.containerColor,
-    height: 65 + bottomPadding - (Platform.OS === 'ios' ? 20 : 0),
-    paddingTop: 8,
-    paddingBottom: bottomPadding,
-    borderTopWidth: 0,
-  };
-
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.accentGreen,
-        tabBarInactiveTintColor: colors.primaryText,
         tabBarShowLabel: false,
-        tabBarStyle: tabBarStyle,
-        tabBarButton: TabBarButton,
-      }}>
+      }}
+      tabBar={props => <AnimatedTabBar {...props} />}>
       <Tab.Screen name="HomeScreen" component={HomeScreen} options={{headerShown: false, tabBarIcon: HomeIcon}} />
       <Tab.Screen
         name="ReportsScreen"
