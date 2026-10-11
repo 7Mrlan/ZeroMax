@@ -14,7 +14,7 @@
 - 第一阶段保留 `expenses` 与 `incomes` 两张表，通过 repository 提供统一 TransactionRecord；不直接重写为新 transactions 表。
 - WatermelonDB schema 从两边冲突的 v3 统一到 v4；导入导出统一到 v5；历史 migration/upgrader 不修改。
 - 录入支出/收入使用单路由局部 mode，禁止用 `replace()` 互换两个完整表单页面。
-- RN 0.87.1 起步配 React 19.2.3；React 19.3、TS7、WatermelonDB 新架构分别验证、分别可回滚。
+- 用户已明确要求最终栈直接使用最新稳定版：RN 0.87.1、React 19.3.0、TypeScript 7.0.2、Reanimated 4.7.1/Worklets 0.13.0、Navigation 7.5/7.20、Redux Toolkit 2.13.0、FlashList 2.3.3、WatermelonDB 0.28.0、MMKV 4.3.2、Zod 4.6.5；不得把 React 19.2.3 当作目标或兼容实现。React 19.2.3 仅能作为历史对照构建。
 
 ## 工作方式
 
