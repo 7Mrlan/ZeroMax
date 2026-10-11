@@ -9,12 +9,11 @@ const MIGRATION_FAILED_KEY = 'data_migration_failed';
 const MIGRATION_FAILED_APP_VERSION_KEY = 'data_migration_failed_app_version';
 const MAX_RETRIES = 3;
 
-/**
- * Returns true if migrations have permanently failed (exceeded retry limit).
- */
-export const hasMigrationFailed = (): boolean => {
-  return StorageService.getBoolean(MIGRATION_FAILED_KEY);
-};
+export interface MigrationRunResult {
+  ok: boolean;
+  error?: Error;
+  migrationVersion?: number;
+}
 
 const clearMigrationFailure = (): void => {
   StorageService.setBoolean(MIGRATION_FAILED_KEY, false);
@@ -22,14 +21,8 @@ const clearMigrationFailure = (): void => {
   StorageService.removeItemSync(MIGRATION_FAILED_APP_VERSION_KEY);
 };
 
-/**
- * User-initiated retry (Settings banner): clears the permanent-failure flag
- * and re-runs pending migrations. Returns true if they now succeed.
- */
-export const retryMigrations = async (): Promise<boolean> => {
+export const resetMigrationFailureForRetry = (): void => {
   clearMigrationFailure();
-  await runMigrations();
-  return !hasMigrationFailed();
 };
 
 /**
@@ -42,26 +35,24 @@ export const retryMigrations = async (): Promise<boolean> => {
  * - After MAX_RETRIES consecutive failures on the same version, sets a
  *   permanent failure flag and stops retrying
  */
-export const runMigrations = async (): Promise<void> => {
-  if (hasMigrationFailed()) {
+export const runMigrations = async (): Promise<MigrationRunResult> => {
+  if (StorageService.getBoolean(MIGRATION_FAILED_KEY)) {
     // Don't stay poisoned forever: an app update may ship a fixed migration,
     // so the permanent flag only holds for the app version that set it.
     const failedOnVersion = StorageService.getItemSync(MIGRATION_FAILED_APP_VERSION_KEY);
     if (failedOnVersion === getAppVersion()) {
-      return;
+      return {ok: false, error: new Error('A data migration previously failed for this app version')};
     }
     clearMigrationFailure();
   }
 
   const currentVersion = StorageService.getNumber(MIGRATION_VERSION_KEY) ?? 0;
 
-  const pending = DATA_MIGRATIONS
-    .filter(m => m.version > currentVersion)
-    .sort((a, b) => a.version - b.version);
+  const pending = DATA_MIGRATIONS.filter(m => m.version > currentVersion).sort((a, b) => a.version - b.version);
 
   if (pending.length === 0) {
     StorageService.setNumber(MIGRATION_RETRY_KEY, 0);
-    return;
+    return {ok: true};
   }
 
   for (const migration of pending) {
@@ -91,7 +82,9 @@ export const runMigrations = async (): Promise<void> => {
           true,
         );
       }
-      break;
+      return {ok: false, error: err, migrationVersion: migration.version};
     }
   }
+
+  return {ok: true};
 };

@@ -7,6 +7,7 @@ import {User, Category, Expense, Currency, Debtor, Debt, Budget} from './models'
 
 let _database: Database | null = null;
 let _databaseError: Error | null = null;
+let _databaseReadyPromise: Promise<void> | null = null;
 
 /**
  * Returns the database setup error if initialization failed.
@@ -33,6 +34,11 @@ const getDatabase = (): Database => {
         },
       });
 
+      // WatermelonDB 0.28 starts SQLite setup asynchronously. Await its
+      // public setup promise so screens never race schema migration or a late
+      // setup failure.
+      _databaseReadyPromise = adapter.initializingPromise;
+
       _database = new Database({
         adapter,
         modelClasses: [User, Category, Expense, Currency, Debtor, Debt, Budget],
@@ -55,6 +61,24 @@ export const database = new Proxy({} as Database, {
     return value;
   },
 });
+
+export const waitForDatabase = async (): Promise<void> => {
+  getDatabase();
+  await _databaseReadyPromise;
+  if (_databaseError) {
+    throw _databaseError;
+  }
+};
+
+/**
+ * Drops only the JS singleton after setup has settled. The SQLite file stays
+ * intact, so a boot retry never deletes user data or bypasses migrations.
+ */
+export const resetDatabaseInstance = (): void => {
+  _database = null;
+  _databaseError = null;
+  _databaseReadyPromise = null;
+};
 
 export {getDatabase};
 export default database;

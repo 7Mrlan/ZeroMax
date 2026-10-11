@@ -18,7 +18,6 @@ import {SheetManager} from 'react-native-actions-sheet';
 import {setLocaleOverride} from '../../utils/locale';
 import {getWeekStartDay, setWeekStartDay, type WeekStartDay} from '../../utils/weekStart';
 import {getWeekdayNames} from '../../utils/dateUtils';
-import {hasMigrationFailed} from '../../backend';
 import {Colors} from '../../hooks/useThemeColors';
 import {gs, hitSlop} from '../../styles/globalStyles';
 
@@ -33,7 +32,16 @@ interface SettingsRowProps {
   colors: Colors;
 }
 
-const SettingsRow: React.FC<SettingsRowProps> = ({icon, label, subtitle, value, valueNode, onPress, destructive, colors}) => (
+const SettingsRow: React.FC<SettingsRowProps> = ({
+  icon,
+  label,
+  subtitle,
+  value,
+  valueNode,
+  onPress,
+  destructive,
+  colors,
+}) => (
   <TouchableOpacity onPress={onPress} activeOpacity={onPress ? 0.6 : 1} disabled={!onPress}>
     <View style={[gs.rowCenter, gs.px14, gs.py12, gs.gap10]}>
       <View style={[gs.size32, gs.rounded8, gs.center, {backgroundColor: colors.secondaryAccent}]}>
@@ -44,11 +52,15 @@ const SettingsRow: React.FC<SettingsRowProps> = ({icon, label, subtitle, value, 
           {label}
         </PrimaryText>
         {subtitle ? (
-          <PrimaryText size={11} color={colors.secondaryText}>{subtitle}</PrimaryText>
+          <PrimaryText size={11} color={colors.secondaryText}>
+            {subtitle}
+          </PrimaryText>
         ) : null}
       </View>
       {value ? (
-        <PrimaryText size={13} color={colors.secondaryText}>{value}</PrimaryText>
+        <PrimaryText size={13} color={colors.secondaryText}>
+          {value}
+        </PrimaryText>
       ) : null}
       {valueNode ?? null}
       {onPress ? <Icon name="chevron-right" size={14} color={colors.secondaryText} /> : null}
@@ -77,7 +89,6 @@ const SettingsScreen = () => {
     handleDeleteAllData,
     allData,
     handleExportResult,
-    handleRetryMigrations,
     showAlert,
     requestStorageViaDialog,
     currentBudget,
@@ -188,15 +199,6 @@ const SettingsScreen = () => {
     return writeAndShareFile(`zero_expenses_${getTimestamp()}.csv`, expensesToCsv(allData.expenses));
   };
 
-  const [migrationFailed, setMigrationFailed] = useState(hasMigrationFailed());
-
-  const handleRetryPress = useCallback(async () => {
-    const succeeded = await handleRetryMigrations();
-    if (succeeded) {
-      setMigrationFailed(false);
-    }
-  }, [handleRetryMigrations]);
-
   const handleOpenDiagnostics = useCallback(() => {
     navigate('DiagnosticsScreen');
   }, []);
@@ -258,40 +260,14 @@ const SettingsScreen = () => {
         <TouchableOpacity onPress={() => goBack()} hitSlop={hitSlop}>
           <Icon name="arrow-left" size={22} color={colors.primaryText} />
         </TouchableOpacity>
-        <PrimaryText size={22} weight="semibold">{t('settings.title')}</PrimaryText>
+        <PrimaryText size={22} weight="semibold">
+          {t('settings.title')}
+        </PrimaryText>
       </View>
       <ScrollView
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={gs.pb80}>
-        {migrationFailed ? (
-          <View
-            style={[
-              gs.rounded12,
-              gs.px14,
-              gs.py12,
-              gs.mt20,
-              gs.rowCenter,
-              gs.gap10,
-              {backgroundColor: colors.containerColor, borderWidth: 1, borderColor: colors.accentOrange},
-            ]}>
-            <Icon name="alert-triangle" size={18} color={colors.accentOrange} />
-            <View style={gs.flex1}>
-              <PrimaryText size={13} weight="semibold" color={colors.accentOrange}>
-                {t('settings.dataWarningTitle')}
-              </PrimaryText>
-              <PrimaryText size={11} color={colors.secondaryText} style={gs.mt2}>
-                {t('settings.dataWarningMessage')}
-              </PrimaryText>
-              <TouchableOpacity onPress={handleRetryPress} hitSlop={hitSlop} style={gs.mt6}>
-                <PrimaryText size={12} weight="semibold" color={colors.accentGreen}>
-                  {t('settings.dataWarningRetry')}
-                </PrimaryText>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ) : null}
-
         <PrimaryText
           size={11}
           weight="semibold"
@@ -304,7 +280,13 @@ const SettingsScreen = () => {
             colors={colors}
             icon="sun-moon"
             label={t('settings.theme')}
-            value={selectedTheme === 'light' ? t('settings.themeLight') : selectedTheme === 'dark' ? t('settings.themeDark') : t('settings.themeSystem')}
+            value={
+              selectedTheme === 'light'
+                ? t('settings.themeLight')
+                : selectedTheme === 'dark'
+                  ? t('settings.themeDark')
+                  : t('settings.themeSystem')
+            }
             onPress={openThemePicker}
           />
           <View style={[gs.mx16, {height: 1, backgroundColor: colors.secondaryAccent}]} />
@@ -332,8 +314,12 @@ const SettingsScreen = () => {
             onPress={handleOpenCurrencySheet}
             valueNode={
               <View style={gs.itemsEnd}>
-                <PrimaryText size={13} color={colors.secondaryText} variant="number">{currencySymbol}</PrimaryText>
-                <PrimaryText size={10} color={colors.secondaryText}>{currencyName}</PrimaryText>
+                <PrimaryText size={13} color={colors.secondaryText} variant="number">
+                  {currencySymbol}
+                </PrimaryText>
+                <PrimaryText size={10} color={colors.secondaryText}>
+                  {currencyName}
+                </PrimaryText>
               </View>
             }
           />
@@ -469,12 +455,7 @@ const SettingsScreen = () => {
             onPress={handleTermsAndConditions}
           />
           <View style={[gs.mx16, {height: 1, backgroundColor: colors.secondaryAccent}]} />
-          <SettingsRow
-            colors={colors}
-            icon="info"
-            label={t('settings.version')}
-            value={`v${appVersion}`}
-          />
+          <SettingsRow colors={colors} icon="info" label={t('settings.version')} value={`v${appVersion}`} />
         </View>
 
         <View style={[gs.mt20, gs.mb10, gs.center, gs.gap2]}>
@@ -486,7 +467,6 @@ const SettingsScreen = () => {
           </PrimaryText>
         </View>
       </ScrollView>
-
     </PrimaryView>
   );
 };

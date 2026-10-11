@@ -13,7 +13,6 @@ import {useFocusEffect} from '@react-navigation/native';
 import {getAppVersion} from '../../utils/getVersion';
 import {useTheme, ThemeMode} from '../../context/ThemeContext';
 import {useDialog} from '../../context/DialogContext';
-import {retryMigrations} from '../../backend';
 import StorageService from '../../utils/asyncStorageService';
 import {updateUserById, updateCurrencyById, deleteAllData} from '../../watermelondb/services';
 import {upsertBudget, deleteBudget} from '../../watermelondb/services/budgetService';
@@ -63,27 +62,33 @@ const useSettings = () => {
     }, [dispatch, yearMonth]),
   );
 
-  const handleThemeSelection = useCallback(async (theme: string) => {
-    try {
-      await setThemeMode(theme as ThemeMode);
-    } catch (error) {
-      if (__DEV__) {
-        console.error('Error saving theme preference:', error);
+  const handleThemeSelection = useCallback(
+    async (theme: string) => {
+      try {
+        await setThemeMode(theme as ThemeMode);
+      } catch (error) {
+        if (__DEV__) {
+          console.error('Error saving theme preference:', error);
+        }
       }
-    }
-  }, [setThemeMode]);
+    },
+    [setThemeMode],
+  );
 
-  const handleNameUpdate = useCallback(async (newName: string) => {
-    if (!userId) return;
-    try {
-      await updateUserById(userId, {username: newName});
-      dispatch(setUserName(newName));
-    } catch (error) {
-      if (__DEV__) {
-        console.error('Error updating the name:', error);
+  const handleNameUpdate = useCallback(
+    async (newName: string) => {
+      if (!userId) return;
+      try {
+        await updateUserById(userId, {username: newName});
+        dispatch(setUserName(newName));
+      } catch (error) {
+        if (__DEV__) {
+          console.error('Error updating the name:', error);
+        }
       }
-    }
-  }, [userId, dispatch]);
+    },
+    [userId, dispatch],
+  );
 
   const handleCurrencyUpdate = useCallback(
     async (currency: {code: string; name: string; symbol: string}) => {
@@ -111,7 +116,8 @@ const useSettings = () => {
   );
 
   const handleReportBug = useCallback(() => {
-    const bugSheetURL = 'https://docs.google.com/spreadsheets/d/187UDxJbFloEUkxxX29ZJnAI7HSdhAAdSbIcAByc8CDU/edit?usp=sharing';
+    const bugSheetURL =
+      'https://docs.google.com/spreadsheets/d/187UDxJbFloEUkxxX29ZJnAI7HSdhAAdSbIcAByc8CDU/edit?usp=sharing';
     Linking.openURL(bugSheetURL).catch(err => {
       if (__DEV__) {
         console.error('Error opening bug report sheet:', err);
@@ -171,45 +177,48 @@ const useSettings = () => {
    * user can retry or explicitly choose Skip, which is a deliberate,
    * backup-free deletion rather than an accidental one.
    */
-  const handleDeleteAllData = useCallback(async (exportFn?: () => Promise<ExportOutcome>) => {
-    const wantsBackup = await showDialog({
-      type: 'info',
-      message: t('settings.deleteBackupPrompt'),
-      okLabel: t('settings.export'),
-      cancelLabel: t('common.skip'),
-    });
+  const handleDeleteAllData = useCallback(
+    async (exportFn?: () => Promise<ExportOutcome>) => {
+      const wantsBackup = await showDialog({
+        type: 'info',
+        message: t('settings.deleteBackupPrompt'),
+        okLabel: t('settings.export'),
+        cancelLabel: t('common.skip'),
+      });
 
-    if (wantsBackup && exportFn) {
-      const outcome = await exportFn();
-      if (outcome !== 'saved') {
-        // 'failed' has already surfaced its own error (or the storage-permission
-        // dialog); 'cancelled' means the user backed out of the share sheet.
-        // Either way there is no backup, so stop before the irreversible step.
-        await showAlert({
-          type: 'error',
-          message: t('settings.deleteBackupFailed'),
-        });
+      if (wantsBackup && exportFn) {
+        const outcome = await exportFn();
+        if (outcome !== 'saved') {
+          // 'failed' has already surfaced its own error (or the storage-permission
+          // dialog); 'cancelled' means the user backed out of the share sheet.
+          // Either way there is no backup, so stop before the irreversible step.
+          await showAlert({
+            type: 'error',
+            message: t('settings.deleteBackupFailed'),
+          });
+          return;
+        }
+      }
+
+      const confirmed = await showDialog({
+        type: 'warning',
+        message: t('settings.deleteConfirm'),
+      });
+      if (!confirmed) return;
+
+      try {
+        await deleteAllData();
+      } catch (error) {
+        // Never leave the user on a "deleted" screen with their data intact.
+        appendErrorLog(error instanceof Error ? error : new Error(String(error)), false);
+        await showAlert({type: 'error', message: t('settings.deleteFailed')});
         return;
       }
-    }
-
-    const confirmed = await showDialog({
-      type: 'warning',
-      message: t('settings.deleteConfirm'),
-    });
-    if (!confirmed) return;
-
-    try {
-      await deleteAllData();
-    } catch (error) {
-      // Never leave the user on a "deleted" screen with their data intact.
-      appendErrorLog(error instanceof Error ? error : new Error(String(error)), false);
-      await showAlert({type: 'error', message: t('settings.deleteFailed')});
-      return;
-    }
-    StorageService.setItemSync('isOnboarded', JSON.stringify(false));
-    dispatch(setIsOnboarded(false));
-  }, [dispatch, showAlert, showDialog, t]);
+      StorageService.setItemSync('isOnboarded', JSON.stringify(false));
+      dispatch(setIsOnboarded(false));
+    },
+    [dispatch, showAlert, showDialog, t],
+  );
 
   const handleExportResult = useCallback(
     async (success: boolean) => {
@@ -228,17 +237,6 @@ const useSettings = () => {
     [showAlert, t],
   );
 
-  const handleRetryMigrations = useCallback(async (): Promise<boolean> => {
-    const succeeded = await retryMigrations();
-    await showAlert({
-      type: succeeded ? 'success' : 'error',
-      message: succeeded
-        ? t('settings.dataWarningRetrySucceeded')
-        : t('settings.dataWarningRetryFailed'),
-    });
-    return succeeded;
-  }, [showAlert, t]);
-
   const requestStorageViaDialog = useCallback(async () => {
     const confirmed = await showDialog({
       type: 'warning',
@@ -251,7 +249,9 @@ const useSettings = () => {
 
   const handleBudgetSave = useCallback(
     async (amount: number, everyMonth: boolean) => {
-      if (!userId) {return;}
+      if (!userId) {
+        return;
+      }
       const month = everyMonth ? `recurring:${yearMonth}` : yearMonth;
       try {
         await upsertBudget(userId, amount, month);
@@ -268,7 +268,9 @@ const useSettings = () => {
   );
 
   const handleBudgetRemove = useCallback(async () => {
-    if (!currentBudget) {return;}
+    if (!currentBudget) {
+      return;
+    }
     try {
       await deleteBudget(currentBudget.id);
     } catch (error) {
@@ -302,7 +304,6 @@ const useSettings = () => {
     handleDeleteAllData,
     allData,
     handleExportResult,
-    handleRetryMigrations,
     showAlert,
     requestStorageViaDialog,
   };

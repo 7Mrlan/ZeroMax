@@ -279,7 +279,12 @@
   },
   "databaseError": {
     "title": "Database failed to load",
-    "message": "Your data file may be corrupted.\nPlease restart the app. If this persists,\nreinstall Zero — your exported backups are safe."
+    "message": "Your data file may be corrupted.\nPlease restart the app. If this persists,\nreinstall Zero — your exported backups are safe.",
+    "retry": "Retry"
+  },
+  "migrationError": {
+    "title": "Preparing your data failed",
+    "message": "Your existing data was kept. Retry the preparation before opening the app."
   },
   "calendar": {
     "today": "Today",
