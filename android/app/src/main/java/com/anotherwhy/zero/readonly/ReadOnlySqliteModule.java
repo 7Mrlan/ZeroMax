@@ -28,6 +28,7 @@ import java.util.Set;
  */
 public final class ReadOnlySqliteModule extends ReactContextBaseJavaModule {
     private static final String MODULE_NAME = "ZeroReadOnlySqlite";
+    private static final String TARGET_DATABASE_NAME = "watermelon_v4";
     private static final Set<String> ALLOWED_DATABASES = new HashSet<>(
             Arrays.asList("watermelon", "watermelon_v4")
     );
@@ -130,6 +131,42 @@ public final class ReadOnlySqliteModule extends ReactContextBaseJavaModule {
         }
     }
 
+    /**
+     * Inspects the inactive v4 artifact without opening it through
+     * WatermelonDB. The JS checkpoint decides whether a present artifact is
+     * owned by the current attempt before any discard operation is allowed.
+     */
+    @ReactMethod
+    public void inspectTargetArtifact(Promise promise) {
+        File databaseFile = resolveDatabaseFile(TARGET_DATABASE_NAME);
+        File walFile = new File(databaseFile.getAbsolutePath() + "-wal");
+        File shmFile = new File(databaseFile.getAbsolutePath() + "-shm");
+        boolean databaseExists = databaseFile.isFile();
+        boolean walExists = walFile.isFile();
+        boolean shmExists = shmFile.isFile();
+
+        if (!databaseExists && !walExists && !shmExists) {
+            WritableMap missing = Arguments.createMap();
+            missing.putString("status", "missing");
+            promise.resolve(missing);
+            return;
+        }
+
+        if (!databaseExists) {
+            WritableMap orphaned = Arguments.createMap();
+            orphaned.putString("status", "orphaned");
+            promise.resolve(orphaned);
+            return;
+        }
+
+        WritableMap present = Arguments.createMap();
+        present.putString("status", "present");
+        present.putMap("database", fileMetadata(databaseFile));
+        present.putMap("wal", fileMetadataOrNull(walFile));
+        present.putMap("shm", fileMetadataOrNull(shmFile));
+        promise.resolve(present);
+    }
+
     private File resolveDatabaseFile(String databaseName) {
         // Keep this resolver byte-for-byte aligned with WatermelonDB's Android
         // driver. The replacement removes the framework's /databases segment.
@@ -138,6 +175,17 @@ public final class ReadOnlySqliteModule extends ReactContextBaseJavaModule {
                 .getPath()
                 .replace("/databases", "");
         return new File(path);
+    }
+
+    private WritableMap fileMetadata(File file) {
+        WritableMap metadata = Arguments.createMap();
+        metadata.putDouble("size", file.length());
+        metadata.putDouble("lastModified", file.lastModified());
+        return metadata;
+    }
+
+    private WritableMap fileMetadataOrNull(File file) {
+        return file.isFile() ? fileMetadata(file) : null;
     }
 
     private WritableMap readColumns(SQLiteDatabase database) {

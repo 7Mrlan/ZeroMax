@@ -14,6 +14,8 @@ export interface ReadOnlySqliteBridge {
   readSnapshot?: (databaseName: ActiveDatabaseName) => Promise<unknown>;
 }
 
+export type ReadOnlySqliteSnapshotBridge = Pick<ReadOnlySqliteBridge, 'readSnapshot'>;
+
 const NativeProbeResultSchema = z.discriminatedUnion('status', [
   z.object({status: z.literal('missing')}),
   z.object({
@@ -93,10 +95,12 @@ export const normalizeNativeSnapshot = (value: unknown): CopyDataset => {
 /** Reads source rows without constructing a writable Watermelon adapter. */
 export const readDatabaseSnapshotReadOnly = async (
   databaseName: ActiveDatabaseName,
-  bridge: ReadOnlySqliteBridge | undefined = NativeModules.ZeroReadOnlySqlite as ReadOnlySqliteBridge | undefined,
+  bridge: ReadOnlySqliteSnapshotBridge | undefined = NativeModules.ZeroReadOnlySqlite as
+    ReadOnlySqliteSnapshotBridge | undefined,
 ): Promise<CopyDataset> => {
   if (!bridge || typeof bridge.readSnapshot !== 'function') {
     throw new Error('ZeroReadOnlySqlite snapshot method is unavailable');
   }
-  return normalizeNativeSnapshot(await bridge.readSnapshot(databaseName));
+  const readSnapshot = bridge.readSnapshot;
+  return normalizeNativeSnapshot(await readSnapshot(databaseName));
 };
