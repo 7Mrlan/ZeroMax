@@ -16,13 +16,12 @@ export interface AndroidLegacyMigrationDependencies {
   backupId: string;
   createDriver?: (dependencies: AndroidCopyDriverDependencies) => LegacyCopyDriver;
   copyRows?: typeof copyLegacyRows;
-  setActiveDatabaseName: (databaseName: ActiveDatabaseName) => void;
-  adoptDatabase: (database: unknown) => void;
 }
 
 export interface AndroidLegacyMigrationResult {
   checkpoint: MigrationCheckpoint;
   copy: LegacyCopyResult;
+  targetDatabase: unknown;
 }
 
 /** Runs legacy migration from a stable backup and adopts the verified target instance. */
@@ -32,8 +31,6 @@ export const runAndroidLegacyMigration = async ({
   backupId,
   createDriver = createAndroidCopyDriver,
   copyRows = copyLegacyRows,
-  setActiveDatabaseName,
-  adoptDatabase,
 }: AndroidLegacyMigrationDependencies): Promise<AndroidLegacyMigrationResult> => {
   const liveSnapshot = await readDatabaseSnapshotReadOnly('watermelon', bridge);
   const liveFingerprint = fingerprintCopyDataset(liveSnapshot);
@@ -65,13 +62,32 @@ export const runAndroidLegacyMigration = async ({
   if (!targetDatabase) {
     throw new Error('Verified target database instance is unavailable for adoption');
   }
+  return {checkpoint: currentCheckpoint, copy, targetDatabase};
+};
+
+export interface AndroidLegacyActivationDependencies {
+  bridge: AndroidLegacyMigrationBridge;
+  setActiveDatabaseName: (databaseName: ActiveDatabaseName) => void;
+  adoptDatabase: (database: unknown) => void;
+}
+
+/** Activates a verified result; failures leave the verified checkpoint recoverable. */
+export const activateAndroidLegacyMigration = async (
+  result: AndroidLegacyMigrationResult,
+  {bridge, setActiveDatabaseName, adoptDatabase}: AndroidLegacyActivationDependencies,
+): Promise<AndroidLegacyMigrationResult> => {
   setActiveDatabaseName('watermelon_v4');
-  adoptDatabase(targetDatabase);
-  await updateTargetArtifactMarker(currentCheckpoint.target.attemptId, 'activated', copy.targetFingerprint, bridge);
-  currentCheckpoint = updateMigrationCheckpoint(currentCheckpoint, current => ({
+  adoptDatabase(result.targetDatabase);
+  await updateTargetArtifactMarker(
+    result.checkpoint.target.attemptId,
+    'activated',
+    result.copy.targetFingerprint,
+    bridge,
+  );
+  const checkpoint = updateMigrationCheckpoint(result.checkpoint, current => ({
     ...current,
     state: 'activated',
     target: {...current.target, status: 'activated'},
   }));
-  return {checkpoint: currentCheckpoint, copy};
+  return {...result, checkpoint};
 };
