@@ -26,6 +26,8 @@
     "test:export": "jest --runInBand src/backend/__tests__/upgrader.test.ts src/backend/import/__tests__ src/backend/export/__tests__",
     "security:secrets": "node scripts/secret-scan.js",
     "audit:high": "pnpm audit --prod --audit-level high",
+    "performance:validate": "node scripts/validate-performance-report.js",
+    "android:artifact:check": "node scripts/check-android-artifact.js",
     "commitlint:range": "commitlint --from=HEAD~1 --to=HEAD",
     "typecheck": "tsc --strict",
     "version:set": "node scripts/bump-version.js",
