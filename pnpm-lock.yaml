@@ -196,6 +196,9 @@ importers:
       globals:
         specifier: 17.13.0
         version: 17.13.0
+      hermes-compiler:
+        specifier: 250829098.0.17
+        version: 250829098.0.17
       husky:
         specifier: ^9.1.7
         version: 9.1.7
