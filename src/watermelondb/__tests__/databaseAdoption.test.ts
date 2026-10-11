@@ -1,5 +1,5 @@
 import type {Database} from '@nozbe/watermelondb';
-import {adoptDatabaseInstance, getDatabase, resetDatabaseInstance, waitForDatabase} from '../database';
+import {adoptDatabaseInstance, database, getDatabase, resetDatabaseInstance, waitForDatabase} from '../database';
 
 describe('verified target database adoption', () => {
   afterEach(() => resetDatabaseInstance({force: true}));
@@ -24,5 +24,12 @@ describe('verified target database adoption', () => {
     resetDatabaseInstance();
 
     expect(getDatabase()).toBe(verified);
+  });
+
+  it('does not open a legacy adapter when React Refresh inspects metadata', () => {
+    const proxy = database as unknown as Record<PropertyKey, unknown>;
+
+    expect(proxy.$$typeof).toBeUndefined();
+    expect(proxy[Symbol.toStringTag]).toBeUndefined();
   });
 });

@@ -19,9 +19,24 @@ cd android
 ./gradlew :app:assembleDebug --no-daemon --stacktrace
 ```
 
-结果：`BUILD SUCCESSFUL`，424 tasks（85 executed，339 up-to-date），随后
-`pnpm run android:artifact:check` 通过。构建期间仍有 AGP legacy variant API
-deprecation warning；它没有阻止 debug 构建，但应在 RN/AGP 后续升级中处理。
+`pnpm install` runs `scripts/patch-watermelon-jsi-cmake.js`. WatermelonDB 0.28's
+legacy JSI CMake file assumes npm hoisting; the postinstall patch keeps the
+dependency source unchanged while pointing its native include paths at the
+pnpm root graph.
 
-这份记录只证明干净主机可以生成 debug APK。没有连接设备，因此不证明启动、
-迁移、WAL/崩溃恢复、帧率、16 KB page runtime、签名或商店发布。
+结果：在注册 WatermelonDB JSI 模块并清理 native CMake 缓存后，
+`BUILD SUCCESSFUL`，453 tasks 全部执行，随后 `pnpm run android:artifact:check`
+和 `pnpm run android:jsi:contract:check` 通过。构建期间仍有 AGP legacy variant
+API 和部分第三方库的 deprecation warning；它们没有阻止 debug 构建，但应在
+RN/AGP 或上游库升级中处理。
+
+同一主机启动 API 35 x86_64 `zero-api35` 模拟器，安装该 debug APK 后清空应用数据，
+通过 Metro 连接冷启动。logcat 同时出现 `Successfully installed Watermelon DB JSI
+Bindings!`、`Opened database at .../watermelon_v4.db`、`schema version 4` 和
+`Schema set up successfully`，没有出现 `JSI SQLiteAdapter not available` 或
+`FATAL`。这证明当前 Android debug 包的 JSI 加载和 fresh v4 BootGate 路径已在
+该模拟器上运行；它仍不证明真实设备帧率、WAL 崩溃恢复、签名或商店发布。
+
+这份记录证明干净主机可以生成 debug APK，并证明该 API 35 模拟器上的 JSI
+fresh-install 启动路径。它仍不证明真实设备迁移、WAL/崩溃恢复、帧率、16 KB
+page runtime、签名或商店发布。

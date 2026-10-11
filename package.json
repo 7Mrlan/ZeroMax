@@ -29,6 +29,7 @@
     "performance:validate": "node scripts/validate-performance-report.js",
     "licenses:generate": "node scripts/generate-license-attribution.js",
     "android:artifact:check": "node scripts/check-android-artifact.js",
+    "android:jsi:contract:check": "node scripts/check-watermelon-jsi-contract.js",
     "release:identity:check": "node scripts/check-release-identity.js",
     "e2e:contract:check": "node scripts/check-e2e-contract.js",
     "commitlint:range": "commitlint --from=HEAD~1 --to=HEAD",
@@ -37,11 +38,13 @@
     "commit": "cz",
     "commitlint": "commitlint --edit",
     "prepare": "husky",
+    "postinstall": "node scripts/patch-watermelon-jsi-cmake.js",
     "ios:contract:check": "node scripts/check-ios-native-contract.js"
   },
   "dependencies": {
     "@babel/runtime": "^7.28.6",
     "@nozbe/simdjson": "^3.9.4",
+    "@nozbe/sqlite": "3.46.0",
     "@nozbe/watermelondb": "^0.28.0",
     "@react-native-community/datetimepicker": "9.1.0",
     "@react-native-documents/picker": "12.0.2",

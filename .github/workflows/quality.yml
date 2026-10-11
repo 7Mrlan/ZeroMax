@@ -54,6 +54,9 @@ jobs:
       - name: iOS native source contract
         run: pnpm run ios:contract:check
 
+      - name: Watermelon JSI source contract
+        run: pnpm run android:jsi:contract:check
+
       - name: Release identity contract
         run: pnpm run release:identity:check
 
@@ -94,6 +97,9 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Validate Watermelon JSI contract
+        run: pnpm run android:jsi:contract:check
 
       - name: Assemble debug APK
         working-directory: android

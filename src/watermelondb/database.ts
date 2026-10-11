@@ -60,6 +60,12 @@ const getDatabase = (): Database => {
 
 export const database = new Proxy({} as Database, {
   get(_target, prop) {
+    // Metro's React Refresh inspector probes module exports for the React
+    // marker before BootGate has completed. Treat that metadata lookup as a
+    // non-database read so development tooling cannot create a legacy file.
+    if (prop === '$$typeof' || prop === Symbol.toStringTag) {
+      return undefined;
+    }
     const db = getDatabase();
     const value = db[prop as keyof Database];
     if (typeof value === 'function') {
