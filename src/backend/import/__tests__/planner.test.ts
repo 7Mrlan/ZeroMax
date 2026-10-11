@@ -67,9 +67,7 @@ describe('buildImportPlan — auto-create instead of dropping transactions', () 
   it('auto-creates a missing category referenced by an expense (nothing is skipped)', () => {
     const plan = buildImportPlan({
       ...emptyData,
-      expenses: [
-        {title: 'Chai', amount: 20, category: {name: 'Unknown'}, date: '2026-07-01'},
-      ],
+      expenses: [{title: 'Chai', amount: 20, category: {name: 'Unknown'}, date: '2026-07-01'}],
     });
     const unknown = plan.categories.find(c => c.name === 'Unknown');
     expect(unknown).toBeDefined();
@@ -82,9 +80,7 @@ describe('buildImportPlan — auto-create instead of dropping transactions', () 
   it('auto-creates a missing debtor referenced by a debt', () => {
     const plan = buildImportPlan({
       ...emptyData,
-      debts: [
-        {amount: 500, description: 'Lunch', debtor: {title: 'Ghost'}, date: '2026-07-01', type: 'Borrow'},
-      ],
+      debts: [{amount: 500, description: 'Lunch', debtor: {title: 'Ghost'}, date: '2026-07-01', type: 'Borrow'}],
     });
     const ghost = plan.debtors.find(d => d.title === 'Ghost');
     expect(ghost?.autoCreated).toBe(true);
@@ -97,9 +93,7 @@ describe('buildImportPlan — auto-create instead of dropping transactions', () 
     const plan = buildImportPlan({
       ...emptyData,
       categories: [category('Food', {categoryStatus: false})],
-      expenses: [
-        {title: 'Chai', amount: 20, category: {name: 'Food'}, date: '2026-07-01'},
-      ],
+      expenses: [{title: 'Chai', amount: 20, category: {name: 'Food'}, date: '2026-07-01'}],
     });
     expect(plan.categories).toHaveLength(1);
     expect(plan.stats.autoCreatedCategories).toBe(0);
@@ -170,5 +164,26 @@ describe('buildImportPlan — empty payload', () => {
       autoCreatedCategories: 0,
       autoCreatedDebtors: 0,
     });
+  });
+});
+
+describe('buildImportPlan — v5 income category identity', () => {
+  it('keeps same-name income and expense categories separate by kind and parent', () => {
+    const plan = buildImportPlan({
+      ...emptyData,
+      categories: [category('Other', {kind: 'expense'}), category('Other', {kind: 'income', parentName: 'Salary'})],
+      incomes: [
+        {
+          title: 'Bonus',
+          amount: 100,
+          category: {name: 'Other', kind: 'income', parentName: 'Salary'},
+          date: '2026-07-01',
+        },
+      ],
+    });
+    expect(plan.categories).toHaveLength(2);
+    expect(plan.incomes).toHaveLength(1);
+    expect(plan.incomes[0].categoryParentName).toBe('Salary');
+    expect(plan.stats.incomes).toBe(1);
   });
 });
