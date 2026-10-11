@@ -88,10 +88,11 @@ export const createAndroidCopyDriver = ({
       if (targetDatabase) {
         throw new Error('Android copy target has already been prepared');
       }
+      nativeTargetWrite = (bridge as AndroidCopyDriverDependencies['bridge'])?.writeTargetSnapshot;
+      if (nativeTargetWrite) return;
       const target = createTarget();
       await target.initializingPromise;
       targetDatabase = target.database;
-      nativeTargetWrite = (bridge as AndroidCopyDriverDependencies['bridge'])?.writeTargetSnapshot;
     },
     closePreparedTarget,
     runTargetTransaction: async (expectedTarget, verify) => {
@@ -111,6 +112,9 @@ export const createAndroidCopyDriver = ({
       if (nativeTargetWrite) {
         await nativeTargetWrite(JSON.stringify(expectedTarget), fingerprintCopyDataset(expectedTarget));
         nativeMarkerActivated = true;
+        const reopened = createTarget();
+        await reopened.initializingPromise;
+        targetDatabase = reopened.database;
         try {
           return await verifyWatermelonTargetSnapshot(targetDatabase as unknown as TargetDatabaseLike, verify);
         } catch (error) {

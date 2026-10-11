@@ -346,8 +346,15 @@ public final class ReadOnlySqliteModule extends ReactContextBaseJavaModule {
             database = SQLiteDatabase.openDatabase(
                     resolveDatabaseFile(TARGET_DATABASE_NAME).getAbsolutePath(),
                     null,
-                    SQLiteDatabase.OPEN_READWRITE | SQLiteDatabase.NO_LOCALIZED_COLLATORS
+                    SQLiteDatabase.CREATE_IF_NECESSARY
+                            | SQLiteDatabase.ENABLE_WRITE_AHEAD_LOGGING
+                            | SQLiteDatabase.NO_LOCALIZED_COLLATORS
             );
+            if (database.getVersion() == 0) {
+                initializeTargetSchema(database);
+            } else if (database.getVersion() != 4) {
+                throw new SQLiteException("Target database has an unsupported schema version");
+            }
             database.beginTransaction();
             transactionStarted = true;
             for (String table : INSPECTED_TABLES) {
@@ -399,6 +406,47 @@ public final class ReadOnlySqliteModule extends ReactContextBaseJavaModule {
         marker.put("status", "activated");
         marker.put("targetFingerprint", targetFingerprint);
         writeMarker(markerFile, marker);
+    }
+
+    private void initializeTargetSchema(SQLiteDatabase database) {
+        database.execSQL("CREATE TABLE \"users\" (\"id\" primary key, \"_changed\", \"_status\", \"username\", \"email\")");
+        database.execSQL("CREATE INDEX \"users__status\" ON \"users\" (\"_status\")");
+        database.execSQL("CREATE TABLE \"categories\" (\"id\" primary key, \"_changed\", \"_status\", \"name\", \"category_status\", \"user_id\", \"icon\", \"color\", \"parent_id\", \"kind\")");
+        database.execSQL("CREATE INDEX \"categories_category_status\" ON \"categories\" (\"category_status\")");
+        database.execSQL("CREATE INDEX \"categories_user_id\" ON \"categories\" (\"user_id\")");
+        database.execSQL("CREATE INDEX \"categories_parent_id\" ON \"categories\" (\"parent_id\")");
+        database.execSQL("CREATE INDEX \"categories_kind\" ON \"categories\" (\"kind\")");
+        database.execSQL("CREATE INDEX \"categories__status\" ON \"categories\" (\"_status\")");
+        database.execSQL("CREATE TABLE \"expenses\" (\"id\" primary key, \"_changed\", \"_status\", \"title\", \"amount\", \"description\", \"category_id\", \"user_id\", \"date\")");
+        database.execSQL("CREATE INDEX \"expenses_category_id\" ON \"expenses\" (\"category_id\")");
+        database.execSQL("CREATE INDEX \"expenses_user_id\" ON \"expenses\" (\"user_id\")");
+        database.execSQL("CREATE INDEX \"expenses_date\" ON \"expenses\" (\"date\")");
+        database.execSQL("CREATE INDEX \"expenses__status\" ON \"expenses\" (\"_status\")");
+        database.execSQL("CREATE TABLE \"incomes\" (\"id\" primary key, \"_changed\", \"_status\", \"title\", \"amount\", \"category_id\", \"user_id\", \"date\")");
+        database.execSQL("CREATE INDEX \"incomes_category_id\" ON \"incomes\" (\"category_id\")");
+        database.execSQL("CREATE INDEX \"incomes_user_id\" ON \"incomes\" (\"user_id\")");
+        database.execSQL("CREATE INDEX \"incomes_date\" ON \"incomes\" (\"date\")");
+        database.execSQL("CREATE INDEX \"incomes__status\" ON \"incomes\" (\"_status\")");
+        database.execSQL("CREATE TABLE \"currencies\" (\"id\" primary key, \"_changed\", \"_status\", \"code\", \"symbol\", \"name\", \"user_id\")");
+        database.execSQL("CREATE INDEX \"currencies_user_id\" ON \"currencies\" (\"user_id\")");
+        database.execSQL("CREATE INDEX \"currencies__status\" ON \"currencies\" (\"_status\")");
+        database.execSQL("CREATE TABLE \"debtors\" (\"id\" primary key, \"_changed\", \"_status\", \"title\", \"type\", \"debtor_status\", \"user_id\", \"icon\", \"color\")");
+        database.execSQL("CREATE INDEX \"debtors_debtor_status\" ON \"debtors\" (\"debtor_status\")");
+        database.execSQL("CREATE INDEX \"debtors_user_id\" ON \"debtors\" (\"user_id\")");
+        database.execSQL("CREATE INDEX \"debtors__status\" ON \"debtors\" (\"_status\")");
+        database.execSQL("CREATE TABLE \"debts\" (\"id\" primary key, \"_changed\", \"_status\", \"description\", \"amount\", \"debtor_id\", \"user_id\", \"date\", \"type\")");
+        database.execSQL("CREATE INDEX \"debts_debtor_id\" ON \"debts\" (\"debtor_id\")");
+        database.execSQL("CREATE INDEX \"debts_user_id\" ON \"debts\" (\"user_id\")");
+        database.execSQL("CREATE INDEX \"debts_date\" ON \"debts\" (\"date\")");
+        database.execSQL("CREATE INDEX \"debts__status\" ON \"debts\" (\"_status\")");
+        database.execSQL("CREATE TABLE \"budgets\" (\"id\" primary key, \"_changed\", \"_status\", \"user_id\", \"category_id\", \"amount\", \"month\", \"budget_type\")");
+        database.execSQL("CREATE INDEX \"budgets_user_id\" ON \"budgets\" (\"user_id\")");
+        database.execSQL("CREATE INDEX \"budgets_category_id\" ON \"budgets\" (\"category_id\")");
+        database.execSQL("CREATE INDEX \"budgets_month\" ON \"budgets\" (\"month\")");
+        database.execSQL("CREATE INDEX \"budgets__status\" ON \"budgets\" (\"_status\")");
+        database.execSQL("CREATE TABLE \"local_storage\" (\"key\" varchar(16) primary key not null, \"value\" text not null)");
+        database.execSQL("CREATE INDEX \"local_storage_key_index\" ON \"local_storage\" (\"key\")");
+        database.setVersion(4);
     }
 
     /** Advances a marker only for the attempt that originally claimed it. */
