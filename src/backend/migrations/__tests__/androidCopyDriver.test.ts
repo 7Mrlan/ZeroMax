@@ -39,6 +39,7 @@ describe('createAndroidCopyDriver', () => {
     await driver.ensureBackup();
     await expect(driver.readSourceSnapshot()).resolves.toEqual(snapshot);
     expect(readBackupSnapshot).toHaveBeenCalledWith('migration-1');
+    expect(driver.getPreparedTargetDatabase?.()).toBeNull();
   });
 
   it('requires target preparation before running a transaction', async () => {
@@ -51,5 +52,6 @@ describe('createAndroidCopyDriver', () => {
     await expect(driver.runTargetTransaction(snapshot, () => ({ok: true}) as never)).rejects.toThrow(
       'has not been prepared',
     );
+    expect(driver.getPreparedTargetDatabase?.()).toBeNull();
   });
 });

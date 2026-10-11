@@ -20,6 +20,8 @@ export interface LegacyCopyDriver {
     expectedTarget: CopyDataset,
     verify: (actualTarget: CopyDataset) => CopyVerificationReport,
   ) => Promise<CopyVerificationReport>;
+  /** Exposes the verified target instance so BootGate can adopt it without opening a second adapter. */
+  getPreparedTargetDatabase?: () => unknown;
 }
 
 export interface LegacyCopyResult {

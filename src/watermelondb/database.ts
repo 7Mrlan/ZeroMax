@@ -85,5 +85,18 @@ export const resetDatabaseInstance = (): void => {
   _databaseReadyPromise = null;
 };
 
+/**
+ * Adopts a verified target instance produced before BootGate mounted the app.
+ * This avoids opening a second JSI adapter against the same SQLite file.
+ */
+export const adoptDatabaseInstance = (verifiedDatabase: Database): void => {
+  if (_database) {
+    throw new Error('Cannot adopt a database after the production singleton has been opened');
+  }
+  _databaseError = null;
+  _database = verifiedDatabase;
+  _databaseReadyPromise = Promise.resolve();
+};
+
 export {getDatabase};
 export default database;

@@ -68,5 +68,6 @@ export const createAndroidCopyDriver = ({
       );
       return runTransaction(expectedTarget, verify);
     },
+    getPreparedTargetDatabase: () => targetDatabase,
   };
 };
