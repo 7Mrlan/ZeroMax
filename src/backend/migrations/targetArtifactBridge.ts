@@ -116,6 +116,18 @@ export const inspectTargetRecovery = async (
     return {kind: 'missing'};
   }
   if (nativeArtifact.status === 'orphaned') {
+    const marker = nativeArtifact.marker;
+    if (
+      checkpoint &&
+      marker &&
+      checkpoint.target.status === 'writing' &&
+      marker.status === 'writing' &&
+      marker.attemptId === checkpoint.target.attemptId &&
+      marker.generation === checkpoint.generation &&
+      marker.sourceFingerprint === checkpoint.sourceFingerprint
+    ) {
+      return {kind: 'artifact', attemptId: checkpoint.target.attemptId, status: 'writing'};
+    }
     return {kind: 'unknown', reason: 'Target SQLite sidecar exists without its database file'};
   }
   if (nativeArtifact.status === 'invalid-marker') {

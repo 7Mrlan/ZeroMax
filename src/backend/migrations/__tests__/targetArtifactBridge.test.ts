@@ -97,6 +97,22 @@ describe('target artifact bridge', () => {
     ).resolves.toEqual({kind: 'artifact', attemptId: '1:source-a', status: 'writing'});
   });
 
+  it('allows an owned orphan writing marker to enter discard/rebuild recovery', async () => {
+    await expect(
+      inspectTargetRecovery(checkpoint(), {
+        inspectTargetArtifact: async () => ({
+          status: 'orphaned',
+          marker: {
+            attemptId: '1:source-a',
+            generation: 1,
+            sourceFingerprint: 'source-a',
+            status: 'writing',
+          },
+        }),
+      }),
+    ).resolves.toEqual({kind: 'artifact', attemptId: '1:source-a', status: 'writing'});
+  });
+
   it('blocks a marker with a matching attempt id but a different generation or source', async () => {
     await expect(
       inspectTargetRecovery(checkpoint(), {
