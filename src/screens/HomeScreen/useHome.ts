@@ -1,18 +1,21 @@
 import {useCallback, useEffect, useMemo, useState} from 'react';
 import useThemeColors from '../../hooks/useThemeColors';
 import {useAppDispatch, useAppSelector} from '../../redux/hooks';
-import {
-  fetchExpensesByMonth,
-  invalidateExpenseCache,
-  selectExpenseData,
-} from '../../redux/slice/expenseDataSlice';
+import {fetchExpensesByMonth, invalidateExpenseCache, selectExpenseData} from '../../redux/slice/expenseDataSlice';
 import {selectMonthIndex, selectYear, setMonthSelection} from '../../redux/slice/monthSelectionSlice';
 import {selectUserName} from '../../redux/slice/userNameSlice';
 import {fetchUserData, selectUserId} from '../../redux/slice/userIdSlice';
 import {fetchCurrency} from '../../redux/slice/currencyDataSlice';
 import {fetchCategories} from '../../redux/slice/categoryDataSlice';
 import {fetchBudgetsByMonth, selectCurrentBudget} from '../../redux/slice/budgetDataSlice';
-import {getCurrentYear, getMonthNumber, getMonthNames, getDaysInMonth, sortByDateDesc, formatDate} from '../../utils/dateUtils';
+import {
+  getCurrentYear,
+  getMonthNumber,
+  getMonthNames,
+  getDaysInMonth,
+  sortByDateDesc,
+  formatDate,
+} from '../../utils/dateUtils';
 import {ExpenseData as Expense} from '../../watermelondb/services';
 import {loadAvailableYears} from '../../utils/availableYearsCache';
 import {useFocusEffect} from '@react-navigation/native';
@@ -59,7 +62,9 @@ const useHome = () => {
   useFocusEffect(
     useCallback(() => {
       if (userId) {
-        dispatch(invalidateExpenseCache());
+        // The month thunk is keyed and skips fulfilled entries. Keeping the
+        // cache while switching tabs prevents a transient empty list and
+        // avoids repeating the same SQLite query on every focus event.
         dispatch(fetchExpensesByMonth(yearMonth));
         dispatch(fetchBudgetsByMonth(yearMonth));
       }
@@ -75,6 +80,8 @@ const useHome = () => {
   useEffect(() => {
     if (!refreshing) return;
 
+    // An explicit pull-to-refresh is the one path that intentionally drops
+    // the keyed cache before querying the active month again.
     dispatch(invalidateExpenseCache());
     dispatch(fetchExpensesByMonth(yearMonth)).finally(() => {
       setRefreshing(false);
@@ -89,7 +96,10 @@ const useHome = () => {
 
     const todayStr = formatDate(new Date(), 'YYYY-MM-DD');
     const today = isCurrentMonth
-      ? (allTransactions ?? []).reduce((sum: number, t: Expense) => (t.date.startsWith(todayStr) ? sum + t.amount : sum), 0)
+      ? (allTransactions ?? []).reduce(
+          (sum: number, t: Expense) => (t.date.startsWith(todayStr) ? sum + t.amount : sum),
+          0,
+        )
       : 0;
 
     return {totalSpent: total, transactionCount: count, todayTotal: today};
