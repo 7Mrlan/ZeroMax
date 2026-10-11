@@ -39,6 +39,7 @@ const verificationPassed = (verification: UpgradeVerification): boolean =>
  * be tested without native SQLite or relying on unsafe conditional DDL.
  */
 export const runDualDatabaseUpgrade = async (driver: DualDatabaseUpgradeDriver): Promise<DualDatabaseUpgradeResult> => {
+  let activationStarted = false;
   try {
     await driver.persistState('pending');
     const snapshot = await driver.inspectLegacySchema();
@@ -57,17 +58,28 @@ export const runDualDatabaseUpgrade = async (driver: DualDatabaseUpgradeDriver):
     }
 
     await driver.persistState('verified');
+    // From this point the pointer may change before the next durable write.
+    // A failure must remain recoverable as `verified`; writing `failed` here
+    // would claim the legacy database is active even when activation succeeded.
+    activationStarted = true;
     await driver.activateTarget();
     await driver.persistState('activated');
     return {source: plan.source, finalState: 'activated'};
   } catch (error) {
-    // The old database remains active because activation only happens after
-    // verification. Persisting failed lets BootGate resume or offer recovery.
-    try {
-      await driver.persistState('failed');
-    } catch {
-      // Preserve the original error; the next boot can inspect the last
-      // durable state while keeping the legacy database active.
+    if (!activationStarted) {
+      // Before activation starts the old database remains active. Persisting
+      // failed lets BootGate offer recovery without guessing at target state.
+      try {
+        await driver.persistState('failed');
+      } catch {
+        // Preserve the original error; the next boot can inspect the last
+        // durable state while keeping the legacy database active.
+      }
+    } else {
+      // Activation and its durable marker are intentionally not collapsed into
+      // one JS operation. If either side fails, leave `verified` intact so the
+      // next boot reconciles the pointer and target instead of falsely marking
+      // a possibly active target as failed.
     }
     throw error;
   }

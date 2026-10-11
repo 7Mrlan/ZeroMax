@@ -76,4 +76,23 @@ describe('runDualDatabaseUpgrade', () => {
     });
     await expect(runDualDatabaseUpgrade(driver)).rejects.toThrow('copy failed');
   });
+
+  it('does not overwrite verified state when activation or its marker is uncertain', async () => {
+    const activationFailure = makeDriver({
+      activateTarget: jest.fn(async () => {
+        throw new Error('pointer write interrupted');
+      }),
+    });
+    await expect(runDualDatabaseUpgrade(activationFailure)).rejects.toThrow('pointer write interrupted');
+    expect(activationFailure.persistState).toHaveBeenLastCalledWith('verified');
+
+    const markerFailure = jest.fn(async (state: UpgradeState) => {
+      if (state === 'activated') {
+        throw new Error('state marker interrupted');
+      }
+    });
+    const uncertain = makeDriver({persistState: markerFailure});
+    await expect(runDualDatabaseUpgrade(uncertain)).rejects.toThrow('state marker interrupted');
+    expect(markerFailure).not.toHaveBeenCalledWith('failed');
+  });
 });
