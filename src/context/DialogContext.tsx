@@ -1,5 +1,5 @@
 import React, {createContext, useContext, useState, useCallback, useRef, useMemo, type ReactNode} from 'react';
-import {Modal, Pressable, TouchableOpacity, View} from 'react-native';
+import {Modal, Pressable, StyleSheet, TouchableOpacity, View} from 'react-native';
 import {useTranslation} from 'react-i18next';
 import PrimaryText from '../components/atoms/PrimaryText';
 import Icon from '../components/atoms/Icons';
@@ -51,6 +51,12 @@ const TYPE_ICON: Record<DialogType, string> = {
   error: 'alert-circle',
   info: 'badge-info',
 };
+
+const styles = StyleSheet.create({
+  dialogBody: {width: '80%', borderBottomLeftRadius: 8, borderBottomRightRadius: 8},
+  footerWithCancel: {justifyContent: 'space-between'},
+  footerSingle: {justifyContent: 'center'},
+});
 
 interface DialogProviderProps {
   children: ReactNode;
@@ -138,10 +144,7 @@ export const DialogProvider: React.FC<DialogProviderProps> = ({children}) => {
   const dialogType = display?.type ?? 'info';
 
   // Themed scrim: a fixed black wash sat oddly over the dark theme.
-  const overlayColor = useMemo(
-    () => hexToRgba(colors.sameBlack ?? '#000000', 0.45),
-    [colors.sameBlack],
-  );
+  const overlayColor = useMemo(() => hexToRgba(colors.sameBlack ?? '#000000', 0.45), [colors.sameBlack]);
 
   const accentColor = useMemo(() => {
     switch (dialogType) {
@@ -173,20 +176,16 @@ export const DialogProvider: React.FC<DialogProviderProps> = ({children}) => {
           accessibilityLabel={t('common.close')}
           onPress={handleDismissRequest}>
           <Pressable style={[gs.wFull, gs.itemsCenter]} onPress={event => event.stopPropagation()}>
-            <View style={[gs.roundedTop24, {backgroundColor: accentColor, height: 10, width: '80%'}]} />
-            <View
-              style={[
-                gs.center,
-                gs.py20,
-                gs.px20,
-                {
-                  backgroundColor: colors.secondaryAccent,
-                  width: '80%',
-                  borderBottomLeftRadius: 8,
-                  borderBottomRightRadius: 8,
-                },
-              ]}>
-              <View style={[gs.size40, gs.roundedFull, gs.center, gs.mb10, {backgroundColor: hexToRgba(accentColor, 0.125)}]}>
+            <View style={[gs.roundedTop24, gs.h10, gs.w80p, {backgroundColor: accentColor}]} />
+            <View style={[gs.center, gs.py20, gs.px20, styles.dialogBody, {backgroundColor: colors.secondaryAccent}]}>
+              <View
+                style={[
+                  gs.size40,
+                  gs.roundedFull,
+                  gs.center,
+                  gs.mb10,
+                  {backgroundColor: hexToRgba(accentColor, 0.125)},
+                ]}>
                 <Icon name={TYPE_ICON[dialogType]} size={22} color={accentColor} />
               </View>
               <PrimaryText size={13} color={colors.primaryText} style={gs.textCenter}>
@@ -197,18 +196,10 @@ export const DialogProvider: React.FC<DialogProviderProps> = ({children}) => {
                   {display.bullets.map(bullet => (
                     <View key={bullet.text} style={[gs.row, gs.itemsStart, gs.gap10]}>
                       <View
-                        style={[
-                          gs.size24,
-                          gs.rounded8,
-                          gs.center,
-                          {backgroundColor: hexToRgba(accentColor, 0.125)},
-                        ]}>
+                        style={[gs.size24, gs.rounded8, gs.center, {backgroundColor: hexToRgba(accentColor, 0.125)}]}>
                         <Icon name={bullet.icon} size={13} color={accentColor} />
                       </View>
-                      <PrimaryText
-                        size={12}
-                        color={colors.secondaryText}
-                        style={[gs.flex1, gs.textLeft]}>
+                      <PrimaryText size={12} color={colors.secondaryText} style={[gs.flex1, gs.textLeft]}>
                         {bullet.text}
                       </PrimaryText>
                     </View>
@@ -220,7 +211,7 @@ export const DialogProvider: React.FC<DialogProviderProps> = ({children}) => {
                   gs.rowCenter,
                   gs.mt15,
                   gs.gap12,
-                  {justifyContent: display?.showCancel ? 'space-between' : 'center'},
+                  display?.showCancel ? styles.footerWithCancel : styles.footerSingle,
                 ]}>
                 {display?.showCancel && (
                   <TouchableOpacity

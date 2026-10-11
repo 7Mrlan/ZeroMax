@@ -204,6 +204,7 @@ export const gs = StyleSheet.create({
 
   h4: {height: 4},
   h8: {height: 8},
+  h1: {height: 1},
   h10: {height: 10},
   h30: {height: 30},
   h35: {height: 35},
@@ -259,6 +260,7 @@ export const gs = StyleSheet.create({
   opacity0: {opacity: 0},
   opacity50: {opacity: 0.5},
   opacity60: {opacity: 0.6},
+  opacity70: {opacity: 0.7},
   opacity100: {opacity: 1},
 
   // OVERFLOW
@@ -316,6 +318,7 @@ export const gs = StyleSheet.create({
 
   borderBottom1: {borderBottomWidth: 1},
   borderBottom08: {borderBottomWidth: 0.8},
+  borderBottom05: {borderBottomWidth: 0.5},
   borderTop08: {borderTopWidth: 0.8},
   border15: {borderWidth: 1.5},
 

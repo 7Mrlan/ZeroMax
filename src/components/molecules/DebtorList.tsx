@@ -78,7 +78,7 @@ const DebtorList: React.FC<DebtorListProps> = ({colors, debtors, allDebts, ListH
         <TouchableOpacity
           onPress={() => handleDebtor(debtorId, debtor.title, debtor.type)}
           activeOpacity={0.7}
-          style={[gs.mx16, gs.py12, gs.rowCenter, {borderBottomWidth: 0.5, borderBottomColor: colors.secondaryAccent}]}>
+          style={[gs.mx16, gs.py12, gs.rowCenter, gs.borderBottom05, {borderBottomColor: colors.secondaryAccent}]}>
           <View
             style={[
               gs.size36,

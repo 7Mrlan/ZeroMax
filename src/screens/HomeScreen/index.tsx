@@ -39,7 +39,10 @@ const HomeScreen = () => {
   } = useHome();
   const {t} = useTranslation();
   const formatAmount = useFormatAmount();
-  const {shouldShowTutorial, tutorialRef, dismissTutorial} = useSwipeTutorial({screen: 'home', itemCount: sortedTransactions.length});
+  const {shouldShowTutorial, tutorialRef, dismissTutorial} = useSwipeTutorial({
+    screen: 'home',
+    itemCount: sortedTransactions.length,
+  });
 
   const openMonthPicker = useCallback(() => {
     void SheetManager.show('month-year-picker-sheet', {
@@ -84,13 +87,15 @@ const HomeScreen = () => {
             </PrimaryText>
           </View>
           <View style={[gs.rowCenter, gs.gap8, gs.mt4]}>
-            <PrimaryText size={11} color={colors.buttonText} variant="number" style={{opacity: 0.7}}>
+            <PrimaryText size={11} color={colors.buttonText} variant="number" style={gs.opacity70}>
               {t('home.transactionCount', {count: transactionCount})}
             </PrimaryText>
             {todayTotal > 0 ? (
               <>
-                <PrimaryText size={11} color={colors.buttonText} style={{opacity: 0.7}}>·</PrimaryText>
-                <PrimaryText size={11} color={colors.buttonText} variant="number" style={{opacity: 0.7}}>
+                <PrimaryText size={11} color={colors.buttonText} style={gs.opacity70}>
+                  ·
+                </PrimaryText>
+                <PrimaryText size={11} color={colors.buttonText} variant="number" style={gs.opacity70}>
                   {t('home.today')}: {formatAmount(todayTotal)}
                 </PrimaryText>
               </>
@@ -101,7 +106,11 @@ const HomeScreen = () => {
         {currentBudget ? (
           <View style={[gs.px14, gs.py10, gs.rounded12, gs.mt6, {backgroundColor: colors.secondaryAccent}]}>
             <View style={gs.rowBetweenCenter}>
-              <PrimaryText size={12} weight="semibold" variant="number" color={budgetExceeded ? colors.accentOrange : colors.primaryText}>
+              <PrimaryText
+                size={12}
+                weight="semibold"
+                variant="number"
+                color={budgetExceeded ? colors.accentOrange : colors.primaryText}>
                 {formatAmount(Math.max(currentBudget.amount - totalSpent, 0))} {t('home.remaining')}
               </PrimaryText>
               <PrimaryText size={11} variant="number" color={colors.secondaryText}>
@@ -121,13 +130,36 @@ const HomeScreen = () => {
               />
             </View>
             <View style={gs.mt6}>
-              <DailyBudgetRow dailyBudget={dailyBudget} dailyLeft={dailyLeft} isCurrentMonth={isCurrentMonth} colors={colors} formatAmount={formatAmount} t={t} />
+              <DailyBudgetRow
+                dailyBudget={dailyBudget}
+                dailyLeft={dailyLeft}
+                isCurrentMonth={isCurrentMonth}
+                colors={colors}
+                formatAmount={formatAmount}
+                t={t}
+              />
             </View>
           </View>
         ) : null}
       </View>
     ),
-    [selectedMonthName, selectedYear, totalSpent, transactionCount, todayTotal, isCurrentMonth, currentBudget, budgetPct, budgetExceeded, dailyBudget, dailyLeft, colors, openMonthPicker, formatAmount, t],
+    [
+      selectedMonthName,
+      selectedYear,
+      totalSpent,
+      transactionCount,
+      todayTotal,
+      isCurrentMonth,
+      currentBudget,
+      budgetPct,
+      budgetExceeded,
+      dailyBudget,
+      dailyLeft,
+      colors,
+      openMonthPicker,
+      formatAmount,
+      t,
+    ],
   );
 
   const listEmpty = useMemo(

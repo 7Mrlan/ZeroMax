@@ -28,7 +28,15 @@ const DebtEntry: React.FC<DebtEntryProps> = ({buttonText, route}) => {
   const {t} = useTranslation();
   const colors = useThemeColors();
   const dispatch = useAppDispatch();
-  const {debtId = '', debtDescription = '', amount = 0, debtorName = '', debtDate = '', debtorId = '', debtType = 'Borrow'} = route.params ?? {};
+  const {
+    debtId = '',
+    debtDescription = '',
+    amount = 0,
+    debtorName = '',
+    debtDate = '',
+    debtorId = '',
+    debtType = 'Borrow',
+  } = route.params ?? {};
   const isAddButton = buttonText === 'Add';
   const [hasInteracted, setHasInteracted] = useState(false);
   const [debtName, setDebtName] = useState(isAddButton ? '' : debtDescription);
@@ -106,13 +114,7 @@ const DebtEntry: React.FC<DebtEntryProps> = ({buttonText, route}) => {
                 key={debtTypeOption}
                 onPress={() => setDebtsType(debtTypeOption)}
                 activeOpacity={0.7}
-                style={[
-                  gs.py8,
-                  gs.px14,
-                  gs.rounded12,
-                  gs.center,
-                  {backgroundColor: bgColor},
-                ]}>
+                style={[gs.py8, gs.px14, gs.rounded12, gs.center, {backgroundColor: bgColor}]}>
                 <PrimaryText
                   size={13}
                   weight={isSelected ? 'semibold' : 'regular'}
@@ -133,12 +135,14 @@ const DebtEntry: React.FC<DebtEntryProps> = ({buttonText, route}) => {
           schema={expenseSchema}
         />
 
-        <PrimaryText size={12} color={colors.secondaryText} style={gs.mb5}>{t('transaction.amountLabel')}</PrimaryText>
+        <PrimaryText size={12} color={colors.secondaryText} style={gs.mb5}>
+          {t('transaction.amountLabel')}
+        </PrimaryText>
         <AmountInput
           value={debtAmount}
           onChangeText={setDebtAmount}
           onBlur={handleAmountBlur}
-          style={{marginBottom: debtAmountError.length > 0 ? 5 : 15}}
+          style={debtAmountError.length > 0 ? gs.mb5 : gs.mb15}
         />
         {debtAmountError.length > 0 && (
           <View style={gs.mb10}>

@@ -1,4 +1,4 @@
-import {ScrollView, TouchableOpacity, View, Platform, Share} from 'react-native';
+import {ScrollView, StyleSheet, TouchableOpacity, View, Platform, Share} from 'react-native';
 import React, {useCallback, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import i18n from '../../i18n';
@@ -20,6 +20,11 @@ import {getWeekStartDay, setWeekStartDay, type WeekStartDay} from '../../utils/w
 import {getWeekdayNames} from '../../utils/dateUtils';
 import {Colors} from '../../hooks/useThemeColors';
 import {gs, hitSlop} from '../../styles/globalStyles';
+
+const styles = StyleSheet.create({
+  sectionTitle: {letterSpacing: 0.8},
+  separator: {height: 1},
+});
 
 interface SettingsRowProps {
   icon: string;
@@ -272,7 +277,7 @@ const SettingsScreen = () => {
           size={11}
           weight="semibold"
           color={colors.accentGreen}
-          style={[gs.mt20, gs.mb6, {letterSpacing: 0.8}]}>
+          style={[gs.mt20, gs.mb6, styles.sectionTitle]}>
           {t('settings.sectionPersonalization')}
         </PrimaryText>
         <View style={[gs.rounded12, gs.overflowHidden, {backgroundColor: colors.containerColor}]}>
@@ -289,7 +294,7 @@ const SettingsScreen = () => {
             }
             onPress={openThemePicker}
           />
-          <View style={[gs.mx16, {height: 1, backgroundColor: colors.secondaryAccent}]} />
+          <View style={[gs.mx16, styles.separator, {backgroundColor: colors.secondaryAccent}]} />
           <SettingsRow
             colors={colors}
             icon="user"
@@ -306,7 +311,7 @@ const SettingsScreen = () => {
               });
             }}
           />
-          <View style={[gs.mx16, {height: 1, backgroundColor: colors.secondaryAccent}]} />
+          <View style={[gs.mx16, styles.separator, {backgroundColor: colors.secondaryAccent}]} />
           <SettingsRow
             colors={colors}
             icon="banknote"
@@ -323,7 +328,7 @@ const SettingsScreen = () => {
               </View>
             }
           />
-          <View style={[gs.mx16, {height: 1, backgroundColor: colors.secondaryAccent}]} />
+          <View style={[gs.mx16, styles.separator, {backgroundColor: colors.secondaryAccent}]} />
           <SettingsRow
             colors={colors}
             icon="target"
@@ -332,7 +337,7 @@ const SettingsScreen = () => {
             value={currentBudget ? formatAmount(currentBudget.amount) : undefined}
             onPress={handleOpenBudgetSheet}
           />
-          <View style={[gs.mx16, {height: 1, backgroundColor: colors.secondaryAccent}]} />
+          <View style={[gs.mx16, styles.separator, {backgroundColor: colors.secondaryAccent}]} />
           <SettingsRow
             colors={colors}
             icon="globe"
@@ -349,7 +354,7 @@ const SettingsScreen = () => {
               });
             }}
           />
-          <View style={[gs.mx16, {height: 1, backgroundColor: colors.secondaryAccent}]} />
+          <View style={[gs.mx16, styles.separator, {backgroundColor: colors.secondaryAccent}]} />
           <SettingsRow
             colors={colors}
             icon="calendar-days"
@@ -363,7 +368,7 @@ const SettingsScreen = () => {
           size={11}
           weight="semibold"
           color={colors.accentGreen}
-          style={[gs.mt20, gs.mb6, {letterSpacing: 0.8}]}>
+          style={[gs.mt20, gs.mb6, styles.sectionTitle]}>
           {t('settings.sectionData')}
         </PrimaryText>
         <View style={[gs.rounded12, gs.overflowHidden, {backgroundColor: colors.containerColor}]}>
@@ -374,7 +379,7 @@ const SettingsScreen = () => {
             subtitle={t('settings.exportSubtitle')}
             onPress={() => exportData(allData)}
           />
-          <View style={[gs.mx16, {height: 1, backgroundColor: colors.secondaryAccent}]} />
+          <View style={[gs.mx16, styles.separator, {backgroundColor: colors.secondaryAccent}]} />
           <SettingsRow
             colors={colors}
             icon="file-spreadsheet"
@@ -382,7 +387,7 @@ const SettingsScreen = () => {
             subtitle={t('settings.exportCsvSubtitle')}
             onPress={() => exportCsv()}
           />
-          <View style={[gs.mx16, {height: 1, backgroundColor: colors.secondaryAccent}]} />
+          <View style={[gs.mx16, styles.separator, {backgroundColor: colors.secondaryAccent}]} />
           <SettingsRow
             colors={colors}
             icon="trash-2"
@@ -397,7 +402,7 @@ const SettingsScreen = () => {
           size={11}
           weight="semibold"
           color={colors.accentGreen}
-          style={[gs.mt20, gs.mb6, {letterSpacing: 0.8}]}>
+          style={[gs.mt20, gs.mb6, styles.sectionTitle]}>
           {t('settings.sectionAbout')}
         </PrimaryText>
         <View style={[gs.rounded12, gs.overflowHidden, {backgroundColor: colors.containerColor}]}>
@@ -408,7 +413,7 @@ const SettingsScreen = () => {
             subtitle={t('settings.reportBugSubtitle')}
             onPress={handleReportBug}
           />
-          <View style={[gs.mx16, {height: 1, backgroundColor: colors.secondaryAccent}]} />
+          <View style={[gs.mx16, styles.separator, {backgroundColor: colors.secondaryAccent}]} />
           <SettingsRow
             colors={colors}
             icon="star"
@@ -416,7 +421,7 @@ const SettingsScreen = () => {
             subtitle={t('settings.rateAppSubtitle')}
             onPress={handleRateNow}
           />
-          <View style={[gs.mx16, {height: 1, backgroundColor: colors.secondaryAccent}]} />
+          <View style={[gs.mx16, styles.separator, {backgroundColor: colors.secondaryAccent}]} />
           <SettingsRow
             colors={colors}
             icon="code"
@@ -424,7 +429,7 @@ const SettingsScreen = () => {
             subtitle={t('settings.sourceCodeSubtitle')}
             onPress={handleGithub}
           />
-          <View style={[gs.mx16, {height: 1, backgroundColor: colors.secondaryAccent}]} />
+          <View style={[gs.mx16, styles.separator, {backgroundColor: colors.secondaryAccent}]} />
           <SettingsRow
             colors={colors}
             icon="activity"
@@ -432,7 +437,7 @@ const SettingsScreen = () => {
             subtitle={t('settings.diagnosticsSubtitle')}
             onPress={handleOpenDiagnostics}
           />
-          <View style={[gs.mx16, {height: 1, backgroundColor: colors.secondaryAccent}]} />
+          <View style={[gs.mx16, styles.separator, {backgroundColor: colors.secondaryAccent}]} />
           <SettingsRow
             colors={colors}
             icon="wifi-off"
@@ -440,21 +445,21 @@ const SettingsScreen = () => {
             subtitle={t('settings.whatLeavesDeviceSubtitle')}
             onPress={handleOpenNoiseFloor}
           />
-          <View style={[gs.mx16, {height: 1, backgroundColor: colors.secondaryAccent}]} />
+          <View style={[gs.mx16, styles.separator, {backgroundColor: colors.secondaryAccent}]} />
           <SettingsRow
             colors={colors}
             icon="shield"
             label={t('settings.privacyPolicy')}
             onPress={handlePrivacyPolicy}
           />
-          <View style={[gs.mx16, {height: 1, backgroundColor: colors.secondaryAccent}]} />
+          <View style={[gs.mx16, styles.separator, {backgroundColor: colors.secondaryAccent}]} />
           <SettingsRow
             colors={colors}
             icon="file-text"
             label={t('settings.termsAndConditions')}
             onPress={handleTermsAndConditions}
           />
-          <View style={[gs.mx16, {height: 1, backgroundColor: colors.secondaryAccent}]} />
+          <View style={[gs.mx16, styles.separator, {backgroundColor: colors.secondaryAccent}]} />
           <SettingsRow colors={colors} icon="info" label={t('settings.version')} value={`v${appVersion}`} />
         </View>
 

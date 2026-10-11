@@ -1,4 +1,4 @@
-import {Switch, TextInput, TouchableOpacity, View} from 'react-native';
+import {StyleSheet, Switch, TextInput, TouchableOpacity, View} from 'react-native';
 import React, {useCallback, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import {SheetManager, SheetProps} from 'react-native-actions-sheet';
@@ -10,6 +10,10 @@ import Icon from '../components/atoms/Icons';
 import {isCurrencySymbolSuffix} from '../utils/numberUtils';
 import {normalizeAmountInput} from '../utils/amountInput';
 import {gs} from '../styles/globalStyles';
+
+const styles = StyleSheet.create({
+  transparentBorder: {borderColor: 'transparent'},
+});
 
 const BudgetSheet: React.FC<SheetProps<'budget-sheet'>> = React.memo(props => {
   const {t} = useTranslation();
@@ -77,11 +81,13 @@ const BudgetSheet: React.FC<SheetProps<'budget-sheet'>> = React.memo(props => {
             gs.rounded12,
             gs.px15,
             gs.rowCenter,
-            {backgroundColor: colors.secondaryAccent, borderWidth: 1.5, borderColor: 'transparent'},
+            gs.border15,
+            {backgroundColor: colors.secondaryAccent},
+            styles.transparentBorder,
           ]}>
           {!symbolIsSuffix && budgetSymbol}
           <TextInput
-            style={[gs.flex1, gs.h48, gs.fontMedium, gs.noFontPadding, {color: colors.primaryText, fontSize: 16}]}
+            style={[gs.flex1, gs.h48, gs.fontMedium, gs.noFontPadding, gs.text16, {color: colors.primaryText}]}
             value={amount}
             onChangeText={handleAmountChange}
             placeholder="0"
@@ -112,10 +118,7 @@ const BudgetSheet: React.FC<SheetProps<'budget-sheet'>> = React.memo(props => {
             </PrimaryText>
           </View>
           <View pointerEvents="none" importantForAccessibility="no-hide-descendants">
-            <Switch
-              value={everyMonth}
-              trackColor={{false: colors.secondaryAccent, true: colors.accentGreen}}
-            />
+            <Switch value={everyMonth} trackColor={{false: colors.secondaryAccent, true: colors.accentGreen}} />
           </View>
         </TouchableOpacity>
 

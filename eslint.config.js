@@ -51,9 +51,7 @@ module.exports = [
       'react/display-name': 'off',
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',
-      // Dynamic theme/inset/animation values cannot live in StyleSheet.create;
-      // TypeScript and code review cover these typed style objects instead.
-      'react-native/no-inline-styles': 'off',
+      'react-native/no-inline-styles': 'error',
       'react-native/no-raw-text': 'off',
     },
   },

@@ -1,5 +1,5 @@
 import React, {memo, useCallback, useRef, useState} from 'react';
-import {FlatList, useWindowDimensions, View, ListViewToken} from 'react-native';
+import {FlatList, StyleSheet, useWindowDimensions, View, ListViewToken} from 'react-native';
 import {useTranslation} from 'react-i18next';
 import PrimaryText from './PrimaryText';
 import useThemeColors from '../../hooks/useThemeColors';
@@ -87,11 +87,8 @@ const Carousel = () => {
               style={[
                 gs.m3,
                 gs.roundedFull,
-                {
-                  backgroundColor: isActive ? colors.primaryText : colors.secondaryAccent,
-                  width: isActive ? 8 : 6,
-                  height: isActive ? 8 : 6,
-                },
+                isActive ? styles.dotActive : styles.dotInactive,
+                {backgroundColor: isActive ? colors.primaryText : colors.secondaryAccent},
               ]}
             />
           );
@@ -102,3 +99,8 @@ const Carousel = () => {
 };
 
 export default memo(Carousel);
+
+const styles = StyleSheet.create({
+  dotActive: {width: 8, height: 8},
+  dotInactive: {width: 6, height: 6},
+});

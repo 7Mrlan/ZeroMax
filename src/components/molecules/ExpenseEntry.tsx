@@ -15,7 +15,12 @@ import useFormatAmount from '../../hooks/useFormatAmount';
 import {goBack, navigate} from '../../utils/navigationUtils';
 import {selectUserId} from '../../redux/slice/userIdSlice';
 import {fetchCategories, selectActiveCategories} from '../../redux/slice/categoryDataSlice';
-import {createExpense, updateExpenseById, getAllExpensesByMonth, type CategoryData as CategoryDocType} from '../../watermelondb/services';
+import {
+  createExpense,
+  updateExpenseById,
+  getAllExpensesByMonth,
+  type CategoryData as CategoryDocType,
+} from '../../watermelondb/services';
 import {fetchExpensesByMonth, invalidateExpenseCache} from '../../redux/slice/expenseDataSlice';
 import {fetchBudgetsByMonth, selectCurrentBudget} from '../../redux/slice/budgetDataSlice';
 import DatePicker from '../atoms/DatePicker';
@@ -41,13 +46,17 @@ const ExpenseEntry: React.FC<ExpenseEntryProps> = ({type, route}) => {
   const [selectedCategories, setSelectedCategories] = useState<CategoryDocType[]>(
     isAddButton
       ? []
-      : categories?.filter((category: CategoryDocType) => category?.name === expenseData?.category?.name) ?? [],
+      : (categories?.filter((category: CategoryDocType) => category?.name === expenseData?.category?.name) ?? []),
   );
 
-  const [createdAt, setCreatedAt] = useState(isAddButton ? getISODateTime() : expenseData?.expenseDate ?? getISODateTime());
+  const [createdAt, setCreatedAt] = useState(
+    isAddButton ? getISODateTime() : (expenseData?.expenseDate ?? getISODateTime()),
+  );
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [expenseTitle, setExpenseTitle] = useState(isAddButton ? '' : expenseData?.expenseTitle ?? '');
-  const [expenseDescription, setExpenseDescription] = useState(isAddButton ? '' : expenseData?.expenseDescription ?? '');
+  const [expenseTitle, setExpenseTitle] = useState(isAddButton ? '' : (expenseData?.expenseTitle ?? ''));
+  const [expenseDescription, setExpenseDescription] = useState(
+    isAddButton ? '' : (expenseData?.expenseDescription ?? ''),
+  );
   const [expenseAmount, setExpenseAmount] = useState(isAddButton ? '' : String(expenseData?.expenseAmount ?? ''));
 
   const expenseAmountError = hasInteracted
@@ -86,9 +95,7 @@ const ExpenseEntry: React.FC<ExpenseEntryProps> = ({type, route}) => {
       if (current.length > 0) {
         return current;
       }
-      const match = categories?.filter(
-        (category: CategoryDocType) => category?.name === editingCategoryName,
-      );
+      const match = categories?.filter((category: CategoryDocType) => category?.name === editingCategoryName);
       return match?.length ? match : current;
     });
   }, [isAddButton, editingCategoryName, categories]);
@@ -121,11 +128,15 @@ const ExpenseEntry: React.FC<ExpenseEntryProps> = ({type, route}) => {
           console.error('Error loading month spend:', error);
         }
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [userId, expenseYearMonth, expenseDateStr]);
 
   const dailyBudgetInfo = useMemo(() => {
-    if (!currentBudget) {return null;}
+    if (!currentBudget) {
+      return null;
+    }
 
     const dayOfMonth = Number.parseInt(expenseDateStr.slice(8, 10), 10) || 1;
     const daysInMonthCount = getDaysInMonthByYearMonth(expenseYearMonth);
@@ -152,7 +163,16 @@ const ExpenseEntry: React.FC<ExpenseEntryProps> = ({type, route}) => {
     const dailyRemaining = allowance - otherSpendToday - enteredAmount;
 
     return {dailyBudget: allowance, dailyRemaining, exceeded: dailyRemaining < 0};
-  }, [currentBudget, expenseYearMonth, expenseDateStr, monthSpend, expenseAmount, isAddButton, expenseData?.expenseAmount, expenseData?.expenseDate]);
+  }, [
+    currentBudget,
+    expenseYearMonth,
+    expenseDateStr,
+    monthSpend,
+    expenseAmount,
+    isAddButton,
+    expenseData?.expenseAmount,
+    expenseData?.expenseDate,
+  ]);
 
   const handleAddCategory = useCallback(() => {
     navigate('AddCategoryScreen');
@@ -226,15 +246,17 @@ const ExpenseEntry: React.FC<ExpenseEntryProps> = ({type, route}) => {
   const toggleCategorySelection = useCallback((category: CategoryDocType) => {
     // Compare by id, not object identity: fetchCategories() replaces the array
     // with fresh objects, and reference equality would then fail to deselect.
-    setSelectedCategories(current =>
-      current.some(selected => selected.id === category.id) ? [] : [category],
-    );
+    setSelectedCategories(current => (current.some(selected => selected.id === category.id) ? [] : [category]));
   }, []);
 
   return (
     <PrimaryView colors={colors}>
       <View style={[gs.mb20, gs.mt20]}>
-        <AppHeader onPress={() => goBack()} colors={colors} text={isAddButton ? t('transaction.addTitle') : t('transaction.editTitle')} />
+        <AppHeader
+          onPress={() => goBack()}
+          colors={colors}
+          text={isAddButton ? t('transaction.addTitle') : t('transaction.editTitle')}
+        />
       </View>
 
       <CustomInput
@@ -254,12 +276,14 @@ const ExpenseEntry: React.FC<ExpenseEntryProps> = ({type, route}) => {
         schema={expenseDescriptionSchema}
       />
 
-      <PrimaryText size={12} color={colors.secondaryText} style={gs.mb5}>{t('transaction.amountLabel')}</PrimaryText>
+      <PrimaryText size={12} color={colors.secondaryText} style={gs.mb5}>
+        {t('transaction.amountLabel')}
+      </PrimaryText>
       <AmountInput
         value={expenseAmount}
         onChangeText={setExpenseAmount}
         onBlur={handleAmountBlur}
-        style={{marginBottom: expenseAmountError.length > 0 ? 5 : 15}}
+        style={expenseAmountError.length > 0 ? gs.mb5 : gs.mb15}
       />
       {expenseAmountError.length > 0 && (
         <View style={gs.mb10}>
@@ -275,21 +299,21 @@ const ExpenseEntry: React.FC<ExpenseEntryProps> = ({type, route}) => {
 
       {dailyBudgetInfo ? (
         <View style={[gs.rowCenter, gs.gap6, gs.mb10]}>
-          <Icon
-            name="target"
-            size={13}
-            color={dailyBudgetInfo.exceeded ? colors.accentOrange : colors.accentGreen}
-          />
+          <Icon name="target" size={13} color={dailyBudgetInfo.exceeded ? colors.accentOrange : colors.accentGreen} />
           <PrimaryText size={11} variant="number" color={colors.secondaryText}>
             {t('transaction.dailyBudget', {amount: formatAmount(Math.round(dailyBudgetInfo.dailyBudget))})}
           </PrimaryText>
-          <PrimaryText size={11} color={colors.secondaryText}>·</PrimaryText>
+          <PrimaryText size={11} color={colors.secondaryText}>
+            ·
+          </PrimaryText>
           <PrimaryText
             size={11}
             variant="number"
             color={dailyBudgetInfo.exceeded ? colors.accentOrange : colors.accentGreen}>
             {dailyBudgetInfo.exceeded
-              ? t('transaction.dailyExceeded', {amount: formatAmount(Math.round(Math.abs(dailyBudgetInfo.dailyRemaining)))})
+              ? t('transaction.dailyExceeded', {
+                  amount: formatAmount(Math.round(Math.abs(dailyBudgetInfo.dailyRemaining))),
+                })
               : t('transaction.dailyRemaining', {amount: formatAmount(Math.round(dailyBudgetInfo.dailyRemaining))})}
           </PrimaryText>
         </View>
@@ -303,7 +327,9 @@ const ExpenseEntry: React.FC<ExpenseEntryProps> = ({type, route}) => {
         label={t('transaction.dateLabel')}
       />
 
-      <PrimaryText size={12} color={colors.secondaryText} style={gs.mb8}>{t('transaction.categoryLabel')}</PrimaryText>
+      <PrimaryText size={12} color={colors.secondaryText} style={gs.mb8}>
+        {t('transaction.categoryLabel')}
+      </PrimaryText>
       {/* keyboardShouldPersistTaps + keyboardDismissMode replace the
           screen-wide TouchableWithoutFeedback: they dismiss the keyboard
           without taking the touch responder away from this ScrollView. */}

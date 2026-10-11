@@ -1,4 +1,4 @@
-import {TouchableOpacity, View} from 'react-native';
+import {StyleSheet, TouchableOpacity, View} from 'react-native';
 import React, {useCallback, useMemo, useState, memo} from 'react';
 import type {RouteProp} from '@react-navigation/native';
 import {useTranslation} from 'react-i18next';
@@ -22,6 +22,10 @@ import {SheetManager} from 'react-native-actions-sheet';
 import {useAppDispatch, useAppSelector} from '../../redux/hooks';
 import {gs} from '../../styles/globalStyles';
 
+const categoryStyles = StyleSheet.create({
+  separator: {height: 0.5},
+});
+
 interface CategorySelection {
   name: string;
   icon?: string;
@@ -41,11 +45,13 @@ const CategoryEntry: React.FC<CategoryEntryProps> = ({type, route}) => {
   const categoryData = route?.params;
   const isAddButton = type === 'Add';
 
-  const [categoryName, setCategoryName] = useState(isAddButton ? '' : categoryData?.categoryName ?? '');
+  const [categoryName, setCategoryName] = useState(isAddButton ? '' : (categoryData?.categoryName ?? ''));
 
   const resolveIconParam = (val?: string): string | null => {
     // 'null' is a legacy sentinel that older rows/params may still carry.
-    if (!val || val === 'null' || val === '') { return null; }
+    if (!val || val === 'null' || val === '') {
+      return null;
+    }
     return val;
   };
 
@@ -106,9 +112,16 @@ const CategoryEntry: React.FC<CategoryEntryProps> = ({type, route}) => {
   }, [selectedCategories, userId, dispatch, showAlert, t]);
 
   const handleUpdateCategory = useCallback(async () => {
-    if (!categoryData?.categoryId) { return; }
+    if (!categoryData?.categoryId) {
+      return;
+    }
     try {
-      await updateCategoryById(categoryData.categoryId, categoryName, selectedIcon ?? undefined, selectedColor ?? undefined);
+      await updateCategoryById(
+        categoryData.categoryId,
+        categoryName,
+        selectedIcon ?? undefined,
+        selectedColor ?? undefined,
+      );
       dispatch(fetchCategories());
       goBack();
     } catch (error) {
@@ -250,7 +263,11 @@ const CategoryEntry: React.FC<CategoryEntryProps> = ({type, route}) => {
     <PrimaryView colors={colors} style={gs.justifyBetween} dismissKeyboardOnTouch>
       <View>
         <View style={[gs.mb20, gs.mt20]}>
-          <AppHeader onPress={goBack} colors={colors} text={isAddButton ? t('category.addTitle') : t('category.editTitle')} />
+          <AppHeader
+            onPress={goBack}
+            colors={colors}
+            text={isAddButton ? t('category.addTitle') : t('category.editTitle')}
+          />
         </View>
 
         <CustomInput
@@ -262,7 +279,9 @@ const CategoryEntry: React.FC<CategoryEntryProps> = ({type, route}) => {
           schema={categorySchema}
         />
 
-        <PrimaryText size={12} color={colors.secondaryText} style={gs.mb8}>{t('category.appearanceLabel')}</PrimaryText>
+        <PrimaryText size={12} color={colors.secondaryText} style={gs.mb8}>
+          {t('category.appearanceLabel')}
+        </PrimaryText>
         <View style={[gs.row, gs.gap8, gs.mb15]}>
           <TouchableOpacity
             onPress={handleOpenIconPicker}
@@ -276,21 +295,13 @@ const CategoryEntry: React.FC<CategoryEntryProps> = ({type, route}) => {
               gs.flex1,
               {backgroundColor: colors.secondaryAccent},
             ]}>
-            <View
-              style={[
-                gs.size32,
-                gs.roundedFull,
-                gs.center,
-                {backgroundColor: colors.containerColor},
-              ]}>
-              <Icon
-                name={selectedIcon ?? 'shapes'}
-                size={16}
-                color={colors.primaryText}
-              />
+            <View style={[gs.size32, gs.roundedFull, gs.center, {backgroundColor: colors.containerColor}]}>
+              <Icon name={selectedIcon ?? 'shapes'} size={16} color={colors.primaryText} />
             </View>
             <View style={gs.flex1}>
-              <PrimaryText size={11} color={colors.secondaryText}>{t('category.iconLabel')}</PrimaryText>
+              <PrimaryText size={11} color={colors.secondaryText}>
+                {t('category.iconLabel')}
+              </PrimaryText>
               <PrimaryText size={13} weight="medium">
                 {selectedIcon ? t('common.change') : t('common.choose')}
               </PrimaryText>
@@ -310,15 +321,12 @@ const CategoryEntry: React.FC<CategoryEntryProps> = ({type, route}) => {
               {backgroundColor: colors.secondaryAccent},
             ]}>
             <View
-              style={[
-                gs.size32,
-                gs.roundedFull,
-                gs.center,
-                {backgroundColor: selectedColor ?? colors.accentGreen},
-              ]}
+              style={[gs.size32, gs.roundedFull, gs.center, {backgroundColor: selectedColor ?? colors.accentGreen}]}
             />
             <View style={gs.flex1}>
-              <PrimaryText size={11} color={colors.secondaryText}>{t('category.colorLabel')}</PrimaryText>
+              <PrimaryText size={11} color={colors.secondaryText}>
+                {t('category.colorLabel')}
+              </PrimaryText>
               <PrimaryText size={13} weight="medium">
                 {selectedColor ? t('common.change') : t('common.choose')}
               </PrimaryText>
@@ -329,9 +337,11 @@ const CategoryEntry: React.FC<CategoryEntryProps> = ({type, route}) => {
         {filteredCategories.length !== 0 && isAddButton ? (
           <>
             <View style={[gs.rowCenter, gs.gap8, gs.mb8]}>
-              <View style={[gs.flex1, {height: 0.5, backgroundColor: colors.secondaryAccent}]} />
-              <PrimaryText size={11} color={colors.secondaryText}>{t('category.orPickFromDefaults')}</PrimaryText>
-              <View style={[gs.flex1, {height: 0.5, backgroundColor: colors.secondaryAccent}]} />
+              <View style={[gs.flex1, categoryStyles.separator, {backgroundColor: colors.secondaryAccent}]} />
+              <PrimaryText size={11} color={colors.secondaryText}>
+                {t('category.orPickFromDefaults')}
+              </PrimaryText>
+              <View style={[gs.flex1, categoryStyles.separator, {backgroundColor: colors.secondaryAccent}]} />
             </View>
             <View style={[gs.minH55, gs.mt5]}>
               <FlashList

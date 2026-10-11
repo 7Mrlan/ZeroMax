@@ -28,7 +28,7 @@
  */
 
 import React, {useCallback, useMemo, ReactNode} from 'react';
-import {View, TouchableOpacity, ViewStyle, StyleProp} from 'react-native';
+import {StyleSheet, View, TouchableOpacity, ViewStyle, StyleProp} from 'react-native';
 import ActionSheet, {SheetManager} from 'react-native-actions-sheet';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import useThemeColors from '../../hooks/useThemeColors';
@@ -142,7 +142,8 @@ function CustomBottomSheetComponent({
             style={[
               gs.px16,
               gs.py12,
-              {borderBottomWidth: 1, borderBottomColor: colors.secondaryContainerColor},
+              gs.borderBottom1,
+              {borderBottomColor: colors.secondaryContainerColor},
               header.style,
             ]}>
             <View style={gs.rowBetweenCenter}>
@@ -190,7 +191,7 @@ function CustomBottomSheetComponent({
       useBottomSafeAreaPadding={useBottomSafeAreaPadding}
       animated={animated}
       containerStyle={containerStyles}
-      indicatorStyle={!header && showIndicator ? indicatorStyles : {width: 0, height: 0}}
+      indicatorStyle={!header && showIndicator ? indicatorStyles : styles.hiddenIndicator}
       headerAlwaysVisible={!!header}
       CustomHeaderComponent={renderHeader}
       onOpen={handleOpen}
@@ -204,6 +205,10 @@ function CustomBottomSheetComponent({
     </ActionSheet>
   );
 }
+
+const styles = StyleSheet.create({
+  hiddenIndicator: {width: 0, height: 0},
+});
 
 export const CustomBottomSheet = React.memo(CustomBottomSheetComponent);
 

@@ -1,4 +1,4 @@
-import {Keyboard, Platform, StatusBar, TouchableWithoutFeedback, View, ViewStyle} from 'react-native';
+import {Keyboard, Platform, StatusBar, StyleSheet, TouchableWithoutFeedback, View, ViewStyle} from 'react-native';
 import React, {ReactNode, memo} from 'react';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme, ThemeColors} from '../../context/ThemeContext';
@@ -52,9 +52,8 @@ const PrimaryView: React.FC<PrimaryViewProps> = ({
           backgroundColor: colors.primaryBackground,
           paddingTop: insets.top,
           paddingBottom: bottomPadding,
-          paddingLeft: useSidePadding ? '4%' : 0,
-          paddingRight: useSidePadding ? '4%' : 0,
         },
+        useSidePadding ? styles.sidePadding : styles.noSidePadding,
         style,
       ]}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
@@ -74,3 +73,8 @@ const PrimaryView: React.FC<PrimaryViewProps> = ({
 };
 
 export default memo(PrimaryView);
+
+const styles = StyleSheet.create({
+  sidePadding: {paddingLeft: '4%', paddingRight: '4%'},
+  noSidePadding: {paddingLeft: 0, paddingRight: 0},
+});

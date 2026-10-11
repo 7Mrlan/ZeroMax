@@ -1,4 +1,4 @@
-import {ScrollView, TouchableOpacity, View} from 'react-native';
+import {ScrollView, StyleSheet, TouchableOpacity, View} from 'react-native';
 import React, {useCallback, useMemo, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import DonutChart from '../../components/atoms/DonutChart';
@@ -22,6 +22,10 @@ import {leadingBlanks} from '../../utils/weekStart';
 
 /** Fallback slice color for expenses whose category record has no color. */
 const DEFAULT_SLICE_COLOR = '#758595';
+
+const styles = StyleSheet.create({
+  calendarCell: {width: '13.5%', margin: 0.5},
+});
 
 const ReportsScreen = () => {
   const {
@@ -89,16 +93,10 @@ const ReportsScreen = () => {
   // Selection lives here so the ring and the legend stay in step.
   const [activeSlice, setActiveSlice] = useState<string | null>(null);
 
-  const yearMonth = useMemo(
-    () => `${selectedYear}-${getMonthNumber(selectedMonth)}`,
-    [selectedYear, selectedMonth],
-  );
+  const yearMonth = useMemo(() => `${selectedYear}-${getMonthNumber(selectedMonth)}`, [selectedYear, selectedMonth]);
 
   const pieChartData = useMemo(() => {
-    const categoryMap = new Map<
-      string,
-      {name: string; color: string; id?: string; icon?: string; amount: number}
-    >();
+    const categoryMap = new Map<string, {name: string; color: string; id?: string; icon?: string; amount: number}>();
 
     filteredTransactions?.forEach((transaction: any) => {
       const {amount, category} = transaction;
@@ -234,7 +232,7 @@ const ReportsScreen = () => {
 
     return calendarData.map(({day, index, dateKey, total, hasTransactions}) => {
       if (day === 0) {
-        return <View key={`blank-${index}`} style={[gs.h34, gs.center, {width: '13.5%', margin: 0.5}]} />;
+        return <View key={`blank-${index}`} style={[gs.h34, gs.center, styles.calendarCell]} />;
       }
 
       const backgroundColor = getHeatmapColor(total, hasTransactions);
@@ -249,9 +247,8 @@ const ReportsScreen = () => {
             gs.center,
             gs.rounded4,
             gs.border1,
+            styles.calendarCell,
             {
-              width: '13.5%',
-              margin: 0.5,
               backgroundColor,
               borderColor: hasTransactions ? colors.accentGreen : colors.secondaryContainerColor,
             },
@@ -283,13 +280,17 @@ const ReportsScreen = () => {
           <Icon name="chevron-down" size={14} color={colors.buttonText} />
         </TouchableOpacity>
         <View style={[gs.flex1, gs.px12, gs.py10, gs.rounded8, {backgroundColor: colors.secondaryAccent}]}>
-          <PrimaryText size={11} color={colors.secondaryText} numberOfLines={1}>{t('reports.total')}</PrimaryText>
+          <PrimaryText size={11} color={colors.secondaryText} numberOfLines={1}>
+            {t('reports.total')}
+          </PrimaryText>
           <PrimaryText size={14} weight="semibold" variant="number" numberOfLines={1}>
             {formatAmount(totalAmountForMonth)}
           </PrimaryText>
         </View>
         <View style={[gs.flex1, gs.px12, gs.py10, gs.rounded8, {backgroundColor: colors.secondaryAccent}]}>
-          <PrimaryText size={11} color={colors.secondaryText} numberOfLines={1}>{t('reports.avgPerDay')}</PrimaryText>
+          <PrimaryText size={11} color={colors.secondaryText} numberOfLines={1}>
+            {t('reports.avgPerDay')}
+          </PrimaryText>
           <PrimaryText size={14} weight="semibold" variant="number" numberOfLines={1}>
             {formatAmount(totalAmountForMonth / daysInMonth)}
           </PrimaryText>
@@ -302,7 +303,12 @@ const ReportsScreen = () => {
           activeOpacity={0.7}
           style={[gs.px12, gs.py10, gs.rounded8, gs.mt6, {backgroundColor: colors.secondaryAccent}]}>
           <View style={gs.rowBetweenCenter}>
-            <PrimaryText size={13} weight="semibold" variant="number" color={budgetExceeded ? colors.accentOrange : colors.primaryText} numberOfLines={1}>
+            <PrimaryText
+              size={13}
+              weight="semibold"
+              variant="number"
+              color={budgetExceeded ? colors.accentOrange : colors.primaryText}
+              numberOfLines={1}>
               {formatAmount(Math.max(currentBudget.amount - totalAmountForMonth, 0))} {t('home.remaining')}
             </PrimaryText>
             <PrimaryText size={11} variant="number" color={colors.secondaryText} numberOfLines={1}>
@@ -322,16 +328,33 @@ const ReportsScreen = () => {
             />
           </View>
           <View style={gs.mt6}>
-            <DailyBudgetRow dailyBudget={dailyBudget} dailyLeft={dailyLeft} isCurrentMonth={isCurrentMonth} colors={colors} formatAmount={formatAmount} t={t} />
+            <DailyBudgetRow
+              dailyBudget={dailyBudget}
+              dailyLeft={dailyLeft}
+              isCurrentMonth={isCurrentMonth}
+              colors={colors}
+              formatAmount={formatAmount}
+              t={t}
+            />
           </View>
         </TouchableOpacity>
       ) : (
         <TouchableOpacity
           onPress={openBudgetSheet}
           activeOpacity={0.7}
-          style={[gs.rowCenter, gs.gap6, gs.px12, gs.py10, gs.rounded8, gs.mt6, {backgroundColor: colors.secondaryAccent}]}>
+          style={[
+            gs.rowCenter,
+            gs.gap6,
+            gs.px12,
+            gs.py10,
+            gs.rounded8,
+            gs.mt6,
+            {backgroundColor: colors.secondaryAccent},
+          ]}>
           <Icon name="target" size={14} color={colors.secondaryText} />
-          <PrimaryText size={12} color={colors.secondaryText}>{t('reports.setBudget')}</PrimaryText>
+          <PrimaryText size={12} color={colors.secondaryText}>
+            {t('reports.setBudget')}
+          </PrimaryText>
         </TouchableOpacity>
       )}
 
@@ -342,7 +365,7 @@ const ReportsScreen = () => {
           <>
             <View style={[gs.row, gs.wrap, gs.mt15]}>
               {dayNames.map((day, index) => (
-                <View key={`${day}-${index}`} style={[gs.h34, gs.center, {width: '13.5%', margin: 0.5}]}>
+                <View key={`${day}-${index}`} style={[gs.h34, gs.center, styles.calendarCell]}>
                   <PrimaryText size={13}>{day}</PrimaryText>
                 </View>
               ))}
@@ -350,7 +373,9 @@ const ReportsScreen = () => {
             <View style={[gs.row, gs.wrap]}>{renderCalendar()}</View>
 
             <View style={[gs.rowCenter, gs.justifyCenter, gs.mt10, gs.mb10, gs.gap4]}>
-              <PrimaryText size={11} color={colors.secondaryText}>{t('reports.less')}</PrimaryText>
+              <PrimaryText size={11} color={colors.secondaryText}>
+                {t('reports.less')}
+              </PrimaryText>
               {[0.1, 0.3, 0.5, 0.75, 1].map((opacity, i) => (
                 <View
                   key={`legend-${i}`}
@@ -358,11 +383,16 @@ const ReportsScreen = () => {
                     gs.size16,
                     gs.rounded3,
                     gs.border1,
-                    {backgroundColor: hexToRgba(colors.accentGreen, opacity), borderColor: colors.secondaryContainerColor},
+                    {
+                      backgroundColor: hexToRgba(colors.accentGreen, opacity),
+                      borderColor: colors.secondaryContainerColor,
+                    },
                   ]}
                 />
               ))}
-              <PrimaryText size={11} color={colors.secondaryText}>{t('reports.more')}</PrimaryText>
+              <PrimaryText size={11} color={colors.secondaryText}>
+                {t('reports.more')}
+              </PrimaryText>
             </View>
 
             <View style={[gs.mt20, gs.mb20]}>{renderPieChart()}</View>

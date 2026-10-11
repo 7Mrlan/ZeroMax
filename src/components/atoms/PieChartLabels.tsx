@@ -1,4 +1,4 @@
-import {TouchableOpacity, View} from 'react-native';
+import {StyleSheet, TouchableOpacity, View} from 'react-native';
 import React, {useCallback, useMemo} from 'react';
 import PrimaryText from './PrimaryText';
 import Icon from './Icons';
@@ -52,14 +52,14 @@ const PieChartLabels: React.FC<PieChartLabelsProps> = React.memo(({colors, slice
               gs.rounded12,
               gs.gap8,
               gs.mb6,
+              gs.px14,
+              gs.py10,
+              gs.border1,
               {
-                paddingHorizontal: 14,
-                paddingVertical: 10,
                 backgroundColor: colors.secondaryAccent,
                 // Mirrors the chart's selection so the two read as one control.
-                borderWidth: 1,
-                borderColor: isActive ? slice.color : 'transparent',
               },
+              isActive ? {borderColor: slice.color} : styles.unselectedBorder,
             ]}>
             <View style={[gs.size10, gs.roundedFull, {backgroundColor: slice.color}]} />
             <PrimaryText size={13} color={colors.primaryText} numberOfLines={1} style={gs.flex1}>
@@ -73,9 +73,7 @@ const PieChartLabels: React.FC<PieChartLabelsProps> = React.memo(({colors, slice
                 {pct}%
               </PrimaryText>
             </View>
-            {isTappable && (
-              <Icon name="chevron-right" size={14} color={colors.secondaryText} />
-            )}
+            {isTappable && <Icon name="chevron-right" size={14} color={colors.secondaryText} />}
           </View>
         );
 
@@ -94,3 +92,7 @@ const PieChartLabels: React.FC<PieChartLabelsProps> = React.memo(({colors, slice
 });
 
 export default PieChartLabels;
+
+const styles = StyleSheet.create({
+  unselectedBorder: {borderColor: 'transparent'},
+});

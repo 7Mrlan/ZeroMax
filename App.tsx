@@ -28,7 +28,7 @@ const InitializationErrorFallback = ({result, onRetry}: InitializationErrorFallb
   const isDark = Appearance.getColorScheme() === 'dark';
   const textColor = isDark ? '#fff' : '#000';
   return (
-    <View style={[dbStyles.container, {backgroundColor: isDark ? '#000' : '#fff'}]}>
+    <View style={[dbStyles.container, isDark ? dbStyles.darkBackground : dbStyles.lightBackground]}>
       <Text style={[dbStyles.face, {color: textColor}]}>:(</Text>
       <Text style={[dbStyles.title, {color: textColor}]}>
         {i18n.t(result.kind === 'migration' ? 'migrationError.title' : 'databaseError.title')}
@@ -52,6 +52,8 @@ const InitializationErrorFallback = ({result, onRetry}: InitializationErrorFallb
 const dbStyles = StyleSheet.create({
   appRoot: {flex: 1},
   container: {flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32},
+  darkBackground: {backgroundColor: '#000'},
+  lightBackground: {backgroundColor: '#fff'},
   face: {fontSize: 40, fontWeight: 'bold'},
   title: {fontSize: 16, fontWeight: '600', marginTop: 16, textAlign: 'center'},
   subtitle: {fontSize: 13, color: '#888', marginTop: 8, textAlign: 'center', lineHeight: 20},
