@@ -26,7 +26,12 @@ const SplashScreen = () => {
           </PrimaryText>
         </View>
       </View>
-      <PrimaryButton onPress={handleClick} colors={colors} buttonTitle={t('common.getStarted')} />
+      <PrimaryButton
+        testID="splash-get-started"
+        onPress={handleClick}
+        colors={colors}
+        buttonTitle={t('common.getStarted')}
+      />
     </PrimaryView>
   );
 };

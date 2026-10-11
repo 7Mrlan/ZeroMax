@@ -11,6 +11,8 @@ import {gs} from '../../styles/globalStyles';
 interface DatePickerProps {
   createdAt: string;
   showDatePicker: boolean;
+  testID?: string;
+  accessibilityLabel?: string;
   setCreatedAt: (value: string) => void;
   setShowDatePicker: (value: boolean) => void;
   label?: string;
@@ -19,7 +21,17 @@ interface DatePickerProps {
 }
 
 const DatePicker: React.FC<DatePickerProps> = React.memo(
-  ({setShowDatePicker, createdAt, showDatePicker, setCreatedAt, label, minDate, maxDate}) => {
+  ({
+    setShowDatePicker,
+    createdAt,
+    showDatePicker,
+    setCreatedAt,
+    label,
+    testID,
+    accessibilityLabel,
+    minDate,
+    maxDate,
+  }) => {
     const colors = useThemeColors();
 
     const handleDateChange = useCallback(
@@ -55,18 +67,18 @@ const DatePicker: React.FC<DatePickerProps> = React.memo(
 
     return (
       <View style={gs.mb15}>
-        {label && <PrimaryText size={12} color={colors.secondaryText} style={gs.mb5}>{label}</PrimaryText>}
+        {label && (
+          <PrimaryText size={12} color={colors.secondaryText} style={gs.mb5}>
+            {label}
+          </PrimaryText>
+        )}
         <TouchableOpacity
+          testID={testID}
+          accessibilityRole="button"
+          accessibilityLabel={accessibilityLabel ?? label}
           onPress={handleOpenDatePicker}
           activeOpacity={0.7}
-          style={[
-            gs.h48,
-            gs.rounded12,
-            gs.px14,
-            gs.rowCenter,
-            gs.gap8,
-            {backgroundColor: colors.secondaryAccent},
-          ]}>
+          style={[gs.h48, gs.rounded12, gs.px14, gs.rowCenter, gs.gap8, {backgroundColor: colors.secondaryAccent}]}>
           <Icon name="calendar" size={18} color={colors.secondaryText} />
           <PrimaryText size={14}>{formatDate(createdAt, 'Do MMM YYYY')}</PrimaryText>
         </TouchableOpacity>

@@ -60,6 +60,10 @@ const AddEntryScreen = () => {
         <Animated.View pointerEvents="none" style={[entryStyles.indicator, indicatorStyle]} />
         <Pressable
           onPress={() => switchMode('expense')}
+          testID="add-entry-expense-tab"
+          accessibilityRole="tab"
+          accessibilityLabel={t('entry.expense')}
+          accessibilityState={{selected: mode === 'expense'}}
           style={[gs.flex1, gs.py8, gs.rounded12, entryStyles.transparent]}>
           <Text style={[gs.textCenter, {color: mode === 'expense' ? colors.buttonText : colors.primaryText}]}>
             {t('entry.expense')}
@@ -67,6 +71,10 @@ const AddEntryScreen = () => {
         </Pressable>
         <Pressable
           onPress={() => switchMode('income')}
+          testID="add-entry-income-tab"
+          accessibilityRole="tab"
+          accessibilityLabel={t('entry.income')}
+          accessibilityState={{selected: mode === 'income'}}
           style={[gs.flex1, gs.py8, gs.rounded12, gs.ml8, entryStyles.transparent]}>
           <Text style={[gs.textCenter, {color: mode === 'income' ? colors.buttonText : colors.primaryText}]}>
             {t('entry.income')}

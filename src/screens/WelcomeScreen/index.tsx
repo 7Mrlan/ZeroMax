@@ -29,8 +29,19 @@ const WelcomeScreen = () => {
       <Carousel />
 
       <View style={gs.gap12}>
-        <PrimaryButton onPress={handleNewUser} colors={colors} buttonTitle={t('common.getStarted')} />
-        <PrimaryButton onPress={handleAlreadyUser} colors={colors} buttonTitle={t('backup.iHaveBackup')} variant="outline" />
+        <PrimaryButton
+          testID="welcome-get-started"
+          onPress={handleNewUser}
+          colors={colors}
+          buttonTitle={t('common.getStarted')}
+        />
+        <PrimaryButton
+          testID="welcome-restore-backup"
+          onPress={handleAlreadyUser}
+          colors={colors}
+          buttonTitle={t('backup.iHaveBackup')}
+          variant="outline"
+        />
       </View>
     </PrimaryView>
   );

@@ -1,0 +1,38 @@
+appId: com.anotherwhy.zero
+---
+- launchApp:
+    clearState: true
+- tapOn:
+    id: splash-get-started
+- tapOn:
+    id: welcome-get-started
+- tapOn:
+    id: onboarding-name
+- inputText:
+    text: E2E User
+- tapOn:
+    id: onboarding-personalize-continue
+- tapOn:
+    id: onboarding-category-Food
+- tapOn:
+    id: onboarding-categories-continue
+- tapOn:
+    id: currency-option-USD
+- tapOn:
+    id: onboarding-currency-continue
+- assertVisible:
+    id: home-screen-header
+- tapOn:
+    id: home-settings-button
+- tapOn:
+    id: settings-ai-row
+- assertVisible:
+    id: ai-settings-enable
+- assertVisible:
+    id: ai-settings-endpoint
+- assertVisible:
+    id: ai-settings-model
+- assertVisible:
+    id: ai-settings-api-key
+- assertVisible:
+    id: ai-settings-privacy-notice

@@ -21,6 +21,8 @@ const NUMBER_FONTS: Record<FontWeight, string> = {
 
 interface PrimaryTextProps {
   children?: ReactNode;
+  /** Stable native identifier for UI automation and accessibility checks. */
+  testID?: string;
   style?: StyleProp<TextStyle>;
   size?: number;
   weight?: FontWeight;
@@ -37,6 +39,7 @@ interface PrimaryTextProps {
 
 const PrimaryText: React.FC<PrimaryTextProps> = ({
   children,
+  testID,
   style,
   size = 14,
   weight = 'medium',
@@ -66,6 +69,7 @@ const PrimaryText: React.FC<PrimaryTextProps> = ({
 
   const textElement = (
     <Text
+      testID={testID}
       style={[textStyle, style]}
       numberOfLines={numberOfLines}
       ellipsizeMode={resolvedEllipsizeMode}

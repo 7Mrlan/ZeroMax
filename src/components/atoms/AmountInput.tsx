@@ -11,6 +11,9 @@ import {gs} from '../../styles/globalStyles';
 interface AmountInputProps {
   value: string;
   onChangeText: (text: string) => void;
+  /** Stable native identifier for UI automation and screen-reader hints. */
+  testID?: string;
+  accessibilityLabel?: string;
   onBlur?: () => void;
   /** Outer container additions (e.g. the error-dependent bottom margin). */
   style?: StyleProp<ViewStyle>;
@@ -22,15 +25,12 @@ interface AmountInputProps {
  * hardcoded the symbol as a prefix, disagreeing with the (already
  * locale-correct) formatted display strings for suffix currencies.
  */
-const AmountInput: React.FC<AmountInputProps> = ({value, onChangeText, onBlur, style}) => {
+const AmountInput: React.FC<AmountInputProps> = ({value, onChangeText, testID, accessibilityLabel, onBlur, style}) => {
   const colors = useThemeColors();
   // Numeric keyboards emit a comma as the decimal key in most of Europe and
   // Latin America; every consumer parses with Number(), which needs a dot.
   // Normalising here means the user sees the dot appear as they type.
-  const handleChangeText = useCallback(
-    (text: string) => onChangeText(normalizeAmountInput(text)),
-    [onChangeText],
-  );
+  const handleChangeText = useCallback((text: string) => onChangeText(normalizeAmountInput(text)), [onChangeText]);
   const currencySymbol = useAppSelector(selectCurrencySymbol);
   const currencyCode = useAppSelector(selectCurrencyCode);
   const suffix = isCurrencySymbolSuffix(currencyCode);
@@ -54,6 +54,8 @@ const AmountInput: React.FC<AmountInputProps> = ({value, onChangeText, onBlur, s
       ]}>
       {!suffix && symbol}
       <TextInput
+        testID={testID}
+        accessibilityLabel={accessibilityLabel}
         style={[gs.px15, gs.h48, gs.flex1, gs.numMedium, gs.noFontPadding, {color: colors.primaryText}]}
         value={value}
         onChangeText={handleChangeText}

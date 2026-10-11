@@ -30,6 +30,8 @@ interface PrimaryButtonProps {
   onPress: () => void;
   colors: Colors;
   buttonTitle: string;
+  /** Stable native identifier for UI automation and assistive technology tests. */
+  testID?: string;
   disabled?: boolean;
   loading?: boolean;
   variant?: ButtonVariant;
@@ -44,6 +46,7 @@ const PrimaryButton: React.FC<PrimaryButtonProps> = React.memo(
     onPress,
     colors,
     buttonTitle,
+    testID,
     disabled = false,
     loading = false,
     variant = 'primary',
@@ -126,6 +129,7 @@ const PrimaryButton: React.FC<PrimaryButtonProps> = React.memo(
       <TouchableOpacity
         onPress={onPress}
         disabled={isDisabled}
+        testID={testID}
         activeOpacity={0.7}
         accessibilityLabel={buttonTitle}
         accessibilityRole="button"

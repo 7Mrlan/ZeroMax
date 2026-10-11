@@ -61,17 +61,26 @@ const AiSettingsScreen = () => {
   return (
     <PrimaryView colors={colors}>
       <AppHeader onPress={goBack} colors={colors} text={t('ai.settingsTitle')} />
-      <PrimaryText size={12} color={colors.secondaryText} style={gs.mt10}>
+      <PrimaryText testID="ai-settings-privacy-notice" size={12} color={colors.secondaryText} style={gs.mt10}>
         {t('ai.privacyNotice')}
       </PrimaryText>
       <View style={[gs.rowBetweenCenter, gs.mt20]}>
         <PrimaryText weight="semibold">{t('ai.enable')}</PrimaryText>
-        <Switch value={enabled} onValueChange={setEnabled} disabled={!secretStore} />
+        <Switch
+          testID="ai-settings-enable"
+          value={enabled}
+          onValueChange={setEnabled}
+          disabled={!secretStore}
+          accessibilityLabel={t('ai.enable')}
+          accessibilityRole="switch"
+        />
       </View>
       <PrimaryText size={12} color={colors.secondaryText} style={gs.mt15}>
         {t('ai.endpointLabel')}
       </PrimaryText>
       <TextInput
+        testID="ai-settings-endpoint"
+        accessibilityLabel={t('ai.endpointLabel')}
         value={baseUrl}
         onChangeText={setBaseUrl}
         autoCapitalize="none"
@@ -90,6 +99,8 @@ const AiSettingsScreen = () => {
         {t('ai.modelLabel')}
       </PrimaryText>
       <TextInput
+        testID="ai-settings-model"
+        accessibilityLabel={t('ai.modelLabel')}
         value={model}
         onChangeText={setModel}
         autoCapitalize="none"
@@ -107,6 +118,8 @@ const AiSettingsScreen = () => {
         {t('ai.apiKeyLabel')}
       </PrimaryText>
       <TextInput
+        testID="ai-settings-api-key"
+        accessibilityLabel={t('ai.apiKeyLabel')}
         value={apiKey}
         onChangeText={setApiKey}
         autoCapitalize="none"
@@ -122,8 +135,20 @@ const AiSettingsScreen = () => {
         ]}
       />
       <View style={gs.mt20}>
-        <PrimaryButton onPress={save} colors={colors} buttonTitle={t('ai.save')} disabled={!secretStore} />
-        <PrimaryButton onPress={clear} colors={colors} buttonTitle={t('ai.clearKey')} variant="ghost" />
+        <PrimaryButton
+          testID="ai-settings-save"
+          onPress={save}
+          colors={colors}
+          buttonTitle={t('ai.save')}
+          disabled={!secretStore}
+        />
+        <PrimaryButton
+          testID="ai-settings-clear"
+          onPress={clear}
+          colors={colors}
+          buttonTitle={t('ai.clearKey')}
+          variant="ghost"
+        />
       </View>
     </PrimaryView>
   );

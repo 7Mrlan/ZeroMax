@@ -23,12 +23,18 @@ const OnboardingScreen = () => {
     <PrimaryView colors={colors} style={gs.justifyBetween}>
       <View style={gs.flex1}>
         <TouchableOpacity style={[gs.selfEnd, gs.pt5p]} onPress={handleSkip}>
-          <PrimaryText size={13} weight="medium" color={colors.secondaryText}>{t('common.skip')}</PrimaryText>
+          <PrimaryText size={13} weight="medium" color={colors.secondaryText}>
+            {t('common.skip')}
+          </PrimaryText>
         </TouchableOpacity>
 
         <View style={gs.pt10p}>
-          <PrimaryText size={28} weight="bold">{t('onboarding.title')}</PrimaryText>
-          <PrimaryText size={28} weight="bold">{t('onboarding.titleSuffix')}</PrimaryText>
+          <PrimaryText size={28} weight="bold">
+            {t('onboarding.title')}
+          </PrimaryText>
+          <PrimaryText size={28} weight="bold">
+            {t('onboarding.titleSuffix')}
+          </PrimaryText>
         </View>
 
         <PrimaryText size={14} color={colors.secondaryText} style={[gs.mt6, gs.mb20]}>
@@ -40,7 +46,14 @@ const OnboardingScreen = () => {
             const isSelected = isCategorySelected(category.name);
 
             return (
-              <TouchableOpacity key={category.name} onPress={() => toggleCategorySelection(category)} activeOpacity={0.7}>
+              <TouchableOpacity
+                key={category.name}
+                onPress={() => toggleCategorySelection(category)}
+                activeOpacity={0.7}
+                testID={`onboarding-category-${category.name}`}
+                accessibilityRole="checkbox"
+                accessibilityLabel={category.name}
+                accessibilityState={{checked: isSelected}}>
                 <View
                   style={[
                     gs.py8,
@@ -73,7 +86,13 @@ const OnboardingScreen = () => {
           })}
         </ScrollView>
       </View>
-      <PrimaryButton onPress={handleSubmit} colors={colors} buttonTitle={t('common.continue')} disabled={isSubmitting} />
+      <PrimaryButton
+        testID="onboarding-categories-continue"
+        onPress={handleSubmit}
+        colors={colors}
+        buttonTitle={t('common.continue')}
+        disabled={isSubmitting}
+      />
     </PrimaryView>
   );
 };

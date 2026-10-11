@@ -29,6 +29,7 @@ const styles = StyleSheet.create({
 interface SettingsRowProps {
   icon: string;
   label: string;
+  testID?: string;
   subtitle?: string;
   value?: string;
   valueNode?: React.ReactNode;
@@ -40,6 +41,7 @@ interface SettingsRowProps {
 const SettingsRow: React.FC<SettingsRowProps> = ({
   icon,
   label,
+  testID,
   subtitle,
   value,
   valueNode,
@@ -47,7 +49,13 @@ const SettingsRow: React.FC<SettingsRowProps> = ({
   destructive,
   colors,
 }) => (
-  <TouchableOpacity onPress={onPress} activeOpacity={onPress ? 0.6 : 1} disabled={!onPress}>
+  <TouchableOpacity
+    onPress={onPress}
+    activeOpacity={onPress ? 0.6 : 1}
+    disabled={!onPress}
+    testID={testID}
+    accessibilityRole={onPress ? 'button' : undefined}
+    accessibilityLabel={label}>
     <View style={[gs.rowCenter, gs.px14, gs.py12, gs.gap10]}>
       <View style={[gs.size32, gs.rounded8, gs.center, {backgroundColor: colors.secondaryAccent}]}>
         <Icon name={icon} size={16} color={destructive ? colors.accentOrange : colors.secondaryText} />
@@ -359,6 +367,7 @@ const SettingsScreen = () => {
             colors={colors}
             icon="lock"
             label={t('ai.settingsTitle')}
+            testID="settings-ai-row"
             subtitle={t('ai.settingsSubtitle')}
             onPress={() => navigate('AiSettingsScreen')}
           />

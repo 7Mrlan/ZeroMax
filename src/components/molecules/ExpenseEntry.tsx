@@ -263,6 +263,7 @@ const ExpenseEntry: React.FC<ExpenseEntryProps> = ({type, route}) => {
         colors={colors}
         input={expenseTitle}
         setInput={setExpenseTitle}
+        testID="add-entry-expense-title"
         placeholder={t('transaction.titlePlaceholder')}
         label={t('transaction.titleLabel')}
         schema={expenseSchema}
@@ -271,6 +272,7 @@ const ExpenseEntry: React.FC<ExpenseEntryProps> = ({type, route}) => {
         colors={colors}
         input={expenseDescription}
         setInput={setExpenseDescription}
+        testID="add-entry-expense-description"
         placeholder={t('transaction.descriptionPlaceholder')}
         label={t('transaction.descriptionLabel')}
         schema={expenseDescriptionSchema}
@@ -282,6 +284,8 @@ const ExpenseEntry: React.FC<ExpenseEntryProps> = ({type, route}) => {
       <AmountInput
         value={expenseAmount}
         onChangeText={setExpenseAmount}
+        testID="add-entry-expense-amount"
+        accessibilityLabel={t('transaction.amountLabel')}
         onBlur={handleAmountBlur}
         style={expenseAmountError.length > 0 ? gs.mb5 : gs.mb15}
       />
@@ -324,6 +328,8 @@ const ExpenseEntry: React.FC<ExpenseEntryProps> = ({type, route}) => {
         createdAt={createdAt}
         showDatePicker={showDatePicker}
         setCreatedAt={setCreatedAt}
+        testID="add-entry-expense-date"
+        accessibilityLabel={t('transaction.dateLabel')}
         label={t('transaction.dateLabel')}
       />
 
@@ -346,6 +352,7 @@ const ExpenseEntry: React.FC<ExpenseEntryProps> = ({type, route}) => {
         <PrimaryButton
           onPress={handleAddCategory}
           colors={colors}
+          testID="add-entry-expense-category"
           buttonTitle={t('transaction.addCategoryButton')}
           variant="ghost"
           size="sm"
@@ -356,6 +363,7 @@ const ExpenseEntry: React.FC<ExpenseEntryProps> = ({type, route}) => {
         <PrimaryButton
           onPress={isAddButton ? handleAddExpense : handleUpdateExpense}
           colors={colors}
+          testID="add-entry-expense-submit"
           buttonTitle={isAddButton ? t('common.add') : t('common.update')}
           disabled={!isValid || selectedCategories.length === 0}
         />

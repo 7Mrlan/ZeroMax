@@ -10,15 +10,27 @@ import CurrencySymbolPicker from '../../components/molecules/CurrencySymbolPicke
 import {gs} from '../../styles/globalStyles';
 
 const ChooseCurrencyScreen = () => {
-  const {colors, search, filteredCurrencies, selectedCurrency, isSubmitting, handleCurrencySubmit, handleSearch, handleCurrencySelect} =
-    useChooseCurrency();
+  const {
+    colors,
+    search,
+    filteredCurrencies,
+    selectedCurrency,
+    isSubmitting,
+    handleCurrencySubmit,
+    handleSearch,
+    handleCurrencySelect,
+  } = useChooseCurrency();
   const {t} = useTranslation();
 
   return (
     <PrimaryView colors={colors}>
       <View style={gs.pt15p}>
-        <PrimaryText size={28} weight="bold">{t('chooseCurrency.title')}</PrimaryText>
-        <PrimaryText size={28} weight="bold">{t('chooseCurrency.titleSuffix')}</PrimaryText>
+        <PrimaryText size={28} weight="bold">
+          {t('chooseCurrency.title')}
+        </PrimaryText>
+        <PrimaryText size={28} weight="bold">
+          {t('chooseCurrency.titleSuffix')}
+        </PrimaryText>
       </View>
 
       <PrimaryText size={14} color={colors.secondaryText} style={gs.mt6}>
@@ -39,6 +51,8 @@ const ChooseCurrencyScreen = () => {
         ]}>
         <Icon name="search" size={18} color={colors.secondaryText} />
         <TextInput
+          testID="onboarding-currency-search"
+          accessibilityLabel={t('chooseCurrency.searchPlaceholder')}
           style={[gs.px15, gs.h48, gs.wFull, gs.fontMedium, gs.noFontPadding, {color: colors.primaryText}]}
           value={search}
           onChangeText={handleSearch}
@@ -62,6 +76,7 @@ const ChooseCurrencyScreen = () => {
       </ScrollView>
 
       <PrimaryButton
+        testID="onboarding-currency-continue"
         onPress={handleCurrencySubmit}
         colors={colors}
         buttonTitle={t('common.continue')}

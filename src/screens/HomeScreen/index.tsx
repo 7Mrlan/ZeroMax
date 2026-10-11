@@ -175,7 +175,7 @@ const HomeScreen = () => {
     <>
       <PrimaryView colors={colors} useBottomPadding={false} useSidePadding={false}>
         <View style={[gs.px16, gs.mb15]}>
-          <HeaderContainer headerText={t('home.greeting', {name: userName})} />
+          <HeaderContainer testID="home-screen-header" headerText={t('home.greeting', {name: userName})} />
         </View>
         {shouldShowTutorial && <SwipeTutorialTooltip onDismiss={dismissTutorial} />}
         <TransactionList
@@ -194,6 +194,7 @@ const HomeScreen = () => {
         <TouchableOpacity
           style={[gs.size50, gs.rounded8, gs.center, {backgroundColor: colors.secondaryBackground}]}
           onPress={() => navigate('AddEntryScreen')}
+          testID="home-add-transaction"
           hitSlop={hitSlop}
           accessibilityLabel={t('home.addTransaction')}
           accessibilityRole="button">

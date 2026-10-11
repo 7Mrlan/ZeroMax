@@ -28,6 +28,7 @@ const CategoryRow = memo(
     onToggle,
     depth,
     hasChildren,
+    expanded,
     openSwipeableRef,
     tutorialSwipeRef,
   }: {
@@ -38,6 +39,7 @@ const CategoryRow = memo(
     onToggle: () => void;
     depth: number;
     hasChildren: boolean;
+    expanded: boolean;
     openSwipeableRef: React.RefObject<{close: () => void} | null>;
     tutorialSwipeRef?: React.RefObject<SwipeableMethods | null>;
   }) => {
@@ -74,7 +76,14 @@ const CategoryRow = memo(
               ]}>
               <Icon name={category.icon || 'shapes'} size={18} color={category.color || colors.primaryText} />
             </View>
-            <TouchableOpacity onPress={onToggle} disabled={!hasChildren} style={[gs.rowCenter, gs.flex1]}>
+            <TouchableOpacity
+              onPress={onToggle}
+              disabled={!hasChildren}
+              style={[gs.rowCenter, gs.flex1]}
+              testID={`category-row-${String(category.id)}`}
+              accessibilityRole={hasChildren ? 'button' : 'text'}
+              accessibilityLabel={category.name}
+              accessibilityState={hasChildren ? {expanded} : undefined}>
               <PrimaryText weight="medium" size={14} style={gs.ml12} numberOfLines={1}>
                 {category.name}
               </PrimaryText>
@@ -122,6 +131,7 @@ const CategoryScreen = () => {
         onDelete={handleDelete}
         depth={item.depth}
         hasChildren={item.hasChildren}
+        expanded={expandedIds.has(item.category.id)}
         onToggle={() =>
           setExpandedIds(current => {
             const next = new Set(current);
@@ -134,7 +144,7 @@ const CategoryScreen = () => {
         tutorialSwipeRef={index === 0 ? tutorialRef : undefined}
       />
     ),
-    [colors, handleEdit, handleDelete, tutorialRef],
+    [colors, expandedIds, handleEdit, handleDelete, tutorialRef],
   );
 
   const ListEmptyComponent = useCallback(
@@ -146,7 +156,7 @@ const CategoryScreen = () => {
     <>
       <PrimaryView colors={colors} useSidePadding={false} useBottomPadding={false}>
         <View style={[gs.mb15, gs.px16]}>
-          <HeaderContainer headerText={t('categories.title')} />
+          <HeaderContainer testID="categories-screen-header" headerText={t('categories.title')} />
         </View>
         {shouldShowTutorial && <SwipeTutorialTooltip onDismiss={dismissTutorial} />}
         <View style={gs.flex1}>
@@ -165,6 +175,7 @@ const CategoryScreen = () => {
         <TouchableOpacity
           style={[gs.size50, gs.roundedFull, gs.center, {backgroundColor: colors.primaryText}]}
           onPress={() => navigate('AddCategoryScreen', {})}
+          testID="categories-add"
           hitSlop={hitSlop}
           accessibilityLabel={t('categories.addCategory')}
           accessibilityRole="button">

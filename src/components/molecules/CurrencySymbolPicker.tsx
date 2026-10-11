@@ -26,7 +26,12 @@ const CurrencySymbolPicker: React.FC<CurrencySymbolPickerProps> = ({
 
   const renderCurrencyItem = useCallback(
     ({item: currency}: {item: Currency}) => (
-      <TouchableOpacity onPress={() => handleCurrencySelect(currency)}>
+      <TouchableOpacity
+        onPress={() => handleCurrencySelect(currency)}
+        testID={`currency-option-${currency.code}`}
+        accessibilityRole="radio"
+        accessibilityLabel={`${currency.name} (${currency.code})`}
+        accessibilityState={{selected: selectedCurrency?.code === currency.code}}>
         <View
           style={[
             gs.flex1,

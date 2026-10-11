@@ -11,6 +11,9 @@ interface CustomInputProps {
   setInput: (value: string) => void;
   colors: Colors;
   placeholder: string;
+  /** Stable native identifier for UI automation and screen-reader hints. */
+  testID?: string;
+  accessibilityLabel?: string;
   label?: string;
   schema?: ZodType<string>;
   keyboardType?: KeyboardTypeOptions;
@@ -32,6 +35,8 @@ const CustomInput: React.FC<CustomInputProps> = ({
   input,
   setInput,
   placeholder,
+  testID,
+  accessibilityLabel,
   label,
   schema,
   keyboardType,
@@ -112,6 +117,8 @@ const CustomInput: React.FC<CustomInputProps> = ({
           </View>
         )}
         <TextInput
+          testID={testID}
+          accessibilityLabel={accessibilityLabel ?? label ?? placeholder}
           style={
             hasIcons
               ? [gs.px15, gs.h48, gs.wFull, gs.fontMedium, gs.noFontPadding, {color: colors.primaryText}]
@@ -121,7 +128,13 @@ const CustomInput: React.FC<CustomInputProps> = ({
                   gs.px15,
                   gs.fontMedium,
                   gs.noFontPadding,
-                  {borderWidth: 1.5, borderColor: inputBorderColor, color: colors.primaryText, backgroundColor: inputBackgroundColor, marginBottom: 5},
+                  {
+                    borderWidth: 1.5,
+                    borderColor: inputBorderColor,
+                    color: colors.primaryText,
+                    backgroundColor: inputBackgroundColor,
+                    marginBottom: 5,
+                  },
                 ]
           }
           value={input}

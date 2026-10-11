@@ -59,8 +59,8 @@ const AnimatedTabBar = ({state, descriptors, navigation}: BottomTabBarProps) => 
             key={route.key}
             accessibilityRole="tab"
             accessibilityState={focused ? {selected: true} : {}}
-            accessibilityLabel={options.tabBarAccessibilityLabel}
-            testID={options.tabBarButtonTestID}
+            accessibilityLabel={options.tabBarAccessibilityLabel ?? route.name}
+            testID={options.tabBarButtonTestID ?? `zero-tab-${route.name}`}
             onPress={onPress}
             onLongPress={onLongPress}
             style={styles.item}>

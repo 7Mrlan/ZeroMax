@@ -17,12 +17,18 @@ const PersonalizeScreen = () => {
     <PrimaryView colors={colors} style={gs.justifyBetween} dismissKeyboardOnTouch>
       <View>
         <TouchableOpacity style={[gs.selfEnd, gs.pt5p]} onPress={handleSkip}>
-          <PrimaryText size={13} weight="medium" color={colors.secondaryText}>{t('common.skip')}</PrimaryText>
+          <PrimaryText size={13} weight="medium" color={colors.secondaryText}>
+            {t('common.skip')}
+          </PrimaryText>
         </TouchableOpacity>
 
         <View style={gs.pt15p}>
-          <PrimaryText size={28} weight="bold">{t('personalize.title')}</PrimaryText>
-          <PrimaryText size={28} weight="bold">{t('personalize.titleSuffix')}</PrimaryText>
+          <PrimaryText size={28} weight="bold">
+            {t('personalize.title')}
+          </PrimaryText>
+          <PrimaryText size={28} weight="bold">
+            {t('personalize.titleSuffix')}
+          </PrimaryText>
         </View>
 
         <PrimaryText size={14} color={colors.secondaryText} style={gs.mt6}>
@@ -32,6 +38,7 @@ const PersonalizeScreen = () => {
         <View style={gs.mt30}>
           <CustomInput
             input={name}
+            testID="onboarding-name"
             label={t('personalize.nameLabel')}
             colors={colors}
             placeholder={t('personalize.namePlaceholder')}
@@ -40,7 +47,13 @@ const PersonalizeScreen = () => {
           />
         </View>
       </View>
-      <PrimaryButton onPress={handleSubmit} colors={colors} buttonTitle={t('common.continue')} disabled={!isValid} />
+      <PrimaryButton
+        testID="onboarding-personalize-continue"
+        onPress={handleSubmit}
+        colors={colors}
+        buttonTitle={t('common.continue')}
+        disabled={!isValid}
+      />
     </PrimaryView>
   );
 };

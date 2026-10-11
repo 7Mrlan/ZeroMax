@@ -61,6 +61,7 @@ const IncomeEntry = () => {
         colors={colors}
         input={title}
         setInput={setTitle}
+        testID="add-entry-income-title"
         placeholder={t('income.titlePlaceholder')}
         label={t('income.titleLabel')}
         schema={incomeSchema}
@@ -68,12 +69,20 @@ const IncomeEntry = () => {
       <PrimaryText size={12} color={colors.secondaryText} style={gs.mb5}>
         {t('income.amountLabel')}
       </PrimaryText>
-      <AmountInput value={amount} onChangeText={setAmount} style={gs.mb15} />
+      <AmountInput
+        value={amount}
+        onChangeText={setAmount}
+        testID="add-entry-income-amount"
+        accessibilityLabel={t('income.amountLabel')}
+        style={gs.mb15}
+      />
       <DatePicker
         setShowDatePicker={setShowDatePicker}
         createdAt={date}
         showDatePicker={showDatePicker}
         setCreatedAt={setDate}
+        testID="add-entry-income-date"
+        accessibilityLabel={t('income.dateLabel')}
         label={t('income.dateLabel')}
       />
       <PrimaryText size={12} color={colors.secondaryText} style={gs.mb8}>
@@ -89,6 +98,7 @@ const IncomeEntry = () => {
         <PrimaryButton
           onPress={() => navigate('AddCategoryScreen', {kind: 'income'})}
           colors={colors}
+          testID="add-entry-income-category"
           buttonTitle={t('income.addCategoryButton')}
           variant="ghost"
           size="sm"
@@ -99,6 +109,7 @@ const IncomeEntry = () => {
         <PrimaryButton
           onPress={submit}
           colors={colors}
+          testID="add-entry-income-submit"
           buttonTitle={t('common.add')}
           disabled={!valid || selectedCategories.length !== 1}
         />
