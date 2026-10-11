@@ -6,6 +6,8 @@
 export interface LegacySchemaSnapshot {
   version: number;
   tables: Record<string, string[]>;
+  /** Index names/columns are supplied by the native probe for exact v4 checks. */
+  indexes?: Record<string, string[]>;
 }
 
 export type LegacyDatabaseSource = 'zero-v3' | 'zerox-v3' | 'target-v4' | 'unknown';
