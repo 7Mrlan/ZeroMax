@@ -48,3 +48,5 @@ page runtime、签名或商店发布。
 5000 条 Zero v3 fixture 的 legacy copy fault injection 也已完成：在 target marker=`writing` 时 force-stop，第一次重启清理半成品并进入可重试错误页；点击 Retry 后创建新 generation 并激活 target。最终 target v4 合并 WAL/SHM 检查为 `user_version=4`、`integrity_check=ok`、expenses 5,000 行、金额总和 `240084`、budget 金额 `1000`，与 source v3 一致，source 文件仍保留。这是 legacy copy 中途 kill 的真实证据；WAL 锁定/权限 fixture 和性能矩阵仍待完成。
 
 锁定 fixture：在 app 私有 legacy `watermelon.db` 上用 Android `/system/bin/sqlite3` 保持 `BEGIN EXCLUSIVE`，启动 BootGate 后错误页显示 `database is locked (code 5 SQLITE_BUSY)`，没有打开 writable adapter 或覆盖源库；释放事务后点击 Retry，Zero v3 迁移完成并 marker=`activated`。该证据覆盖 locked source fail-closed/retry，仍不替代权限拒绝和性能矩阵。
+
+权限边界复核：API35 test-signed release 的 manifest 只把 `READ_EXTERNAL_STORAGE`/`WRITE_EXTERNAL_STORAGE` 声明到 `maxSdkVersion=32`；API35 `dumpsys package com.anotherwhy.zero` 的 requested permissions 只有 INTERNET 和应用内部签名权限，因此 API35 上不存在可拒绝的外部存储运行时权限。`requestStoragePermission()` 在 API > 32 直接返回 true，API <= 32 才调用 `PermissionsAndroid.requestMultiple` 并由 Settings/Existing User 在 false 时给出打开设置的路径。真实“拒绝权限”仍需 API32 或更低设备，当前主机只有 API35 AVD，不能把该项标记为通过。

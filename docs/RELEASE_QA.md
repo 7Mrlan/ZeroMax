@@ -121,7 +121,7 @@ accessibility, migration-recovery, network, performance or iOS validation.
 ## 7. Edge and adversarial
 
 - [ ] Airplane mode throughout (the app must not care)
-- [ ] Denied storage permission → clear message, offer to open settings
+- [ ] **API <= 32 device:** deny READ/WRITE external storage → clear message, offer to open settings
 - [ ] Force-kill mid-write (add an expense and kill immediately) → no corruption
 - [ ] Very long titles, very large amounts, rapid double-taps on Continue
       during onboarding (must not create duplicate categories/currencies)
