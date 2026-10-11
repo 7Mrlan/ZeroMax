@@ -174,6 +174,9 @@ const performInitialization = async (): Promise<BackendInitResult> => {
     return {ok: true};
   } catch (error) {
     const initError = error instanceof Error ? error : new Error(String(error));
+    if (__DEV__) {
+      console.error('Backend initialization failed:', initError);
+    }
     appendErrorLog(initError, true);
     return {ok: false, kind: 'database', retryable: true, error: initError};
   }
