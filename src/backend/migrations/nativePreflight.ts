@@ -1,6 +1,7 @@
 import {NativeModules} from 'react-native';
 import {z} from 'zod';
 import type {ActiveDatabaseName} from './activeDatabase';
+import {COPY_TABLES, type CopyDataset} from './copyVerification';
 import type {DatabaseProbeResult} from './preflight';
 
 /**
@@ -10,6 +11,7 @@ import type {DatabaseProbeResult} from './preflight';
  */
 export interface ReadOnlySqliteBridge {
   probe: (databaseName: ActiveDatabaseName) => Promise<unknown>;
+  readSnapshot?: (databaseName: ActiveDatabaseName) => Promise<unknown>;
 }
 
 const NativeProbeResultSchema = z.discriminatedUnion('status', [
@@ -22,6 +24,10 @@ const NativeProbeResultSchema = z.discriminatedUnion('status', [
     integrity: z.enum(['ok', 'failed']),
   }),
 ]);
+
+const NativeRowsSchema = z.object({
+  ...Object.fromEntries(COPY_TABLES.map(table => [table, z.array(z.object({id: z.string()}).passthrough())])),
+});
 
 const asError = (error: unknown): Error => (error instanceof Error ? error : new Error(String(error)));
 
@@ -68,4 +74,24 @@ export const probeDatabaseReadOnly = async (
   } catch (error) {
     return {kind: 'error', error: asError(error)};
   }
+};
+
+/** Validates the row snapshot returned by the Android/iOS read-only bridge. */
+export const normalizeNativeSnapshot = (value: unknown): CopyDataset => {
+  const parsed = NativeRowsSchema.safeParse(value);
+  if (!parsed.success) {
+    throw new Error('Read-only SQLite snapshot returned invalid rows');
+  }
+  return parsed.data as CopyDataset;
+};
+
+/** Reads source rows without constructing a writable Watermelon adapter. */
+export const readDatabaseSnapshotReadOnly = async (
+  databaseName: ActiveDatabaseName,
+  bridge: ReadOnlySqliteBridge | undefined = NativeModules.ZeroReadOnlySqlite as ReadOnlySqliteBridge | undefined,
+): Promise<CopyDataset> => {
+  if (!bridge || typeof bridge.readSnapshot !== 'function') {
+    throw new Error('ZeroReadOnlySqlite snapshot method is unavailable');
+  }
+  return normalizeNativeSnapshot(await bridge.readSnapshot(databaseName));
 };

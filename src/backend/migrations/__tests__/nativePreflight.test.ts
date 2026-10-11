@@ -1,4 +1,10 @@
-import {normalizeNativeProbeResult, probeDatabaseReadOnly, type ReadOnlySqliteBridge} from '../nativePreflight';
+import {
+  normalizeNativeProbeResult,
+  normalizeNativeSnapshot,
+  probeDatabaseReadOnly,
+  readDatabaseSnapshotReadOnly,
+  type ReadOnlySqliteBridge,
+} from '../nativePreflight';
 import type {ActiveDatabaseName} from '../activeDatabase';
 
 describe('normalizeNativeProbeResult', () => {
@@ -73,5 +79,38 @@ describe('probeDatabaseReadOnly', () => {
       kind: 'error',
       error: expect.any(Error),
     });
+  });
+});
+
+describe('readDatabaseSnapshotReadOnly', () => {
+  it('normalizes all allow-listed tables and preserves raw metadata', async () => {
+    const tables = {
+      users: [{id: 'u1', _status: 'synced', _changed: '', username: 'Ada'}],
+      categories: [],
+      expenses: [],
+      incomes: [],
+      currencies: [],
+      debtors: [],
+      debts: [],
+      budgets: [],
+    };
+    const bridge: ReadOnlySqliteBridge = {probe: jest.fn(), readSnapshot: async () => tables};
+    await expect(readDatabaseSnapshotReadOnly('watermelon', bridge)).resolves.toEqual(tables);
+  });
+
+  it('fails closed for a missing table or an invalid row id', () => {
+    expect(() => normalizeNativeSnapshot({users: []})).toThrow('invalid rows');
+    expect(() =>
+      normalizeNativeSnapshot({
+        users: [{id: 1}],
+        categories: [],
+        expenses: [],
+        incomes: [],
+        currencies: [],
+        debtors: [],
+        debts: [],
+        budgets: [],
+      }),
+    ).toThrow('invalid rows');
   });
 });

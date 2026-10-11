@@ -88,6 +88,43 @@ public final class ReadOnlySqliteModule extends ReactContextBaseJavaModule {
         }
     }
 
+    /** Reads all allow-listed rows through one read-only SQLite connection. */
+    @ReactMethod
+    public void readSnapshot(String databaseName, Promise promise) {
+        if (!ALLOWED_DATABASES.contains(databaseName)) {
+            promise.reject("UNSUPPORTED_DATABASE", "Unsupported database name for read-only snapshot");
+            return;
+        }
+
+        File databaseFile = resolveDatabaseFile(databaseName);
+        if (!databaseFile.isFile()) {
+            promise.reject("DATABASE_MISSING", "Database file does not exist");
+            return;
+        }
+
+        SQLiteDatabase database = null;
+        try {
+            database = SQLiteDatabase.openDatabase(
+                    databaseFile.getAbsolutePath(),
+                    null,
+                    SQLiteDatabase.OPEN_READONLY | SQLiteDatabase.NO_LOCALIZED_COLLATORS
+            );
+            WritableMap snapshot = Arguments.createMap();
+            for (String table : INSPECTED_TABLES) {
+                snapshot.putArray(table, readRows(database, table));
+            }
+            promise.resolve(snapshot);
+        } catch (SQLiteException error) {
+            promise.reject("SQLITE_SNAPSHOT_FAILED", error.getMessage(), error);
+        } catch (Exception error) {
+            promise.reject("SQLITE_SNAPSHOT_FAILED", error.getMessage(), error);
+        } finally {
+            if (database != null) {
+                database.close();
+            }
+        }
+    }
+
     private File resolveDatabaseFile(String databaseName) {
         // Keep this resolver byte-for-byte aligned with WatermelonDB's Android
         // driver. The replacement removes the framework's /databases segment.
@@ -130,6 +167,43 @@ public final class ReadOnlySqliteModule extends ReactContextBaseJavaModule {
             }
         }
         return indexes;
+    }
+
+    private WritableArray readRows(SQLiteDatabase database, String table) {
+        WritableArray rows = Arguments.createArray();
+        try (Cursor cursor = database.rawQuery("SELECT * FROM \"" + table + "\"", null)) {
+            String[] columns = cursor.getColumnNames();
+            while (cursor.moveToNext()) {
+                WritableMap row = Arguments.createMap();
+                for (int index = 0; index < columns.length; index++) {
+                    putCursorValue(row, columns[index], cursor, index, table);
+                }
+                rows.pushMap(row);
+            }
+        }
+        return rows;
+    }
+
+    private void putCursorValue(WritableMap row, String column, Cursor cursor, int index, String table) {
+        if (cursor.isNull(index)) {
+            row.putNull(column);
+            return;
+        }
+        int type = cursor.getType(index);
+        if (type == Cursor.FIELD_TYPE_INTEGER && isBooleanColumn(table, column)) {
+            row.putBoolean(column, cursor.getInt(index) != 0);
+        } else if (type == Cursor.FIELD_TYPE_INTEGER || type == Cursor.FIELD_TYPE_FLOAT) {
+            row.putDouble(column, cursor.getDouble(index));
+        } else if (type == Cursor.FIELD_TYPE_STRING) {
+            row.putString(column, cursor.getString(index));
+        } else {
+            throw new SQLiteException("Unsupported SQLite value type for " + table + "." + column);
+        }
+    }
+
+    private boolean isBooleanColumn(String table, String column) {
+        return ("categories".equals(table) && "category_status".equals(column))
+                || ("debtors".equals(table) && "debtor_status".equals(column));
     }
 
     private boolean readIntegrity(SQLiteDatabase database) {
