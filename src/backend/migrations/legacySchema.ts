@@ -33,6 +33,61 @@ const hasColumn = (snapshot: LegacySchemaSnapshot, table: string, column: string
 const hasCoreTables = (snapshot: LegacySchemaSnapshot): boolean =>
   ['users', 'categories', 'expenses', 'currencies', 'debtors', 'debts'].every(table => hasTable(snapshot, table));
 
+const COMMON_INDEXES: Record<string, string[]> = {
+  users: ['sqlite_autoindex_users_1', 'users__status'],
+  expenses: [
+    'sqlite_autoindex_expenses_1',
+    'expenses__status',
+    'expenses_category_id',
+    'expenses_date',
+    'expenses_user_id',
+  ],
+  currencies: ['sqlite_autoindex_currencies_1', 'currencies__status', 'currencies_user_id'],
+  debtors: ['sqlite_autoindex_debtors_1', 'debtors__status', 'debtors_debtor_status', 'debtors_user_id'],
+  debts: ['sqlite_autoindex_debts_1', 'debts__status', 'debts_date', 'debts_debtor_id', 'debts_user_id'],
+};
+
+const expectedIndexes = (source: Exclude<LegacyDatabaseSource, 'unknown'>): Record<string, string[]> => {
+  const indexes = {...COMMON_INDEXES};
+  indexes.categories = [
+    'sqlite_autoindex_categories_1',
+    'categories__status',
+    'categories_category_status',
+    'categories_user_id',
+    ...(source === 'zerox-v3' || source === 'target-v4' ? ['categories_kind', 'categories_parent_id'] : []),
+  ];
+  if (source === 'zero-v3' || source === 'target-v4') {
+    indexes.budgets = [
+      'sqlite_autoindex_budgets_1',
+      'budgets__status',
+      'budgets_category_id',
+      'budgets_month',
+      'budgets_user_id',
+    ];
+  }
+  if (source === 'zerox-v3' || source === 'target-v4') {
+    indexes.incomes = [
+      'sqlite_autoindex_incomes_1',
+      'incomes__status',
+      'incomes_category_id',
+      'incomes_date',
+      'incomes_user_id',
+    ];
+  }
+  return indexes;
+};
+
+const indexesMatch = (snapshot: LegacySchemaSnapshot, source: Exclude<LegacyDatabaseSource, 'unknown'>): boolean => {
+  if (!snapshot.indexes) return true;
+  const expected = expectedIndexes(source);
+  const actualTables = Object.keys(snapshot.indexes).sort();
+  const expectedTables = Object.keys(expected).sort();
+  if (actualTables.join('|') !== expectedTables.join('|')) return false;
+  return expectedTables.every(
+    table => [...(snapshot.indexes?.[table] ?? [])].sort().join('|') === [...expected[table]].sort().join('|'),
+  );
+};
+
 /**
  * Detects only shapes that have an explicit, tested migration path. Similar or
  * future schemas fail closed so startup can preserve the old database rather
@@ -55,15 +110,15 @@ export const detectLegacyDatabaseSource = (snapshot: LegacySchemaSnapshot): Lega
   const hasExpenseDescription = hasColumn(snapshot, 'expenses', 'description');
 
   if (snapshot.version === 3 && hasBudgetTable && !hasIncomeTable && !hasIncomeCategories && hasExpenseDescription) {
-    return 'zero-v3';
+    return indexesMatch(snapshot, 'zero-v3') ? 'zero-v3' : 'unknown';
   }
 
   if (snapshot.version === 3 && hasIncomeTable && !hasBudgetTable && hasIncomeCategories && !hasExpenseDescription) {
-    return 'zerox-v3';
+    return indexesMatch(snapshot, 'zerox-v3') ? 'zerox-v3' : 'unknown';
   }
 
   if (snapshot.version === 4 && hasIncomeTable && hasBudgetTable && hasIncomeCategories && hasExpenseDescription) {
-    return 'target-v4';
+    return indexesMatch(snapshot, 'target-v4') ? 'target-v4' : 'unknown';
   }
 
   return 'unknown';
