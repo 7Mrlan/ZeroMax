@@ -1,17 +1,8 @@
 // User Service
-export {
-  createUser,
-  updateUserById,
-  getAllUsers,
-} from './userService';
+export {createUser, updateUserById, getAllUsers} from './userService';
 
 // Category Service
-export {
-  createCategory,
-  softDeleteCategoryById,
-  updateCategoryById,
-  getAllCategoriesByUserId,
-} from './categoryService';
+export {createCategory, softDeleteCategoryById, updateCategoryById, getAllCategoriesByUserId} from './categoryService';
 export type {CategoryData} from './categoryService';
 
 // Expense Service
@@ -28,12 +19,19 @@ export {
 } from './expenseService';
 export type {ExpenseData, ExpenseWithCategory} from './expenseService';
 
-// Currency Service
+// Income service (v4 target)
 export {
-  createCurrency,
-  updateCurrencyById,
-  getCurrencyByUserId,
-} from './currencyService';
+  createIncome,
+  updateIncomeById,
+  deleteIncomeById,
+  getAllIncomesByMonth,
+  getIncomeById,
+  getAvailableIncomeYears,
+} from './incomeService';
+export type {IncomeData, IncomeWithCategory} from './incomeService';
+
+// Currency Service
+export {createCurrency, updateCurrencyById, getCurrencyByUserId} from './currencyService';
 export type {CurrencyData} from './currencyService';
 
 // Debtor Service
@@ -62,16 +60,10 @@ export {getAllData} from './getService';
 export type {ExportData} from './getService';
 
 // Delete Service
-export {
-  deleteAllData,
-} from './deleteService';
+export {deleteAllData} from './deleteService';
 
 // Budget Service
-export {
-  upsertBudget,
-  deleteBudget,
-  getBudgetsByMonth,
-} from './budgetService';
+export {upsertBudget, deleteBudget, getBudgetsByMonth} from './budgetService';
 export type {BudgetData} from './budgetService';
 
 // Import Service (atomic backup restore)
