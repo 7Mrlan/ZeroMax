@@ -32,6 +32,14 @@ It produced a debug APK successfully; API35 emulator-5554 is connected and has
 provided JSI/fresh-start smoke evidence, but this still does not provide
 release signing or runtime performance evidence.
 
+On 2026-10-12, a one-day temporary local keystore was used only to exercise the
+release packaging path. `:app:assembleRelease` completed successfully (740
+tasks); the 98 MB APK passed `apksigner verify` with APK Signature Scheme v2,
+and `aapt2 dump permissions` showed INTERNET plus storage permissions capped at
+API 32. The temporary keystore and `android/keystore.properties` were deleted
+afterward. This is test-signing evidence, not a production signing or store
+readiness result.
+
 ## 2. Build the real artifact
 
 - [ ] `pnpm run version:set` — versionName and versionCode both bumped
