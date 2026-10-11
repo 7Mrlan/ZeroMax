@@ -1,12 +1,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- No INTERNET permission. Zero has no servers and makes no network
-         calls, so the release build is declared without it: the Play listing
-         shows no network access and `aapt dump permissions` on the shipped
-         APK proves the claim. Metro needs it in development, so it is
-         declared in src/debug/AndroidManifest.xml instead.
-         Store/GitHub links open in the browser and do not require it here. -->
+    <!-- AI is opt-in and disabled by default, but a release build must declare
+         INTERNET so an explicitly configured HTTPS/allow-listed endpoint can
+         work. The JS network boundary, secure secret store and privacy UI are
+         the controls; absence of this permission would make the release AI
+         path silently unusable while debug appeared healthy. -->
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <!-- Backup import/export on API <= 32; PermissionsAndroid auto-denies
          runtime requests for permissions that are not declared here. -->
