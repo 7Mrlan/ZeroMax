@@ -356,7 +356,10 @@ const SettingsScreen = () => {
                 payload: {
                   currentLanguage: i18n.language,
                   onSelect: (lang: string) => {
-                    setLocaleOverride(lang === 'en' ? null : lang);
+                    // Keep an explicit English choice even on a Chinese
+                    // device; null means “follow the device” and would make
+                    // the picker appear to ignore the user's selection.
+                    setLocaleOverride(lang);
                   },
                 },
               });
