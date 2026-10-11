@@ -173,6 +173,10 @@
   },
   "ai": {
     "queueTitle": "AI bookkeeping queue",
+    "capturePlaceholder": "Describe one or more transactions…",
+    "queueTask": "Queue task",
+    "processNext": "Process next",
+    "processFailed": "Could not process AI task",
     "privacyNotice": "AI is off by default. Requests use your configured HTTPS endpoint; keys stay in secure device storage.",
     "empty": "No AI tasks yet",
     "retry": "Retry",

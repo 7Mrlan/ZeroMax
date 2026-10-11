@@ -57,7 +57,7 @@ export const runAiTask = async (task: AiTask, dependencies: AiTaskCoordinatorDep
     };
     const prompt = task.prompt || buildAiParserPrompt(task.input, categoryNames, task.createdAt);
     const response = await requestAiCompletion(
-      {...settings, enabled: true},
+      settings,
       dependencies.secretStore,
       prompt,
       dependencies.allowedHosts,

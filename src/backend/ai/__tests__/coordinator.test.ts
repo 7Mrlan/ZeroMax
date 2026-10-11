@@ -94,6 +94,25 @@ describe('AI task coordinator', () => {
     ).rejects.toThrow('category');
   });
 
+  it('does not bypass the explicit AI network opt-in', async () => {
+    storage.getBoolean.mockReturnValue(false);
+    const task = createAiTask('lunch', 'prompt');
+    claimNextAiTask();
+
+    await expect(
+      runAiTask(task, {
+        userId: 'u1',
+        categories: async () => [category('expense', 'Food')],
+        secretStore: {get: () => 'secret', set: jest.fn(), clear: jest.fn()},
+        allowedHosts: ['api.example.com'],
+        database,
+        fetchImpl: async () => {
+          throw new Error('network must not be called');
+        },
+      }),
+    ).rejects.toThrow('disabled');
+  });
+
   it('resolves a child category by its stable parent name and child name', async () => {
     const task = createAiTask('salary', 'prompt');
     claimNextAiTask();

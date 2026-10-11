@@ -14,7 +14,7 @@ import {
   clearAiSettings,
   type AiSecretStore,
 } from '../../backend/ai/settings';
-import {goBack} from '../../utils/navigationUtils';
+import {goBack, navigate} from '../../utils/navigationUtils';
 import {gs} from '../../styles/globalStyles';
 
 const AiSettingsScreen = () => {
@@ -148,6 +148,13 @@ const AiSettingsScreen = () => {
           colors={colors}
           buttonTitle={t('ai.clearKey')}
           variant="ghost"
+        />
+        <PrimaryButton
+          testID="ai-settings-queue"
+          onPress={() => navigate('AiQueueScreen')}
+          colors={colors}
+          buttonTitle={t('ai.queueTitle')}
+          variant="outline"
         />
       </View>
     </PrimaryView>
