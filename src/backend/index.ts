@@ -1,6 +1,17 @@
+import {NativeModules} from 'react-native';
 import {resetMigrationFailureForRetry, runMigrations} from './migrations/runner';
 import {appendErrorLog} from '../utils/errorLog';
-import {resetDatabaseInstance, waitForDatabase} from '../watermelondb/database';
+import {adoptDatabaseInstance, resetDatabaseInstance, waitForDatabase} from '../watermelondb/database';
+import {createTargetDatabase} from '../watermelondb/targetDatabase';
+import {getActiveDatabaseName, setActiveDatabaseName} from './migrations/activeDatabase';
+import {runDatabasePreflight} from './migrations/runPreflight';
+import {runBootGate} from './migrations/bootGate';
+import {
+  activateAndroidLegacyMigration,
+  runAndroidLegacyMigration,
+  type AndroidLegacyMigrationBridge,
+  type AndroidLegacyMigrationResult,
+} from './migrations/androidLegacyMigration';
 
 /**
  * Initialize the backend layer.
@@ -17,8 +28,46 @@ let initializationPromise: Promise<BackendInitResult> | null = null;
 
 const performInitialization = async (): Promise<BackendInitResult> => {
   try {
-    // SQLite schema setup must finish before data migrations hydrate models.
-    await waitForDatabase();
+    let preparedLegacyMigration: AndroidLegacyMigrationResult | null = null;
+    let adoptedByMigration = false;
+    const bootResult = await runBootGate({
+      preflight: () => runDatabasePreflight(getActiveDatabaseName()),
+      createFreshTarget: async () => {
+        const target = createTargetDatabase();
+        await target.initializingPromise;
+        setActiveDatabaseName('watermelon_v4');
+        return target.database;
+      },
+      migrateLegacy: async source => {
+        const bridge = NativeModules.ZeroReadOnlySqlite as AndroidLegacyMigrationBridge;
+        const backupId = `migration-${Date.now()}`;
+        preparedLegacyMigration = await runAndroidLegacyMigration({
+          bridge,
+          source,
+          backupId,
+        });
+        await activateAndroidLegacyMigration(preparedLegacyMigration, {
+          bridge,
+          setActiveDatabaseName,
+          adoptDatabase: database => {
+            adoptDatabaseInstance(database as Parameters<typeof adoptDatabaseInstance>[0]);
+            adoptedByMigration = true;
+          },
+        });
+        return preparedLegacyMigration.targetDatabase;
+      },
+      adoptDatabase: database => {
+        // The legacy coordinator activates and adopts its verified instance so
+        // pointer and JSI ownership remain one ordered operation.
+        if (!adoptedByMigration) {
+          adoptDatabaseInstance(database as Parameters<typeof adoptDatabaseInstance>[0]);
+        }
+      },
+      openActiveDatabase: waitForDatabase,
+    });
+    if (!bootResult.ok) {
+      return {ok: false, kind: 'migration', retryable: true, error: bootResult.error ?? new Error(bootResult.reason)};
+    }
     const migrationResult = await runMigrations();
     if (!migrationResult.ok) {
       const error = migrationResult.error ?? new Error('Data migration failed');
