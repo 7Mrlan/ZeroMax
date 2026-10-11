@@ -10,7 +10,7 @@ interface WriterLike {
   batch: (records: ReadonlyArray<unknown>) => Promise<void>;
 }
 
-interface TargetDatabaseLike {
+export interface TargetDatabaseLike {
   write: (work: (writer: WriterLike) => Promise<unknown>, description?: string) => Promise<unknown>;
   get: (table: string) => RawCollection;
 }
