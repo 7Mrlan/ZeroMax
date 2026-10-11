@@ -143,5 +143,17 @@ export const cancelQueuedAiTask = (taskId: string): AiTask | null => {
   return cancelled;
 };
 
+/** Marks a queued or running task cancelled; the coordinator's AbortSignal stops active I/O. */
+export const cancelAiTask = (taskId: string): AiTask | null => {
+  const tasks = readTasks();
+  const current = tasks.find(task => task.taskId === taskId);
+  if (!current || current.status === 'created' || current.status === 'failed' || current.status === 'cancelled') {
+    return current ?? null;
+  }
+  const cancelled = {...current, status: 'cancelled' as const, updatedAt: now()};
+  writeTasks(tasks.map(task => (task.taskId === taskId ? cancelled : task)));
+  return cancelled;
+};
+
 export const recordIdempotencyKey = (task: Pick<AiTask, 'idempotencyKey'>, itemLocalId: string): string =>
   `${task.idempotencyKey}:${itemLocalId}`;

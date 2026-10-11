@@ -22,6 +22,7 @@ export const requestAiCompletion = async (
   prompt: string,
   allowedHosts: readonly string[],
   fetchImpl: AiFetch = fetch as unknown as AiFetch,
+  signal?: AbortSignal,
 ): Promise<AiParserResponse> => {
   if (!settings.enabled) throw new Error('AI network access is disabled');
   const apiKey = (await secretStore.get())?.trim();
@@ -31,6 +32,9 @@ export const requestAiCompletion = async (
 
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const controller = new AbortController();
+    const abortFromCaller = () => controller.abort();
+    if (signal?.aborted) controller.abort();
+    signal?.addEventListener('abort', abortFromCaller, {once: true});
     const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
     try {
       const response = await fetchImpl(endpoint, {
@@ -52,6 +56,7 @@ export const requestAiCompletion = async (
       return parseAiResponse(body);
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
+      if (signal?.aborted) throw lastError;
       const isHttpFailure = lastError.message.startsWith('AI request failed with status');
       if (isHttpFailure) throw lastError;
       if (attempt === 0 && lastError.name !== 'AbortError' && !isHttpFailure) {
@@ -60,6 +65,7 @@ export const requestAiCompletion = async (
       }
     } finally {
       clearTimeout(timeout);
+      signal?.removeEventListener('abort', abortFromCaller);
     }
   }
 

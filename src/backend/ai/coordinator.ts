@@ -12,6 +12,8 @@ export interface AiTaskCoordinatorDependencies {
   allowedHosts: readonly string[];
   fetchImpl?: AiFetch;
   database?: AiDatabaseLike;
+  signal?: AbortSignal;
+  onClaim?: (task: AiTask) => void;
 }
 
 const findCategory = (categories: CategoryData[], type: 'expense' | 'income', name: string): CategoryData | null => {
@@ -62,12 +64,16 @@ export const runAiTask = async (task: AiTask, dependencies: AiTaskCoordinatorDep
       prompt,
       dependencies.allowedHosts,
       dependencies.fetchImpl,
+      dependencies.signal,
     );
     const records = toRecordInputs(response, categories, dependencies.userId);
     await writeAiRecords(task, records, dependencies.database);
     return getAiTasks().find(current => current.taskId === task.taskId) ?? task;
   } catch (error) {
-    failAiTask(task.taskId, error instanceof Error ? error.message : String(error));
+    const current = getAiTasks().find(candidate => candidate.taskId === task.taskId);
+    if (current?.status !== 'cancelled') {
+      failAiTask(task.taskId, error instanceof Error ? error.message : String(error));
+    }
     throw error;
   }
 };
@@ -75,5 +81,6 @@ export const runAiTask = async (task: AiTask, dependencies: AiTaskCoordinatorDep
 export const runNextAiTask = async (dependencies: AiTaskCoordinatorDependencies): Promise<AiTask | null> => {
   const task = claimNextAiTask();
   if (!task) return null;
+  dependencies.onClaim?.(task);
   return runAiTask(task, dependencies);
 };

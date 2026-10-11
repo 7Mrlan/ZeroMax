@@ -1,4 +1,4 @@
-import {requestAiCompletion} from '../network';
+import {requestAiCompletion, type AiFetchResponse} from '../network';
 import type {AiSecretStore} from '../settings';
 
 const secretStore = (value: string | null): AiSecretStore => ({get: () => value, set: jest.fn(), clear: jest.fn()});
@@ -61,5 +61,31 @@ describe('AI network boundary', () => {
       requestAiCompletion(settings, secretStore('secret'), 'prompt', ['api.example.com'], fetchImpl),
     ).rejects.toThrow('401');
     expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it('aborts an in-flight request when the caller signal is cancelled', async () => {
+    const controller = new AbortController();
+    const fetchImpl = jest.fn(
+      (_url: string, init: RequestInit): Promise<AiFetchResponse> =>
+        new Promise((_resolve, reject) => {
+          const rejectAborted = () => reject(Object.assign(new Error('aborted'), {name: 'AbortError'}));
+          if (init.signal?.aborted) {
+            rejectAborted();
+          } else {
+            init.signal?.addEventListener('abort', rejectAborted, {once: true});
+          }
+        }),
+    );
+    const request = requestAiCompletion(
+      settings,
+      secretStore('secret'),
+      'prompt',
+      ['api.example.com'],
+      fetchImpl,
+      controller.signal,
+    );
+    await Promise.resolve();
+    controller.abort();
+    await expect(request).rejects.toThrow('aborted');
   });
 });

@@ -8,7 +8,7 @@ import PrimaryText from '../../components/atoms/PrimaryText';
 import PrimaryButton from '../../components/atoms/PrimaryButton';
 import useThemeColors from '../../hooks/useThemeColors';
 import {
-  cancelQueuedAiTask,
+  cancelAiTask,
   createAiTask,
   getAiTasks,
   retryAiTask,
@@ -29,6 +29,8 @@ const AiQueueScreen = () => {
   const userId = useAppSelector(selectUserId);
   const [input, setInput] = useState('');
   const [processing, setProcessing] = useState(false);
+  const abortControllerRef = React.useRef<AbortController | null>(null);
+  const activeTaskIdRef = React.useRef<string | null>(null);
   const tasks = useSyncExternalStore(subscribeAiTasks, getAiTasks, getAiTasks);
   const retry = useCallback((taskId: string) => {
     retryAiTask(taskId);
@@ -48,15 +50,25 @@ const AiQueueScreen = () => {
       const settings = getAiSettings();
       const endpoint = new URL(settings.apiBaseUrl);
       const secretStore = createNativeAiSecretStore();
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
       await runNextAiTask({
         userId,
         categories: () => getAllCategoriesByUserId(userId),
         secretStore,
         allowedHosts: [endpoint.hostname],
+        signal: controller.signal,
+        onClaim: task => {
+          activeTaskIdRef.current = task.taskId;
+        },
       });
     } catch (error) {
-      Alert.alert(t('ai.processFailed'), error instanceof Error ? error.message : t('ai.processFailed'));
+      if (!(error instanceof Error && error.name === 'AbortError')) {
+        Alert.alert(t('ai.processFailed'), error instanceof Error ? error.message : t('ai.processFailed'));
+      }
     } finally {
+      abortControllerRef.current = null;
+      activeTaskIdRef.current = null;
       setProcessing(false);
     }
   }, [processing, t, userId]);
@@ -85,10 +97,13 @@ const AiQueueScreen = () => {
             fullWidth={false}
           />
         ) : null}
-        {item.status === 'queued' ? (
+        {item.status === 'queued' || item.status === 'running' ? (
           <PrimaryButton
             testID={`ai-cancel-${item.taskId}`}
-            onPress={() => cancelQueuedAiTask(item.taskId)}
+            onPress={() => {
+              cancelAiTask(item.taskId);
+              if (activeTaskIdRef.current === item.taskId) abortControllerRef.current?.abort();
+            }}
             colors={colors}
             buttonTitle={t('ai.cancel')}
             variant="ghost"
