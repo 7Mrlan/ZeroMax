@@ -6,3 +6,4 @@ allowBuilds:
 # Keep a single Worklets runtime across Reanimated and ActionSheet.
 overrides:
   react-native-worklets: 0.13.0
+  '@babel/runtime': 7.29.10
