@@ -59,7 +59,11 @@ applicationId, iOS bundle identifier, marketing/version name and build number
 aligned; it does not prove that an artifact is signed or installable.
 
 `pnpm run e2e:contract:check` validates Maestro flow selectors against source.
-The flows still need to run on an Android device or emulator.
+On 2026-10-12, all five flows also ran successfully on the API35
+`zero-api35` emulator against the test-signed release APK; see
+[`E2E_QA.md`](./E2E_QA.md) for the commit and SHA-256. This is emulator
+evidence for the covered screens only, not a substitute for physical-device,
+accessibility, migration-recovery, network, performance or iOS validation.
 
 ## 3. Privacy verification (Lossless Protocol claims)
 
