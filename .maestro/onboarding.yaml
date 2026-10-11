@@ -10,6 +10,7 @@ appId: com.anotherwhy.zero
     id: onboarding-name
 - inputText:
     text: E2E User
+- hideKeyboard
 - tapOn:
     id: onboarding-personalize-continue
 - tapOn:

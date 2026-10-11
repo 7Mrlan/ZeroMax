@@ -1,9 +1,13 @@
 import {useAppDispatch, useAppSelector} from '../../redux/hooks';
+import {useNavigation} from '@react-navigation/native';
+import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import useThemeColors from '../../hooks/useThemeColors';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {fetchUserData, selectUserId} from '../../redux/slice/userIdSlice';
-import {navigate} from '../../utils/navigationUtils';
 import {createCategory} from '../../watermelondb/services';
+import type {OnboardingStackParamList} from '../../navigation/types';
+
+type OnboardingNavigation = NativeStackNavigationProp<OnboardingStackParamList, 'OnboardingScreen'>;
 interface CategorySelection {
   name: string;
   icon?: string;
@@ -12,6 +16,7 @@ interface CategorySelection {
 
 const useOnboarding = () => {
   const colors = useThemeColors();
+  const navigation = useNavigation<OnboardingNavigation>();
   const [selectedCategories, setSelectedCategories] = useState<Array<CategorySelection>>([]);
 
   const selectedCategoryNames = useMemo(() => new Set(selectedCategories.map(c => c.name)), [selectedCategories]);
@@ -20,8 +25,8 @@ const useOnboarding = () => {
 
   const dispatch = useAppDispatch();
   const handleSkip = useCallback(() => {
-    navigate('ChooseCurrencyScreen');
-  }, []);
+    navigation.push('ChooseCurrencyScreen');
+  }, [navigation]);
 
   useEffect(() => {
     dispatch(fetchUserData());
@@ -42,7 +47,7 @@ const useOnboarding = () => {
       for (const category of selectedCategories) {
         await createCategory(category.name, userId, category.icon ?? null, category.color ?? null);
       }
-      navigate('ChooseCurrencyScreen');
+      navigation.push('ChooseCurrencyScreen');
     } catch (error) {
       if (__DEV__) {
         console.error('Error creating default categories:', error);
@@ -50,7 +55,7 @@ const useOnboarding = () => {
       isSubmittingRef.current = false;
       setIsSubmitting(false);
     }
-  }, [selectedCategories, userId]);
+  }, [navigation, selectedCategories, userId]);
 
   const toggleCategorySelection = useCallback(
     (category: CategorySelection) => {
