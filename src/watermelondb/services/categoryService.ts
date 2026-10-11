@@ -12,6 +12,8 @@ export interface CategoryData {
   userId: string;
   icon: string;
   color: string;
+  parentId: string;
+  kind: 'expense' | 'income';
 }
 
 /**
@@ -22,6 +24,8 @@ export const createCategory = async (
   userId: string,
   icon: string | null,
   color: string | null,
+  kind: 'expense' | 'income' = 'expense',
+  parentId: string | null = null,
 ): Promise<string> => {
   const id = nanoid(24);
   await database.write(async () => {
@@ -33,6 +37,8 @@ export const createCategory = async (
       // Always assign string values for consistent Hidden Class shape
       cat.icon = sanitizeString(icon, DEFAULTS.icon);
       cat.color = sanitizeString(color, DEFAULTS.color);
+      cat.kind = kind;
+      cat.parentId = parentId ?? undefined;
     });
   });
   return id;
@@ -41,14 +47,22 @@ export const createCategory = async (
 /**
  * Soft deletes a category by ID (sets categoryStatus to false)
  */
-export const softDeleteCategoryById = async (
-  categoryId: string,
-): Promise<void> => {
+export const softDeleteCategoryById = async (categoryId: string): Promise<void> => {
   await database.write(async () => {
     const category = await database.get<Category>('categories').find(categoryId);
-    await category.update(cat => {
-      cat.categoryStatus = false;
-    });
+    const children = category.parentId
+      ? []
+      : await database.get<Category>('categories').query(Q.where('parent_id', categoryId)).fetch();
+    await database.batch(
+      category.prepareUpdate(cat => {
+        cat.categoryStatus = false;
+      }),
+      ...children.map(child =>
+        child.prepareUpdate(childRecord => {
+          childRecord.categoryStatus = false;
+        }),
+      ),
+    );
   });
 };
 
@@ -60,9 +74,15 @@ export const updateCategoryById = async (
   newName?: string,
   newIcon?: string,
   newColor?: string,
+  newKind?: 'expense' | 'income',
+  newParentId?: string | null,
 ): Promise<void> => {
   await database.write(async () => {
     const category = await database.get<Category>('categories').find(categoryId);
+    const resolvedParentId = newParentId !== undefined ? newParentId : (category.parentId ?? null);
+    const parentColor = resolvedParentId
+      ? (await database.get<Category>('categories').find(resolvedParentId)).color
+      : null;
     await category.update(cat => {
       if (newName !== undefined) {
         cat.name = newName;
@@ -70,23 +90,32 @@ export const updateCategoryById = async (
       if (newIcon !== undefined) {
         cat.icon = sanitizeString(newIcon, DEFAULTS.icon);
       }
-      if (newColor !== undefined) {
+      if (parentColor) {
+        cat.color = parentColor;
+      } else if (newColor !== undefined) {
         cat.color = sanitizeString(newColor, DEFAULTS.color);
       }
+      if (newKind !== undefined) cat.kind = newKind;
+      if (newParentId !== undefined) cat.parentId = newParentId ?? undefined;
     });
+    if (!resolvedParentId && newColor !== undefined) {
+      const children = await database.get<Category>('categories').query(Q.where('parent_id', categoryId)).fetch();
+      await database.batch(
+        ...children.map(child =>
+          child.prepareUpdate(childRecord => {
+            childRecord.color = sanitizeString(newColor, DEFAULTS.color);
+          }),
+        ),
+      );
+    }
   });
 };
 
 /**
  * Gets all categories by user ID
  */
-export const getAllCategoriesByUserId = async (
-  userId: string,
-): Promise<CategoryData[]> => {
-  const categories = await database
-    .get<Category>('categories')
-    .query(Q.where('user_id', userId))
-    .fetch();
+export const getAllCategoriesByUserId = async (userId: string): Promise<CategoryData[]> => {
+  const categories = await database.get<Category>('categories').query(Q.where('user_id', userId)).fetch();
   return categories.map(c => ({
     id: c.id,
     name: c.name,
@@ -94,6 +123,7 @@ export const getAllCategoriesByUserId = async (
     userId: c.userId,
     icon: sanitizeString(c.icon, DEFAULTS.icon),
     color: sanitizeString(c.color, DEFAULTS.color),
+    parentId: c.parentId ?? '',
+    kind: c.kind === 'income' ? 'income' : 'expense',
   }));
 };
-

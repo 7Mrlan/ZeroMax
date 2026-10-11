@@ -16,6 +16,9 @@ export default class Category extends Model {
   @text('user_id') userId!: string;
   @text('icon') icon?: string;
   @text('color') color!: string;
+  /** Present in the unified v4 target; legacy v3 rows read as undefined. */
+  @text('parent_id') parentId?: string;
+  @text('kind') kind?: 'expense' | 'income';
 
   @children('expenses') expenses!: Query<Expense>;
   @immutableRelation('users', 'user_id') user!: Relation<User>;

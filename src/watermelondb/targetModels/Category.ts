@@ -1,5 +1,5 @@
 import {Query} from '@nozbe/watermelondb';
-import {children, text} from '@nozbe/watermelondb/decorators';
+import {children} from '@nozbe/watermelondb/decorators';
 import Category from '../models/Category';
 import type Income from '../models/Income';
 
@@ -9,9 +9,6 @@ export default class TargetCategory extends Category {
     ...Category.associations,
     incomes: {type: 'has_many' as const, foreignKey: 'category_id'},
   };
-
-  @text('parent_id') parentId?: string;
-  @text('kind') kind?: string;
 
   @children('incomes') incomes!: Query<Income>;
 }
