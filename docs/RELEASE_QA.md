@@ -33,6 +33,10 @@ marked complete from a green CI build alone.
 - [ ] iOS: `bundle exec pod install` then Archive from Xcode
 - [ ] Install the release build on device (not Metro, not debug)
 
+Run `pnpm run release:identity:check` before building. It keeps the Android
+applicationId, iOS bundle identifier, marketing/version name and build number
+aligned; it does not prove that an artifact is signed or installable.
+
 ## 3. Privacy verification (Lossless Protocol claims)
 
 - [ ] `aapt dump permissions <release apk>` → **no `android.permission.INTERNET`**;
