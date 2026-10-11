@@ -268,7 +268,7 @@ const ReportsScreen = () => {
 
   return (
     <PrimaryView colors={colors} useBottomPadding={false}>
-      <HeaderContainer headerText={t('reports.title')} />
+      <HeaderContainer testID="reports-screen-header" headerText={t('reports.title')} />
       <View style={[gs.row, gs.wFull, gs.justifyBetween, gs.gap6, gs.mt10]}>
         <TouchableOpacity
           onPress={openMonthPicker}
