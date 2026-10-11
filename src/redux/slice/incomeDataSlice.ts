@@ -96,5 +96,6 @@ export const selectIncomeData = selectors.selectAll;
 export const selectIncomeDataById = selectors.selectById;
 export const selectIncomeLoading = (state: RootState) => state.income.isLoading;
 export const selectIncomeError = (state: RootState) => state.income.error;
+export const selectIncomeActiveYearMonth = (state: RootState) => state.income.activeYearMonth;
 export const {invalidateIncomeCache} = incomeDataSlice.actions;
 export default incomeDataSlice.reducer;

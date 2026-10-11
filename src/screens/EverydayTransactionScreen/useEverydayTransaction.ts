@@ -5,6 +5,7 @@ import {RouteProp, useFocusEffect} from '@react-navigation/native';
 import {ExpenseData as Expense} from '../../watermelondb/services';
 import {useCallback, useMemo} from 'react';
 import {fetchEverydayExpenses, selectFilterKey, selectFilteredExpenses} from '../../redux/slice/expenseDataSlice';
+import {fetchIncomesByMonth, selectIncomeActiveYearMonth, selectIncomeData} from '../../redux/slice/incomeDataSlice';
 export type EverydayTransactionRouteProp = RouteProp<
   {
     EverydayTransaction: {
@@ -18,15 +19,19 @@ export type EverydayTransactionRouteProp = RouteProp<
 const useEverydayTransaction = (route: EverydayTransactionRouteProp) => {
   const dispatch = useAppDispatch();
   const filteredExpenses = useAppSelector(selectFilteredExpenses) as Expense[];
+  const monthIncomes = useAppSelector(selectIncomeData);
   const filterKey = useAppSelector(selectFilterKey);
   const expenseDate = route.params?.isDate ?? '';
+  const incomeYearMonth = formatDate(expenseDate, 'YYYY-MM');
+  const activeIncomeYearMonth = useAppSelector(selectIncomeActiveYearMonth);
   const formattedDate = formatDate(expenseDate, 'MMM Do YY');
   const colors = useThemeColors();
 
   useFocusEffect(
     useCallback(() => {
       dispatch(fetchEverydayExpenses(expenseDate));
-    }, [dispatch, expenseDate]),
+      dispatch(fetchIncomesByMonth(incomeYearMonth));
+    }, [dispatch, expenseDate, incomeYearMonth]),
   );
 
   /**
@@ -39,12 +44,21 @@ const useEverydayTransaction = (route: EverydayTransactionRouteProp) => {
    * screen has no data rather than the wrong data.
    */
   const allEverydayTransactions = useMemo(
-    () => (filterKey === expenseDate ? filteredExpenses : []),
-    [filterKey, expenseDate, filteredExpenses],
+    () => [
+      ...(filterKey === expenseDate ? filteredExpenses : []),
+      ...(activeIncomeYearMonth === incomeYearMonth
+        ? monthIncomes.filter(income => income.date.startsWith(expenseDate.slice(0, 10)))
+        : []),
+    ],
+    [activeIncomeYearMonth, expenseDate, filterKey, filteredExpenses, incomeYearMonth, monthIncomes],
   );
 
   const totalAmountForTheDay = useMemo(
-    () => allEverydayTransactions.reduce((sum: number, transaction: Expense) => sum + transaction.amount, 0),
+    () =>
+      allEverydayTransactions.reduce(
+        (sum, transaction) => ('transactionType' in transaction ? sum : sum + transaction.amount),
+        0,
+      ),
     [allEverydayTransactions],
   );
 
