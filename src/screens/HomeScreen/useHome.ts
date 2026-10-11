@@ -2,6 +2,7 @@ import {useCallback, useEffect, useMemo, useState} from 'react';
 import useThemeColors from '../../hooks/useThemeColors';
 import {useAppDispatch, useAppSelector} from '../../redux/hooks';
 import {fetchExpensesByMonth, invalidateExpenseCache, selectExpenseData} from '../../redux/slice/expenseDataSlice';
+import {fetchIncomesByMonth, invalidateIncomeCache, selectIncomeData} from '../../redux/slice/incomeDataSlice';
 import {selectMonthIndex, selectYear, setMonthSelection} from '../../redux/slice/monthSelectionSlice';
 import {selectUserName} from '../../redux/slice/userNameSlice';
 import {fetchUserData, selectUserId} from '../../redux/slice/userIdSlice';
@@ -16,7 +17,7 @@ import {
   sortByDateDesc,
   formatDate,
 } from '../../utils/dateUtils';
-import {ExpenseData as Expense} from '../../watermelondb/services';
+import type {ExpenseData as Expense} from '../../watermelondb/services';
 import {loadAvailableYears} from '../../utils/availableYearsCache';
 import {useFocusEffect} from '@react-navigation/native';
 
@@ -34,8 +35,10 @@ const useHome = () => {
   const selectedMonthIndex = useAppSelector(selectMonthIndex);
   const selectedYear = useAppSelector(selectYear);
 
-  const allTransactions = useAppSelector(selectExpenseData);
-  const sortedTransactions = useMemo(() => sortByDateDesc(allTransactions as Expense[]), [allTransactions]);
+  const expenses = useAppSelector(selectExpenseData);
+  const incomes = useAppSelector(selectIncomeData);
+  const allTransactions = useMemo(() => [...expenses, ...incomes], [expenses, incomes]);
+  const sortedTransactions = useMemo(() => sortByDateDesc(allTransactions), [allTransactions]);
 
   const userName = useAppSelector(selectUserName);
   const userId = useAppSelector(selectUserId);
@@ -66,6 +69,7 @@ const useHome = () => {
         // cache while switching tabs prevents a transient empty list and
         // avoids repeating the same SQLite query on every focus event.
         dispatch(fetchExpensesByMonth(yearMonth));
+        dispatch(fetchIncomesByMonth(yearMonth));
         dispatch(fetchBudgetsByMonth(yearMonth));
       }
     }, [dispatch, userId, yearMonth]),
@@ -83,7 +87,8 @@ const useHome = () => {
     // An explicit pull-to-refresh is the one path that intentionally drops
     // the keyed cache before querying the active month again.
     dispatch(invalidateExpenseCache());
-    dispatch(fetchExpensesByMonth(yearMonth)).finally(() => {
+    dispatch(invalidateIncomeCache());
+    Promise.all([dispatch(fetchExpensesByMonth(yearMonth)), dispatch(fetchIncomesByMonth(yearMonth))]).finally(() => {
       setRefreshing(false);
     });
   }, [dispatch, refreshing, yearMonth]);
@@ -91,19 +96,16 @@ const useHome = () => {
   const isCurrentMonth = selectedYear === CURRENT_YEAR && selectedMonthIndex === CURRENT_MONTH_INDEX;
 
   const {totalSpent, transactionCount, todayTotal} = useMemo(() => {
-    const total = (allTransactions ?? []).reduce((sum: number, t: Expense) => sum + t.amount, 0);
-    const count = (allTransactions ?? []).length;
+    const total = expenses.reduce((sum: number, t: Expense) => sum + t.amount, 0);
+    const count = allTransactions.length;
 
     const todayStr = formatDate(new Date(), 'YYYY-MM-DD');
     const today = isCurrentMonth
-      ? (allTransactions ?? []).reduce(
-          (sum: number, t: Expense) => (t.date.startsWith(todayStr) ? sum + t.amount : sum),
-          0,
-        )
+      ? expenses.reduce((sum: number, t: Expense) => (t.date.startsWith(todayStr) ? sum + t.amount : sum), 0)
       : 0;
 
     return {totalSpent: total, transactionCount: count, todayTotal: today};
-  }, [allTransactions, isCurrentMonth]);
+  }, [allTransactions.length, expenses, isCurrentMonth]);
 
   const daysInMonth = useMemo(() => getDaysInMonth(selectedYear, selectedMonthName), [selectedYear, selectedMonthName]);
 

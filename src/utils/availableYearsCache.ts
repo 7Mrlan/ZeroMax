@@ -1,5 +1,5 @@
 import StorageService from './asyncStorageService';
-import {getAvailableExpenseYears} from '../watermelondb/services';
+import {getAvailableExpenseYears, getAvailableIncomeYears} from '../watermelondb/services';
 
 /**
  * Per-user cache of the years that have expenses, used to populate the
@@ -57,8 +57,11 @@ export const ensureYearInCache = (userId: string, year: number): number[] => {
 
 /** Re-reads the years from the database. Call after an import/restore. */
 export const refreshYearsCache = async (userId: string): Promise<number[]> => {
-  const years = await getAvailableExpenseYears(userId);
-  const withCurrent = ensureCurrentYear(years);
+  const [expenseYears, incomeYears] = await Promise.all([
+    getAvailableExpenseYears(userId),
+    getAvailableIncomeYears(userId),
+  ]);
+  const withCurrent = ensureCurrentYear([...new Set([...expenseYears, ...incomeYears])].sort((a, b) => a - b));
   setCachedYears(userId, withCurrent);
   return withCurrent;
 };
