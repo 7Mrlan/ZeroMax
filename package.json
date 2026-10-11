@@ -34,7 +34,8 @@
     "version:set": "node scripts/bump-version.js",
     "commit": "cz",
     "commitlint": "commitlint --edit",
-    "prepare": "husky"
+    "prepare": "husky",
+    "ios:contract:check": "node scripts/check-ios-native-contract.js"
   },
   "dependencies": {
     "@babel/runtime": "^7.28.6",
