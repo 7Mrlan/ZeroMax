@@ -14,7 +14,13 @@ import {
 export interface AndroidCopyDriverDependencies {
   bridge?: ReadOnlySqliteBridge &
     AndroidBackupBridge & {
-      writeTargetSnapshot?: (snapshotJson: string, targetFingerprint: string) => Promise<unknown>;
+      writeTargetSnapshot?: (
+        snapshotJson: string,
+        targetFingerprint: string,
+        attemptId: string,
+        generation: number,
+        sourceFingerprint: string,
+      ) => Promise<unknown>;
     };
   backupId: string;
   createBackup?: (backupId: string, bridge: AndroidBackupBridge) => Promise<{backupId: string}>;
@@ -40,8 +46,21 @@ export const createAndroidCopyDriver = ({
 }: AndroidCopyDriverDependencies): LegacyCopyDriver => {
   let targetDatabase: Database | null = null;
   let backup: {backupId: string} | null = null;
-  let nativeTargetWrite: ((snapshotJson: string, targetFingerprint: string) => Promise<unknown>) | undefined;
+  let nativeTargetWrite:
+    | ((
+        snapshotJson: string,
+        targetFingerprint: string,
+        attemptId: string,
+        generation: number,
+        sourceFingerprint: string,
+      ) => Promise<unknown>)
+    | undefined;
   let nativeMarkerActivated = false;
+  let targetMarkerIdentity: {
+    attemptId: string;
+    generation: number;
+    sourceFingerprint: string;
+  } | null = null;
 
   const closePreparedTarget = async (): Promise<void> => {
     if (!targetDatabase) {
@@ -110,8 +129,16 @@ export const createAndroidCopyDriver = ({
         await discardTargetArtifact();
       };
       if (nativeTargetWrite) {
-        await nativeTargetWrite(JSON.stringify(expectedTarget), fingerprintCopyDataset(expectedTarget));
-        nativeMarkerActivated = true;
+        if (!targetMarkerIdentity) {
+          throw new Error('Native target writer marker identity has not been bound');
+        }
+        await nativeTargetWrite(
+          JSON.stringify(expectedTarget),
+          fingerprintCopyDataset(expectedTarget),
+          targetMarkerIdentity.attemptId,
+          targetMarkerIdentity.generation,
+          targetMarkerIdentity.sourceFingerprint,
+        );
         const reopened = createTarget();
         await reopened.initializingPromise;
         targetDatabase = reopened.database;
@@ -127,6 +154,9 @@ export const createAndroidCopyDriver = ({
         discardTarget,
       );
       return runTransaction(expectedTarget, verify);
+    },
+    setTargetMarkerIdentity: identity => {
+      targetMarkerIdentity = identity;
     },
     getPreparedTargetDatabase: () => targetDatabase,
     get targetMarkerActivated() {

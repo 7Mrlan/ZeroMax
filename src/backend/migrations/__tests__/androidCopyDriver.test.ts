@@ -101,8 +101,16 @@ describe('createAndroidCopyDriver', () => {
       createTarget: jest.fn(() => ({database: database as never, initializingPromise: Promise.resolve()})),
     });
 
+    driver.setTargetMarkerIdentity?.({attemptId: '1:source', generation: 1, sourceFingerprint: 'source'});
     await driver.prepareTarget();
     await expect(driver.runTargetTransaction(snapshot, () => ({ok: true}) as never)).resolves.toEqual({ok: true});
-    expect(writeTargetSnapshot).toHaveBeenCalledWith(JSON.stringify(snapshot), expect.any(String));
+    expect(writeTargetSnapshot).toHaveBeenCalledWith(
+      JSON.stringify(snapshot),
+      expect.any(String),
+      '1:source',
+      1,
+      'source',
+    );
+    expect(driver.targetMarkerActivated).toBe(false);
   });
 });

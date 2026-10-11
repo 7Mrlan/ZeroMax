@@ -10,6 +10,10 @@ const application = read('android/app/src/main/java/com/anotherwhy/zero/MainAppl
 const readonly = read('android/app/src/main/java/com/anotherwhy/zero/readonly/ReadOnlySqliteModule.java');
 const database = read('src/watermelondb/database.ts');
 const cmake = read(require.resolve('@nozbe/watermelondb/native/android-jsi/src/main/cpp/CMakeLists.txt'));
+const nativeCommitIndex = readonly.indexOf('database.endTransaction();');
+const nativeMarkerMethodIndex = readonly.indexOf(
+  'markTargetMarkerVerifiedAfterNativeWrite(targetFingerprint, attemptId',
+);
 
 const checks = [
   [packageJson.dependencies?.['@nozbe/sqlite'] === '3.46.0', 'package.json must pin @nozbe/sqlite 3.46.0'],
@@ -35,6 +39,14 @@ const checks = [
   [
     readonly.includes('writeTargetSnapshot') && readonly.includes('insertOrThrow'),
     'native target writer must validate and commit normalized rows',
+  ],
+  [
+    readonly.includes('Unknown target table:') &&
+      readonly.includes('Target marker identity does not match native writer request') &&
+      nativeCommitIndex >= 0 &&
+      nativeMarkerMethodIndex > nativeCommitIndex &&
+      readonly.includes('marker.put("status", "verified")'),
+    'native target marker must fail closed on unknown tables and remain verified until JS activation after commit',
   ],
   [
     database.includes("prop === '$$typeof'") && database.includes('Symbol.toStringTag'),

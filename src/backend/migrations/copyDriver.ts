@@ -22,9 +22,11 @@ export interface LegacyCopyDriver {
   ) => Promise<CopyVerificationReport>;
   /** Closes a prepared target before a later identity-guarded discard. */
   closePreparedTarget?: () => Promise<void>;
+  /** Binds the native writer to the marker claimed by this migration attempt. */
+  setTargetMarkerIdentity?: (identity: {attemptId: string; generation: number; sourceFingerprint: string}) => void;
   /** Exposes the verified target instance so BootGate can adopt it without opening a second adapter. */
   getPreparedTargetDatabase?: () => unknown;
-  /** Native writer may advance the marker before returning to JS. */
+  /** Optional signal for drivers whose native writer already activated the marker. */
   targetMarkerActivated?: boolean;
 }
 

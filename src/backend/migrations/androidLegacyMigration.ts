@@ -250,6 +250,11 @@ export const runAndroidLegacyMigration = async ({
 
   const checkpoint = beginMigrationCheckpoint({source, sourceFingerprint: liveFingerprint});
   await claimTargetArtifact(checkpoint, bridge);
+  driver.setTargetMarkerIdentity?.({
+    attemptId: checkpoint.target.attemptId,
+    generation: checkpoint.generation,
+    sourceFingerprint: checkpoint.sourceFingerprint,
+  });
   let currentCheckpoint = updateMigrationCheckpoint(checkpoint, current => ({
     ...current,
     state: 'copying',

@@ -25,6 +25,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -334,8 +335,20 @@ public final class ReadOnlySqliteModule extends ReactContextBaseJavaModule {
 
     /** Writes a verified normalized target snapshot while no Watermelon adapter owns the file. */
     @ReactMethod
-    public synchronized void writeTargetSnapshot(String snapshotJson, String targetFingerprint, Promise promise) {
-        if (snapshotJson == null || snapshotJson.length() > 16 * 1024 * 1024 || !isValidMarkerText(targetFingerprint)) {
+    public synchronized void writeTargetSnapshot(
+            String snapshotJson,
+            String targetFingerprint,
+            String attemptId,
+            int generation,
+            String sourceFingerprint,
+            Promise promise
+    ) {
+        if (snapshotJson == null
+                || snapshotJson.length() > 16 * 1024 * 1024
+                || !isValidMarkerText(targetFingerprint)
+                || !isValidMarkerText(attemptId)
+                || generation <= 0
+                || !isValidMarkerText(sourceFingerprint)) {
             promise.reject("INVALID_TARGET_SNAPSHOT", "Target snapshot is missing or too large");
             return;
         }
@@ -343,6 +356,14 @@ public final class ReadOnlySqliteModule extends ReactContextBaseJavaModule {
         boolean transactionStarted = false;
         try {
             JSONObject snapshot = new JSONObject(snapshotJson);
+            Set<String> inspectedTables = new HashSet<>(Arrays.asList(INSPECTED_TABLES));
+            Iterator<String> snapshotTables = snapshot.keys();
+            while (snapshotTables.hasNext()) {
+                String table = snapshotTables.next();
+                if (!inspectedTables.contains(table)) {
+                    throw new JSONException("Unknown target table: " + table);
+                }
+            }
             database = SQLiteDatabase.openDatabase(
                     resolveDatabaseFile(TARGET_DATABASE_NAME).getAbsolutePath(),
                     null,
@@ -381,7 +402,14 @@ public final class ReadOnlySqliteModule extends ReactContextBaseJavaModule {
                 }
             }
             database.setTransactionSuccessful();
-            activateTargetMarkerAfterNativeWrite(targetFingerprint);
+            // Marker advancement must follow the real SQLite commit. If the
+            // process dies while endTransaction() is committing, the durable
+            // marker must remain `writing` so recovery can discard/rebuild it.
+            database.endTransaction();
+            transactionStarted = false;
+            database.close();
+            database = null;
+            markTargetMarkerVerifiedAfterNativeWrite(targetFingerprint, attemptId, generation, sourceFingerprint);
             promise.resolve(Arguments.createMap());
         } catch (Exception error) {
             promise.reject("TARGET_WRITE_FAILED", error.getMessage(), error);
@@ -393,17 +421,30 @@ public final class ReadOnlySqliteModule extends ReactContextBaseJavaModule {
         }
     }
 
-    private void activateTargetMarkerAfterNativeWrite(String targetFingerprint) throws IOException, JSONException {
+    private void markTargetMarkerVerifiedAfterNativeWrite(
+            String targetFingerprint,
+            String attemptId,
+            int generation,
+            String sourceFingerprint
+    ) throws IOException, JSONException {
         File markerFile = targetMarkerFile(resolveDatabaseFile(TARGET_DATABASE_NAME));
         WritableMap existing = readMarker(markerFile);
         if (existing == null || !"writing".equals(existing.getString("status"))) {
             throw new IOException("Target marker is not in writing state");
         }
+        if (!attemptId.equals(existing.getString("attemptId"))
+                || generation != existing.getInt("generation")
+                || !sourceFingerprint.equals(existing.getString("sourceFingerprint"))) {
+            throw new IOException("Target marker identity does not match native writer request");
+        }
         JSONObject marker = new JSONObject();
         marker.put("attemptId", existing.getString("attemptId"));
         marker.put("generation", existing.getInt("generation"));
         marker.put("sourceFingerprint", existing.getString("sourceFingerprint"));
-        marker.put("status", "activated");
+        // The JavaScript coordinator still owns pointer activation. Keeping
+        // this marker at `verified` makes the committed target recoverable if
+        // the process exits before the checkpoint and active pointer advance.
+        marker.put("status", "verified");
         marker.put("targetFingerprint", targetFingerprint);
         writeMarker(markerFile, marker);
     }
@@ -826,7 +867,7 @@ public final class ReadOnlySqliteModule extends ReactContextBaseJavaModule {
                     StandardCopyOption.ATOMIC_MOVE,
                     StandardCopyOption.REPLACE_EXISTING
             );
-        } catch (UnsupportedOperationException error) {
+        } catch (AtomicMoveNotSupportedException | UnsupportedOperationException error) {
             Files.move(markerTemporary.toPath(), markerFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
         }
     }
