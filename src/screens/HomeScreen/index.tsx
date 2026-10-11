@@ -193,7 +193,7 @@ const HomeScreen = () => {
       <View style={[gs.absolute, gs.bottom15, gs.right15, gs.zIndex1]}>
         <TouchableOpacity
           style={[gs.size50, gs.rounded8, gs.center, {backgroundColor: colors.secondaryBackground}]}
-          onPress={() => navigate('AddTransactionsScreen')}
+          onPress={() => navigate('AddEntryScreen')}
           hitSlop={hitSlop}
           accessibilityLabel={t('home.addTransaction')}
           accessibilityRole="button">

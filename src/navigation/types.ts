@@ -12,6 +12,7 @@ export type HomeStackParamList = {
   SettingsScreen: undefined;
   DiagnosticsScreen: undefined;
   AddTransactionsScreen: undefined;
+  AddEntryScreen: undefined;
   UpdateTransactionScreen: {
     expenseId: string;
     expenseTitle: string;

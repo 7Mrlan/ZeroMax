@@ -157,6 +157,20 @@
     "txnCount_one": "{{count}} txn",
     "txnCount_other": "{{count}} txns"
   },
+  "entry": {
+    "expense": "Expense",
+    "income": "Income",
+    "switchMode": "Switch entry type"
+  },
+  "income": {
+    "addTitle": "Add Income",
+    "titleLabel": "Title",
+    "titlePlaceholder": "eg. Salary",
+    "amountLabel": "Amount",
+    "dateLabel": "Date",
+    "categoryLabel": "Income category",
+    "addCategoryButton": "Add income category"
+  },
   "category": {
     "addTitle": "Add Category",
     "editTitle": "Edit Category",
@@ -298,6 +312,8 @@
     "nameMaxLength": "Name cannot exceed 50 characters.",
     "expenseMinLength": "Expense must be at least 1 character long.",
     "expenseMaxLength": "Expense cannot exceed 25 characters.",
+    "incomeMinLength": "Income title must be at least 1 character long.",
+    "incomeMaxLength": "Income title cannot exceed 50 characters.",
     "descriptionMinLength": "Expense Description must be at least 1 character long.",
     "descriptionMaxLength": "Expense Description cannot exceed 50 characters.",
     "amountMin": "Expense Amount must be at least 0.01.",

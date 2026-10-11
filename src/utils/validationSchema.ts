@@ -34,6 +34,11 @@ export const expenseSchema = z
   .min(1, {error: () => i18n.t('validation.expenseMinLength')})
   .max(25, {error: () => i18n.t('validation.expenseMaxLength')});
 
+export const incomeSchema = z
+  .string()
+  .min(1, {error: () => i18n.t('validation.incomeMinLength')})
+  .max(50, {error: () => i18n.t('validation.incomeMaxLength')});
+
 export const expenseDescriptionSchema = z
   .string()
   .min(0, {error: () => i18n.t('validation.descriptionMinLength')})
@@ -43,6 +48,8 @@ export const expenseAmountSchema = z
   .number()
   .min(0.01, {error: () => i18n.t('validation.amountMin')})
   .max(1000000, {error: () => i18n.t('validation.amountMax')});
+
+export const incomeAmountSchema = expenseAmountSchema;
 
 export const categorySchema = z
   .string()

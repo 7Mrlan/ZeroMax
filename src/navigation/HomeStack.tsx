@@ -14,6 +14,7 @@ import CategoryScreen from '../screens/CategoryScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import DiagnosticsScreen from '../screens/DiagnosticsScreen';
 import AddTransactionsScreen from '../screens/AddTransactionsScreen';
+import AddEntryScreen from '../screens/AddEntryScreen';
 import UpdateTransactionScreen from '../screens/UpdateTransactionScreen';
 import AddCategoryScreen from '../screens/AddCategoryScreen';
 import UpdateCategoryScreen from '../screens/UpdateCategoryScreen';
@@ -51,7 +52,9 @@ const ReportsIcon = ({color}: {color: string}) => {
       <View style={[gs.h26, gs.center]}>
         <Icon name="bar-chart-3" size={ICON_SIZE} color={color} />
       </View>
-      <Text style={[gs.text10, gs.fontMedium, gs.noFontPadding, gs.textCenter, gs.mt2, {color}]}>{t('tabs.reports')}</Text>
+      <Text style={[gs.text10, gs.fontMedium, gs.noFontPadding, gs.textCenter, gs.mt2, {color}]}>
+        {t('tabs.reports')}
+      </Text>
     </View>
   );
 };
@@ -63,7 +66,9 @@ const DebtIcon = ({color}: {color: string}) => {
       <View style={[gs.h26, gs.center]}>
         <Icon name="credit-card" size={ICON_SIZE} color={color} />
       </View>
-      <Text style={[gs.text10, gs.fontMedium, gs.noFontPadding, gs.textCenter, gs.mt2, {color}]}>{t('tabs.debts')}</Text>
+      <Text style={[gs.text10, gs.fontMedium, gs.noFontPadding, gs.textCenter, gs.mt2, {color}]}>
+        {t('tabs.debts')}
+      </Text>
     </View>
   );
 };
@@ -75,7 +80,9 @@ const CategoriesIcon = ({color}: {color: string}) => {
       <View style={[gs.h26, gs.center]}>
         <Icon name="shapes" size={ICON_SIZE} color={color} />
       </View>
-      <Text style={[gs.text10, gs.fontMedium, gs.noFontPadding, gs.textCenter, gs.mt2, {color}]}>{t('tabs.categories')}</Text>
+      <Text style={[gs.text10, gs.fontMedium, gs.noFontPadding, gs.textCenter, gs.mt2, {color}]}>
+        {t('tabs.categories')}
+      </Text>
     </View>
   );
 };
@@ -135,6 +142,7 @@ const HomeStack = () => {
       <Stack.Screen name="TabStack" component={TabStack} />
       <Stack.Screen name="SettingsScreen" component={SettingsScreen} />
       <Stack.Screen name="AddTransactionsScreen" component={AddTransactionsScreen} />
+      <Stack.Screen name="AddEntryScreen" component={AddEntryScreen} />
       <Stack.Screen name="UpdateTransactionScreen" component={UpdateTransactionScreen} />
       <Stack.Screen name="AddCategoryScreen" component={AddCategoryScreen} />
       <Stack.Screen name="UpdateCategoryScreen" component={UpdateCategoryScreen} />
