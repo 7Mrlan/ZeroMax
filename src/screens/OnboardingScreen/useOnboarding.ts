@@ -6,6 +6,7 @@ import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {fetchUserData, selectUserId} from '../../redux/slice/userIdSlice';
 import {createCategory} from '../../watermelondb/services';
 import type {OnboardingStackParamList} from '../../navigation/types';
+import {appendErrorLog} from '../../utils/errorLog';
 
 type OnboardingNavigation = NativeStackNavigationProp<OnboardingStackParamList, 'OnboardingScreen'>;
 interface CategorySelection {
@@ -49,8 +50,11 @@ const useOnboarding = () => {
       }
       navigation.push('ChooseCurrencyScreen');
     } catch (error) {
+      const normalized = error instanceof Error ? error : new Error(String(error));
+      appendErrorLog(normalized);
+      console.error('Onboarding category submit failed:', normalized);
       if (__DEV__) {
-        console.error('Error creating default categories:', error);
+        console.error('Error creating default categories:', normalized);
       }
       isSubmittingRef.current = false;
       setIsSubmitting(false);

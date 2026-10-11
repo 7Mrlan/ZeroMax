@@ -5,6 +5,7 @@ import useThemeColors from '../../hooks/useThemeColors';
 import {createUser} from '../../watermelondb/services';
 import type {OnboardingStackParamList} from '../../navigation/types';
 import {nameSchema} from '../../utils/validationSchema';
+import {appendErrorLog} from '../../utils/errorLog';
 
 type PersonalizeNavigation = NativeStackNavigationProp<OnboardingStackParamList, 'PersonalizeScreen'>;
 
@@ -19,8 +20,11 @@ const usePersonalize = () => {
       await createUser(name, '');
       navigation.push('OnboardingScreen');
     } catch (error) {
+      const normalized = error instanceof Error ? error : new Error(String(error));
+      appendErrorLog(normalized);
+      console.error('Personalize onboarding submit failed:', normalized);
       if (__DEV__) {
-        console.error('Error saving user data:', error);
+        console.error('Error saving user data:', normalized);
       }
     }
   }, [name, navigation]);
@@ -30,8 +34,11 @@ const usePersonalize = () => {
       await createUser('User', '');
       navigation.push('OnboardingScreen');
     } catch (error) {
+      const normalized = error instanceof Error ? error : new Error(String(error));
+      appendErrorLog(normalized);
+      console.error('Personalize onboarding skip failed:', normalized);
       if (__DEV__) {
-        console.error('Error saving demo user data:', error);
+        console.error('Error saving demo user data:', normalized);
       }
     }
   }, [navigation]);
