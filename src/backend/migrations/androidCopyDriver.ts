@@ -41,6 +41,9 @@ export const createAndroidCopyDriver = ({
       return readBackupSnapshot(backup.backupId, bridge as AndroidBackupBridge);
     },
     ensureBackup: async () => {
+      if (backup?.backupId === backupId) {
+        return;
+      }
       backup = await createBackup(backupId, bridge as AndroidBackupBridge);
     },
     prepareTarget: async () => {
