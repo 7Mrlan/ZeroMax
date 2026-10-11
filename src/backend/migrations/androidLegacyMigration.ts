@@ -1,4 +1,4 @@
-import {readDatabaseSnapshotReadOnly, type ReadOnlySqliteBridge} from './nativePreflight';
+import {probeDatabaseReadOnly, readDatabaseSnapshotReadOnly, type ReadOnlySqliteBridge} from './nativePreflight';
 import {fingerprintCopyDataset} from './copyFingerprint';
 import {copyLegacyRows, type LegacyCopyDriver, type LegacyCopyResult} from './copyDriver';
 import {
@@ -11,13 +11,14 @@ import {
   claimTargetArtifact,
   discardOwnedTargetArtifact,
   inspectTargetRecovery,
+  normalizeTargetArtifact,
   updateTargetArtifactMarker,
   type TargetArtifactBridge,
 } from './targetArtifactBridge';
 import {decideTargetRecovery, type TargetObservation} from './targetArtifact';
 import {createAndroidCopyDriver, type AndroidCopyDriverDependencies} from './androidCopyDriver';
 import type {AndroidBackupBridge} from './backupBridge';
-import type {LegacyDatabaseSource} from './legacySchema';
+import {detectLegacyDatabaseSource, type LegacyDatabaseSource} from './legacySchema';
 import type {ActiveDatabaseName} from './activeDatabase';
 import {createTargetDatabase} from '../../watermelondb/targetDatabase';
 
@@ -130,6 +131,79 @@ export const reopenVerifiedTarget = async (
   };
 };
 
+/**
+ * Repairs the two durable-write ordering windows around `verified`.
+ *
+ * The target is reusable only after a readonly exact-v4/integrity probe and
+ * a row fingerprint match. A marker or checkpoint string alone never proves
+ * that the target contains a complete copy.
+ */
+export const recoverAdjacentVerifiedTarget = async (
+  checkpoint: MigrationCheckpoint,
+  bridge: AndroidLegacyMigrationBridge,
+  createTarget: typeof createTargetDatabase,
+): Promise<AndroidLegacyMigrationResult | null> => {
+  if (checkpoint.target.status !== 'writing' && checkpoint.target.status !== 'verified') {
+    return null;
+  }
+
+  const observation = normalizeTargetArtifact(await bridge.inspectTargetArtifact());
+  if (observation.status !== 'present' || observation.marker === null) {
+    return null;
+  }
+  const marker = observation.marker;
+  if (
+    marker.attemptId !== checkpoint.target.attemptId ||
+    marker.generation !== checkpoint.generation ||
+    marker.sourceFingerprint !== checkpoint.sourceFingerprint
+  ) {
+    return null;
+  }
+
+  const markerVerified = marker.status === 'verified' || marker.status === 'activated';
+  const checkpointVerified = checkpoint.target.status === 'verified';
+  const adjacent =
+    (checkpoint.target.status === 'writing' && markerVerified) || (checkpointVerified && marker.status === 'writing');
+  if (!adjacent) return null;
+
+  const targetProbe = await probeDatabaseReadOnly('watermelon_v4', bridge);
+  if (
+    targetProbe.kind !== 'metadata' ||
+    targetProbe.integrity !== 'ok' ||
+    detectLegacyDatabaseSource(targetProbe.snapshot) !== 'target-v4'
+  ) {
+    throw new Error('Adjacent verified target failed readonly schema or integrity validation');
+  }
+  const targetSnapshot = await readDatabaseSnapshotReadOnly('watermelon_v4', bridge);
+  const targetFingerprint = fingerprintCopyDataset(targetSnapshot);
+  const expectedFingerprint = checkpoint.target.fingerprint ?? marker.targetFingerprint;
+  if (!expectedFingerprint || targetFingerprint !== expectedFingerprint) {
+    throw new Error('Adjacent verified target fingerprint does not match durable state');
+  }
+
+  const liveSource = await readDatabaseSnapshotReadOnly('watermelon', bridge);
+  assertLiveSourceFingerprint(liveSource, checkpoint.sourceFingerprint);
+
+  let promotedCheckpoint = checkpoint;
+  if (!checkpointVerified) {
+    promotedCheckpoint = updateMigrationCheckpoint(checkpoint, current => ({
+      ...current,
+      state: 'verified',
+      target: {...current.target, status: 'verified', fingerprint: targetFingerprint},
+    }));
+  } else if (marker.status === 'writing') {
+    await updateTargetArtifactMarker(checkpoint.target.attemptId, 'verified', targetFingerprint, bridge);
+  }
+
+  const verifiedObservation: Extract<TargetObservation, {kind: 'artifact'}> = {
+    kind: 'artifact',
+    attemptId: promotedCheckpoint.target.attemptId,
+    status: 'verified',
+    fingerprint: targetFingerprint,
+  };
+  return reopenVerifiedTarget(promotedCheckpoint, verifiedObservation, createTarget);
+};
+
 /** Runs legacy migration from a stable backup and adopts the verified target instance. */
 export const runAndroidLegacyMigration = async ({
   bridge,
@@ -147,6 +221,8 @@ export const runAndroidLegacyMigration = async ({
     if (previous.checkpoint.source !== source) {
       throw new Error('Migration checkpoint source changed while the upgrade was in progress');
     }
+    const adjacent = await recoverAdjacentVerifiedTarget(previous.checkpoint, bridge, createTarget);
+    if (adjacent) return adjacent;
     const recovery = await reconcileExistingTarget(previous.checkpoint, bridge);
     if (recovery.kind === 'reuse') {
       const liveSnapshot = await readDatabaseSnapshotReadOnly('watermelon', bridge);

@@ -8,6 +8,7 @@ import {
   assertLiveSourceFingerprint,
   reopenVerifiedTarget,
   activateAndroidLegacyMigration,
+  recoverAdjacentVerifiedTarget,
   runAndroidLegacyMigration,
   type AndroidLegacyMigrationResult,
 } from '../androidLegacyMigration';
@@ -190,6 +191,92 @@ describe('runAndroidLegacyMigration', () => {
 
     expect(second.targetDatabase).toBe(first.targetDatabase);
     expect(createTarget).toHaveBeenCalledTimes(1);
+  });
+
+  it('promotes a verified marker when the checkpoint was still copying', async () => {
+    const empty = {
+      users: [],
+      categories: [],
+      expenses: [],
+      incomes: [],
+      currencies: [],
+      debtors: [],
+      debts: [],
+      budgets: [],
+    };
+    const fingerprint = fingerprintCopyDataset(empty);
+    const sourceFingerprint = fingerprintCopyDataset(source);
+    const current = {
+      ...checkpoint(),
+      sourceFingerprint,
+      target: {...checkpoint().target, attemptId: `1:${sourceFingerprint}`},
+    };
+    const createTarget = jest.fn(() => ({database: {target: true} as never, initializingPromise: Promise.resolve()}));
+    const bridge = {
+      inspectTargetArtifact: jest.fn(async () => ({
+        status: 'present',
+        database: {size: 10, lastModified: 20},
+        wal: null,
+        shm: null,
+        marker: {
+          attemptId: current.target.attemptId,
+          generation: current.generation,
+          sourceFingerprint: current.sourceFingerprint,
+          status: 'verified',
+          targetFingerprint: fingerprint,
+        },
+      })),
+      probe: jest.fn(async () => targetProbe),
+      readSnapshot: jest.fn().mockResolvedValueOnce(empty).mockResolvedValueOnce(source),
+    };
+
+    const result = await recoverAdjacentVerifiedTarget(current, bridge as never, createTarget);
+    expect(result?.checkpoint.state).toBe('verified');
+    expect(result?.checkpoint.target.fingerprint).toBe(fingerprint);
+  });
+
+  it('repairs a writing marker when the checkpoint already contains the verified fingerprint', async () => {
+    const empty = {
+      users: [],
+      categories: [],
+      expenses: [],
+      incomes: [],
+      currencies: [],
+      debtors: [],
+      debts: [],
+      budgets: [],
+    };
+    const fingerprint = fingerprintCopyDataset(empty);
+    const sourceFingerprint = fingerprintCopyDataset(source);
+    const base = checkpoint('verified');
+    const current = {
+      ...base,
+      sourceFingerprint,
+      target: {...base.target, attemptId: `1:${sourceFingerprint}`, fingerprint},
+    };
+    const update = jest.fn(async () => undefined);
+    const bridge = {
+      inspectTargetArtifact: jest.fn(async () => ({
+        status: 'present',
+        database: {size: 10, lastModified: 20},
+        wal: null,
+        shm: null,
+        marker: {
+          attemptId: current.target.attemptId,
+          generation: current.generation,
+          sourceFingerprint: current.sourceFingerprint,
+          status: 'writing',
+        },
+      })),
+      probe: jest.fn(async () => targetProbe),
+      readSnapshot: jest.fn().mockResolvedValueOnce(empty).mockResolvedValueOnce(source),
+      updateTargetArtifactMarker: update,
+    };
+
+    await expect(recoverAdjacentVerifiedTarget(current, bridge as never, jest.fn())).resolves.toMatchObject({
+      checkpoint: {state: 'verified'},
+    });
+    expect(update).toHaveBeenCalledWith(current.target.attemptId, 'verified', fingerprint);
   });
 
   it('copies from a stable backup and leaves activation at verified state', async () => {
