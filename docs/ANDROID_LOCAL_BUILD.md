@@ -40,3 +40,5 @@ Bindings!`、`Opened database at .../watermelon_v4.db`、`schema version 4` 和
 这份记录证明干净主机可以生成 debug APK，并证明该 API 35 模拟器上的 JSI
 fresh-install 启动路径。它仍不证明真实设备迁移、WAL/崩溃恢复、帧率、16 KB
 page runtime、签名或商店发布。
+
+2026-10-12 fresh ownership fault injection：在 API35 `zero-api35` debug app 启动后捕获 `watermelon_v4.db.artifact.json` 的 `status=writing` 窗口，立即 `am force-stop`；重新启动后 marker 为 `activated`。同时拉取 `watermelon_v4.db`、`-wal`、`-shm` 合并检查，得到 `user_version=4`、`PRAGMA integrity_check=ok`，8 张业务表和 `local_storage` 均为 0 行。该证据覆盖 fresh claim/init 窗口，尚不等价于 legacy Zero/Zerox copy 中途 kill、WAL 恢复或性能矩阵。
