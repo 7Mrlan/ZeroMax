@@ -361,16 +361,16 @@
     "iHaveBackup": "我有备份"
   },
   "defaultCategories": {
-    "food": "Food",
-    "transportation": "Transportation",
-    "entertainment": "Entertainment",
-    "healthcare": "Healthcare",
-    "shopping": "Shopping",
-    "travel": "Travel",
-    "utilities": "Utilities",
-    "education": "Education",
-    "gifts": "Gifts",
-    "other": "Other"
+    "food": "餐饮",
+    "transportation": "交通",
+    "entertainment": "娱乐",
+    "healthcare": "医疗",
+    "shopping": "购物",
+    "travel": "旅行",
+    "utilities": "生活缴费",
+    "education": "教育",
+    "gifts": "礼物",
+    "other": "其他"
   },
   "defaultDebtAccounts": {
     "creditCard": "Credit Card",

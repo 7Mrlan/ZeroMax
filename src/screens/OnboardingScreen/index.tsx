@@ -15,9 +15,45 @@ interface CategoryData {
   color?: string;
 }
 
+const defaultCategoryKeys: Record<string, string> = {
+  Food: 'food',
+  Transportation: 'transportation',
+  Entertainment: 'entertainment',
+  Healthcare: 'healthcare',
+  Shopping: 'shopping',
+  Travel: 'travel',
+  Utilities: 'utilities',
+  Education: 'education',
+  Gifts: 'gifts',
+  Other: 'other',
+};
+type DefaultCategoryKey =
+  | 'food'
+  | 'transportation'
+  | 'entertainment'
+  | 'healthcare'
+  | 'shopping'
+  | 'travel'
+  | 'utilities'
+  | 'education'
+  | 'gifts'
+  | 'other';
+
 const OnboardingScreen = () => {
   const {colors, handleSkip, handleSubmit, isSubmitting, toggleCategorySelection, isCategorySelected} = useOnboarding();
   const {t} = useTranslation();
+  const localizedDefaults: Record<DefaultCategoryKey, string> = {
+    food: t('defaultCategories.food'),
+    transportation: t('defaultCategories.transportation'),
+    entertainment: t('defaultCategories.entertainment'),
+    healthcare: t('defaultCategories.healthcare'),
+    shopping: t('defaultCategories.shopping'),
+    travel: t('defaultCategories.travel'),
+    utilities: t('defaultCategories.utilities'),
+    education: t('defaultCategories.education'),
+    gifts: t('defaultCategories.gifts'),
+    other: t('defaultCategories.other'),
+  };
 
   return (
     <PrimaryView colors={colors} style={gs.justifyBetween}>
@@ -43,16 +79,19 @@ const OnboardingScreen = () => {
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[gs.row, gs.wrap, gs.pb80]}>
           {defaultCategories?.map((category: CategoryData) => {
-            const isSelected = isCategorySelected(category.name);
+            const defaultKey = defaultCategoryKeys[category.name] as DefaultCategoryKey | undefined;
+            const localizedName = defaultKey ? localizedDefaults[defaultKey] : category.name;
+            const isSelected = isCategorySelected(localizedName);
+            const stableId = category.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
             return (
               <TouchableOpacity
                 key={category.name}
-                onPress={() => toggleCategorySelection(category)}
+                onPress={() => toggleCategorySelection({...category, name: localizedName})}
                 activeOpacity={0.7}
-                testID={`onboarding-category-${category.name}`}
+                testID={`onboarding-category-${stableId}`}
                 accessibilityRole="checkbox"
-                accessibilityLabel={category.name}
+                accessibilityLabel={localizedName}
                 accessibilityState={{checked: isSelected}}>
                 <View
                   style={[
@@ -78,7 +117,7 @@ const OnboardingScreen = () => {
                     size={13}
                     weight={isSelected ? 'semibold' : 'regular'}
                     color={isSelected ? colors.buttonText : colors.primaryText}>
-                    {category.name}
+                    {localizedName}
                   </PrimaryText>
                 </View>
               </TouchableOpacity>

@@ -13,7 +13,7 @@ appId: com.anotherwhy.zero
 - tapOn:
     id: onboarding-personalize-continue
 - tapOn:
-    id: onboarding-category-Food
+    id: onboarding-category-food
 - tapOn:
     id: onboarding-categories-continue
 - tapOn:
