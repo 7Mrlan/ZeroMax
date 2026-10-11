@@ -6,14 +6,20 @@ import {
   type DatabaseProbeResult,
 } from './preflight';
 import {probeDatabaseReadOnly, readDatabaseSnapshotReadOnly} from './nativePreflight';
-import {COPY_TABLES, type CopyDataset} from './copyVerification';
-import {detectLegacyDatabaseSource} from './legacySchema';
+import type {CopyDataset} from './copyVerification';
+import {readMigrationCheckpoint} from './migrationCheckpoint';
+import {inspectTargetRecovery} from './targetArtifactBridge';
+import {decideTargetRecovery, type TargetObservation} from './targetArtifact';
 
 export type ReadOnlyProbe = (databaseName: ActiveDatabaseName) => Promise<DatabaseProbeResult>;
 export type ReadOnlySnapshot = (databaseName: ActiveDatabaseName) => Promise<CopyDataset>;
 
-const isEmptyTargetSnapshot = (snapshot: CopyDataset): boolean =>
-  COPY_TABLES.every(table => Array.isArray(snapshot[table]) && snapshot[table]?.length === 0);
+export type TargetRecoveryInspection = () => Promise<TargetObservation>;
+
+const inspectOwnedTarget = async (): Promise<TargetObservation> => {
+  const checkpoint = readMigrationCheckpoint();
+  return inspectTargetRecovery(checkpoint.kind === 'valid' ? checkpoint.checkpoint : null);
+};
 
 /**
  * Composes the active pointer, native read-only probe and fail-closed
@@ -23,28 +29,35 @@ const isEmptyTargetSnapshot = (snapshot: CopyDataset): boolean =>
 export const runDatabasePreflight = async (
   activeDatabase: ActiveDatabaseName = getActiveDatabaseName(),
   probe: ReadOnlyProbe = probeDatabaseReadOnly,
-  readSnapshot: ReadOnlySnapshot = databaseName => readDatabaseSnapshotReadOnly(databaseName),
+  _readSnapshot: ReadOnlySnapshot = databaseName => readDatabaseSnapshotReadOnly(databaseName),
+  inspectTarget: TargetRecoveryInspection = inspectOwnedTarget,
 ): Promise<DatabasePreflightDecision> => {
   const result = await probe(activeDatabase);
+  if (activeDatabase === 'watermelon_v4') {
+    const decision = decideDatabasePreflight(activeDatabase, result);
+    if (decision.kind !== 'open-target') {
+      return decision;
+    }
+    const checkpoint = readMigrationCheckpoint();
+    if (checkpoint.kind !== 'valid') {
+      return {kind: 'blocked', reason: 'The active target has no valid durable migration checkpoint'};
+    }
+    try {
+      const observation = await inspectTarget();
+      if (decideTargetRecovery(checkpoint.checkpoint, observation).kind !== 'open-verified') {
+        return {kind: 'blocked', reason: 'The active target artifact is not owned and verified'};
+      }
+    } catch (error) {
+      return {
+        kind: 'blocked',
+        reason: 'The active target artifact could not be verified',
+        error: error instanceof Error ? error : new Error(String(error)),
+      };
+    }
+    return decision;
+  }
   if (activeDatabase === 'watermelon' && result.kind === 'missing') {
     const target = await probe('watermelon_v4');
-    if (
-      target.kind === 'metadata' &&
-      target.integrity === 'ok' &&
-      detectLegacyDatabaseSource(target.snapshot) === 'target-v4'
-    ) {
-      try {
-        // A crash after creating an empty fresh v4 target but before pointer
-        // activation is safe to resume. A non-empty target still needs a
-        // durable migration checkpoint and remains fail-closed.
-        if (isEmptyTargetSnapshot(await readSnapshot('watermelon_v4'))) {
-          return {kind: 'fresh-target', databaseName: 'watermelon_v4'};
-        }
-      } catch {
-        // Missing/invalid snapshot evidence falls through to the blocked
-        // decision below; never infer emptiness from metadata alone.
-      }
-    }
     return decideDatabasePreflightWithTarget(activeDatabase, result, target);
   }
   return decideDatabasePreflight(activeDatabase, result);

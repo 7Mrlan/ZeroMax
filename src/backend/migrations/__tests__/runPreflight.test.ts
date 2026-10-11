@@ -28,17 +28,7 @@ describe('runDatabasePreflight', () => {
     });
   });
 
-  it('resumes an empty exact-v4 target left by a fresh-install crash', async () => {
-    const targetSnapshot = {
-      users: [],
-      categories: [],
-      expenses: [],
-      incomes: [],
-      currencies: [],
-      debtors: [],
-      debts: [],
-      budgets: [],
-    };
+  it('blocks an empty exact-v4 target without owned recovery evidence', async () => {
     await expect(
       runDatabasePreflight(
         'watermelon',
@@ -62,9 +52,12 @@ describe('runDatabasePreflight', () => {
                   },
                 },
               },
-        async () => targetSnapshot,
+        async () => ({}),
       ),
-    ).resolves.toEqual({kind: 'fresh-target', databaseName: 'watermelon_v4'});
+    ).resolves.toEqual({
+      kind: 'blocked',
+      reason: 'An inactive target database exists and requires durable migration recovery',
+    });
   });
 
   it('routes known legacy metadata to copy without constructing an adapter', async () => {
