@@ -13,16 +13,8 @@ import useFormatAmount from '../../hooks/useFormatAmount';
 import {gs, hitSlop} from '../../styles/globalStyles';
 
 const DebtsScreen = () => {
-  const {
-    colors,
-    allDebts,
-    debtorType,
-    setDebtorType,
-    personDebtors,
-    otherAccountsDebtors,
-    totalDebts,
-    debtors,
-  } = useDebts();
+  const {colors, allDebts, debtorType, setDebtorType, personDebtors, otherAccountsDebtors, totalDebts, debtors} =
+    useDebts();
   const {t} = useTranslation();
   const formatAmount = useFormatAmount();
 
@@ -38,79 +30,87 @@ const DebtsScreen = () => {
     return colors.primaryText;
   }, [totalDebts, colors]);
 
-  const ListHeader = useMemo(() => (
-    <View style={gs.mx16}>
-      <View
-        style={[
-          gs.py12,
-          gs.px14,
-          gs.rounded12,
-          gs.mb15,
-          gs.center,
-          {backgroundColor: colors.containerColor},
-        ]}>
-        <PrimaryText size={11} weight="medium" color={colors.secondaryText} style={gs.mb5}>
-          {overallLabel}
-        </PrimaryText>
-        <PrimaryText size={28} weight="bold" variant="number" color={amountColor}>
-          {formatAmount(Math.abs(totalDebts))}
-        </PrimaryText>
-        <View style={[gs.rowCenter, gs.gap6, gs.mt6]}>
-          <PrimaryText size={11} color={colors.secondaryText} variant="number">
-            {t('debts.personCount', {count: personDebtors.length})}
+  const ListHeader = useMemo(
+    () => (
+      <View style={gs.mx16}>
+        <View style={[gs.py12, gs.px14, gs.rounded12, gs.mb15, gs.center, {backgroundColor: colors.containerColor}]}>
+          <PrimaryText size={11} weight="medium" color={colors.secondaryText} style={gs.mb5}>
+            {overallLabel}
           </PrimaryText>
-          <PrimaryText size={11} color={colors.secondaryText}>·</PrimaryText>
-          <PrimaryText size={11} color={colors.secondaryText} variant="number">
-            {t('debts.accountCount', {count: otherAccountsDebtors.length})}
+          <PrimaryText size={28} weight="bold" variant="number" color={amountColor}>
+            {formatAmount(Math.abs(totalDebts))}
           </PrimaryText>
+          <View style={[gs.rowCenter, gs.gap6, gs.mt6]}>
+            <PrimaryText size={11} color={colors.secondaryText} variant="number">
+              {t('debts.personCount', {count: personDebtors.length})}
+            </PrimaryText>
+            <PrimaryText size={11} color={colors.secondaryText}>
+              ·
+            </PrimaryText>
+            <PrimaryText size={11} color={colors.secondaryText} variant="number">
+              {t('debts.accountCount', {count: otherAccountsDebtors.length})}
+            </PrimaryText>
+          </View>
+        </View>
+
+        <View style={[gs.row, gs.gap8, gs.mb15]}>
+          <TouchableOpacity
+            onPress={() => setDebtorType('Person')}
+            activeOpacity={0.7}
+            style={[
+              gs.py8,
+              gs.px14,
+              gs.rounded12,
+              {
+                backgroundColor: debtorType === 'Person' ? colors.primaryText : colors.secondaryAccent,
+              },
+            ]}>
+            <PrimaryText
+              size={13}
+              weight="semibold"
+              color={debtorType === 'Person' ? colors.buttonText : colors.secondaryText}>
+              {t('debts.tabPerson')}
+            </PrimaryText>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setDebtorType('Other')}
+            activeOpacity={0.7}
+            style={[
+              gs.py8,
+              gs.px14,
+              gs.rounded12,
+              {
+                backgroundColor: debtorType === 'Other' ? colors.primaryText : colors.secondaryAccent,
+              },
+            ]}>
+            <PrimaryText
+              size={13}
+              weight="semibold"
+              color={debtorType === 'Other' ? colors.buttonText : colors.secondaryText}>
+              {t('debts.tabAccounts')}
+            </PrimaryText>
+          </TouchableOpacity>
         </View>
       </View>
-
-      <View style={[gs.row, gs.gap8, gs.mb15]}>
-        <TouchableOpacity
-          onPress={() => setDebtorType('Person')}
-          activeOpacity={0.7}
-          style={[
-            gs.py8,
-            gs.px14,
-            gs.rounded12,
-            {
-              backgroundColor: debtorType === 'Person' ? colors.primaryText : colors.secondaryAccent,
-            },
-          ]}>
-          <PrimaryText
-            size={13}
-            weight="semibold"
-            color={debtorType === 'Person' ? colors.buttonText : colors.secondaryText}>
-            {t('debts.tabPerson')}
-          </PrimaryText>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => setDebtorType('Other')}
-          activeOpacity={0.7}
-          style={[
-            gs.py8,
-            gs.px14,
-            gs.rounded12,
-            {
-              backgroundColor: debtorType === 'Other' ? colors.primaryText : colors.secondaryAccent,
-            },
-          ]}>
-          <PrimaryText
-            size={13}
-            weight="semibold"
-            color={debtorType === 'Other' ? colors.buttonText : colors.secondaryText}>
-            {t('debts.tabAccounts')}
-          </PrimaryText>
-        </TouchableOpacity>
-      </View>
-    </View>
-  ), [amountColor, colors, formatAmount, debtorType, overallLabel, otherAccountsDebtors.length, personDebtors.length, setDebtorType, t, totalDebts]);
+    ),
+    [
+      amountColor,
+      colors,
+      formatAmount,
+      debtorType,
+      overallLabel,
+      otherAccountsDebtors.length,
+      personDebtors.length,
+      setDebtorType,
+      t,
+      totalDebts,
+    ],
+  );
 
   return (
     <PrimaryView colors={colors} useBottomPadding={false} useSidePadding={false}>
       <View style={[gs.px16, gs.mb15]}>
-        <HeaderContainer headerText={t('debts.title')} />
+        <HeaderContainer testID="debts-screen-header" headerText={t('debts.title')} />
       </View>
       {debtors.length === 0 ? (
         <View style={gs.px16}>
