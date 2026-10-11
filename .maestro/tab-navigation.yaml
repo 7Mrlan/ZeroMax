@@ -44,3 +44,5 @@ appId: com.anotherwhy.zero
     id: debts-screen-header
 - tapOn:
     id: zero-tab-HomeScreen
+- assertVisible:
+    id: home-screen-header
