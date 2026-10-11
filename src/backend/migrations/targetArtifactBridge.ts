@@ -11,20 +11,37 @@ export interface TargetArtifactBridge {
   inspectTargetArtifact: () => Promise<unknown>;
   /** Optional until native marker + closed-adapter deletion is implemented. */
   discardTargetArtifact?: () => Promise<unknown>;
+  claimTargetArtifact?: (attemptId: string, generation: number, sourceFingerprint: string) => Promise<unknown>;
+  updateTargetArtifactMarker?: (
+    attemptId: string,
+    status: 'writing' | 'verified' | 'activated',
+    targetFingerprint?: string,
+  ) => Promise<unknown>;
   probe?: (databaseName: ActiveDatabaseName) => Promise<unknown>;
   readSnapshot?: (databaseName: ActiveDatabaseName) => Promise<unknown>;
 }
 
 const FileMetadataSchema = z.object({size: z.number().nonnegative(), lastModified: z.number().nonnegative()}).strict();
+const MarkerSchema = z
+  .object({
+    attemptId: z.string().min(1),
+    generation: z.number().int().positive(),
+    sourceFingerprint: z.string().min(1),
+    status: z.enum(['writing', 'verified', 'activated']),
+    targetFingerprint: z.string().min(1).optional(),
+  })
+  .strict();
 const NativeArtifactSchema = z.discriminatedUnion('status', [
   z.object({status: z.literal('missing')}).strict(),
   z.object({status: z.literal('orphaned')}).strict(),
+  z.object({status: z.literal('invalid-marker')}).strict(),
   z
     .object({
       status: z.literal('present'),
       database: FileMetadataSchema,
       wal: FileMetadataSchema.nullable(),
       shm: FileMetadataSchema.nullable(),
+      marker: MarkerSchema.nullable(),
     })
     .strict(),
 ]);
@@ -75,14 +92,35 @@ export const inspectTargetRecovery = async (
   if (nativeArtifact.status === 'orphaned') {
     return {kind: 'unknown', reason: 'Target SQLite sidecar exists without its database file'};
   }
+  if (nativeArtifact.status === 'invalid-marker') {
+    return {kind: 'unknown', reason: 'Target artifact marker is invalid'};
+  }
   if (!checkpoint) {
     return {kind: 'unknown', reason: 'Target file exists without a durable migration checkpoint'};
+  }
+
+  if (
+    !nativeArtifact.marker ||
+    nativeArtifact.marker.attemptId !== checkpoint.target.attemptId ||
+    nativeArtifact.marker.generation !== checkpoint.generation ||
+    nativeArtifact.marker.sourceFingerprint !== checkpoint.sourceFingerprint
+  ) {
+    return {kind: 'unknown', reason: 'Target artifact marker belongs to another attempt'};
+  }
+
+  const expectedStatus = statusForCheckpoint(checkpoint);
+  const markerStatusMatches =
+    expectedStatus === 'verified'
+      ? nativeArtifact.marker.status === 'verified' || nativeArtifact.marker.status === 'activated'
+      : nativeArtifact.marker.status === expectedStatus;
+  if (!markerStatusMatches) {
+    return {kind: 'unknown', reason: 'Target artifact marker status does not match the checkpoint'};
   }
 
   // A writing target has no content proof that ties the file to this attempt.
   // Never resume or discard it from size/mtime alone; a native marker and
   // closed adapter lifecycle must be added before this branch can proceed.
-  if (statusForCheckpoint(checkpoint) !== 'verified') {
+  if (expectedStatus !== 'verified') {
     return {kind: 'unknown', reason: 'Writing target ownership marker is unavailable'};
   }
 
@@ -104,7 +142,7 @@ export const inspectTargetRecovery = async (
   }
 
   let fingerprint: string | undefined;
-  if (statusForCheckpoint(checkpoint) === 'verified') {
+  if (expectedStatus === 'verified') {
     if (!bridge.readSnapshot) {
       return {kind: 'unknown', reason: 'Target snapshot bridge is unavailable for verified recovery'};
     }
@@ -119,7 +157,7 @@ export const inspectTargetRecovery = async (
   return {
     kind: 'artifact',
     attemptId: checkpoint.target.attemptId,
-    status: statusForCheckpoint(checkpoint),
+    status: expectedStatus,
     ...(fingerprint ? {fingerprint} : {}),
   };
 };
@@ -139,4 +177,26 @@ export const discardOwnedTargetArtifact = async (
     throw new Error('Target artifact discard bridge is unavailable');
   }
   await bridge.discardTargetArtifact();
+};
+
+export const claimTargetArtifact = async (
+  checkpoint: MigrationCheckpoint,
+  bridge: TargetArtifactBridge = NativeModules.ZeroReadOnlySqlite as TargetArtifactBridge,
+): Promise<void> => {
+  if (!bridge || typeof bridge.claimTargetArtifact !== 'function') {
+    throw new Error('Target artifact claim bridge is unavailable');
+  }
+  await bridge.claimTargetArtifact(checkpoint.target.attemptId, checkpoint.generation, checkpoint.sourceFingerprint);
+};
+
+export const updateTargetArtifactMarker = async (
+  attemptId: string,
+  status: 'writing' | 'verified' | 'activated',
+  targetFingerprint: string | undefined,
+  bridge: TargetArtifactBridge = NativeModules.ZeroReadOnlySqlite as TargetArtifactBridge,
+): Promise<void> => {
+  if (!bridge || typeof bridge.updateTargetArtifactMarker !== 'function') {
+    throw new Error('Target artifact marker update bridge is unavailable');
+  }
+  await bridge.updateTargetArtifactMarker(attemptId, status, targetFingerprint);
 };

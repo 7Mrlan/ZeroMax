@@ -21,14 +21,14 @@ describe('decideTargetRecovery', () => {
     });
   });
 
-  it('resumes an owned writing target', () => {
+  it('requires rebuilding an owned writing target instead of resuming partial rows', () => {
     expect(
       decideTargetRecovery(checkpoint(), {
         kind: 'artifact',
         attemptId: '1:source-a',
         status: 'writing',
       }),
-    ).toEqual({kind: 'resume-owned', attemptId: '1:source-a'});
+    ).toEqual({kind: 'discard-owned', attemptId: '1:source-a'});
   });
 
   it('blocks a target whose marker belongs to another attempt', () => {

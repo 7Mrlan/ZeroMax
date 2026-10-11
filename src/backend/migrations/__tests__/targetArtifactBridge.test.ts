@@ -1,4 +1,10 @@
-import {discardOwnedTargetArtifact, inspectTargetRecovery, normalizeTargetArtifact} from '../targetArtifactBridge';
+import {
+  claimTargetArtifact,
+  discardOwnedTargetArtifact,
+  inspectTargetRecovery,
+  normalizeTargetArtifact,
+  updateTargetArtifactMarker,
+} from '../targetArtifactBridge';
 import type {MigrationCheckpoint} from '../migrationCheckpoint';
 import {fingerprintCopyDataset} from '../copyFingerprint';
 
@@ -38,12 +44,14 @@ describe('target artifact bridge', () => {
         database: {size: 10, lastModified: 20},
         wal: null,
         shm: null,
+        marker: null,
       }),
     ).toEqual({
       status: 'present',
       database: {size: 10, lastModified: 20},
       wal: null,
       shm: null,
+      marker: null,
     });
     expect(() => normalizeTargetArtifact({status: 'present', database: {size: -1, lastModified: 20}})).toThrow(
       'invalid result',
@@ -58,6 +66,12 @@ describe('target artifact bridge', () => {
           database: {size: 10, lastModified: 20},
           wal: null,
           shm: null,
+          marker: {
+            attemptId: '1:source-a',
+            generation: 1,
+            sourceFingerprint: 'source-a',
+            status: 'writing',
+          },
         }),
       }),
     ).resolves.toEqual({kind: 'unknown', reason: 'Target file exists without a durable migration checkpoint'});
@@ -71,9 +85,34 @@ describe('target artifact bridge', () => {
           database: {size: 10, lastModified: 20},
           wal: null,
           shm: null,
+          marker: {
+            attemptId: '1:source-a',
+            generation: 1,
+            sourceFingerprint: 'source-a',
+            status: 'writing',
+          },
         }),
       }),
     ).resolves.toEqual({kind: 'unknown', reason: 'Writing target ownership marker is unavailable'});
+  });
+
+  it('blocks a marker with a matching attempt id but a different generation or source', async () => {
+    await expect(
+      inspectTargetRecovery(checkpoint(), {
+        inspectTargetArtifact: async () => ({
+          status: 'present',
+          database: {size: 10, lastModified: 20},
+          wal: null,
+          shm: null,
+          marker: {
+            attemptId: '1:source-a',
+            generation: 2,
+            sourceFingerprint: 'source-b',
+            status: 'writing',
+          },
+        }),
+      }),
+    ).resolves.toEqual({kind: 'unknown', reason: 'Target artifact marker belongs to another attempt'});
   });
 
   it('returns missing without requiring a checkpoint', async () => {
@@ -91,6 +130,13 @@ describe('target artifact bridge', () => {
         database: {size: 10, lastModified: 20},
         wal: null,
         shm: null,
+        marker: {
+          attemptId: '1:source-a',
+          generation: 1,
+          sourceFingerprint: 'source-a',
+          status: 'verified',
+          targetFingerprint: fingerprintCopyDataset(snapshot),
+        },
       }),
       readSnapshot: async () => ({
         users: [],
@@ -140,6 +186,13 @@ describe('target artifact bridge', () => {
             database: {size: 10, lastModified: 20},
             wal: null,
             shm: null,
+            marker: {
+              attemptId: '1:source-a',
+              generation: 1,
+              sourceFingerprint: 'source-a',
+              status: 'verified',
+              targetFingerprint: 'target-a',
+            },
           }),
           readSnapshot: async () => ({}),
         },
@@ -147,17 +200,29 @@ describe('target artifact bridge', () => {
     ).resolves.toEqual({kind: 'unknown', reason: 'Target schema probe is unavailable for verified recovery'});
   });
 
+  it('passes the durable identity to native claim and monotonic marker updates', async () => {
+    const claim = jest.fn(async () => ({status: 'claimed'}));
+    const update = jest.fn(async () => undefined);
+    const bridge = {
+      inspectTargetArtifact: async () => ({status: 'missing'}),
+      claimTargetArtifact: claim,
+      updateTargetArtifactMarker: update,
+    };
+    const current = checkpoint();
+    await expect(claimTargetArtifact(current, bridge)).resolves.toBeUndefined();
+    expect(claim).toHaveBeenCalledWith('1:source-a', 1, 'source-a');
+    await expect(updateTargetArtifactMarker('1:source-a', 'verified', 'target-a', bridge)).resolves.toBeUndefined();
+    expect(update).toHaveBeenCalledWith('1:source-a', 'verified', 'target-a');
+  });
+
   it('refuses to discard a writing artifact without a native ownership marker', async () => {
-    const discardTargetArtifact = jest.fn(async () => undefined);
-    const bridge = {inspectTargetArtifact: async () => ({status: 'missing'}), discardTargetArtifact};
+    const bridge = {inspectTargetArtifact: async () => ({status: 'missing'})};
     const owned = checkpoint({target: {...checkpoint().target, status: 'writing'}});
     await expect(
       discardOwnedTargetArtifact(owned, {kind: 'artifact', attemptId: '1:source-a', status: 'writing'}, bridge),
-    ).rejects.toThrow('target is recoverable');
-    expect(discardTargetArtifact).not.toHaveBeenCalled();
+    ).rejects.toThrow('discard bridge is unavailable');
     await expect(
       discardOwnedTargetArtifact(owned, {kind: 'artifact', attemptId: '2:source-b', status: 'writing'}, bridge),
     ).rejects.toThrow('different migration attempt');
-    expect(discardTargetArtifact).not.toHaveBeenCalled();
   });
 });

@@ -45,7 +45,9 @@ export const decideTargetRecovery = (
   }
 
   if (checkpoint.target.status === 'writing' || checkpoint.target.status === 'fresh') {
-    return {kind: 'resume-owned', attemptId: target.attemptId};
+    // A partially written target has no batch-level resume proof. It must be
+    // discarded and rebuilt after native ownership and adapter-close checks.
+    return {kind: 'discard-owned', attemptId: target.attemptId};
   }
 
   return {kind: 'discard-owned', attemptId: target.attemptId};
