@@ -1,6 +1,6 @@
 import {RefreshControl, View} from 'react-native';
 import {TouchableOpacity} from 'react-native-gesture-handler';
-import React, {useCallback, useRef, memo} from 'react';
+import React, {useCallback, useMemo, useRef, useState, memo} from 'react';
 import {useTranslation} from 'react-i18next';
 import type {SwipeableMethods} from 'react-native-gesture-handler/ReanimatedSwipeable';
 import {navigate} from '../../utils/navigationUtils';
@@ -25,6 +25,9 @@ const CategoryRow = memo(
     colors,
     onEdit,
     onDelete,
+    onToggle,
+    depth,
+    hasChildren,
     openSwipeableRef,
     tutorialSwipeRef,
   }: {
@@ -32,6 +35,9 @@ const CategoryRow = memo(
     colors: Colors;
     onEdit: (id: string, name: string, icon: string, color: string) => void;
     onDelete: (id: string) => void;
+    onToggle: () => void;
+    depth: number;
+    hasChildren: boolean;
     openSwipeableRef: React.RefObject<{close: () => void} | null>;
     tutorialSwipeRef?: React.RefObject<SwipeableMethods | null>;
   }) => {
@@ -51,7 +57,14 @@ const CategoryRow = memo(
           colors={colors}
           swipeRef={tutorialSwipeRef}
           openSwipeableRef={openSwipeableRef}>
-          <View style={[gs.rounded12, gs.rowCenter, gs.px14, gs.py12, {backgroundColor: colors.containerColor}]}>
+          <View
+            style={[
+              gs.rounded12,
+              gs.rowCenter,
+              gs.px14,
+              gs.py12,
+              {backgroundColor: colors.containerColor, marginLeft: depth * 18},
+            ]}>
             <View
               style={[
                 gs.size36,
@@ -61,9 +74,12 @@ const CategoryRow = memo(
               ]}>
               <Icon name={category.icon || 'shapes'} size={18} color={category.color || colors.primaryText} />
             </View>
-            <PrimaryText weight="medium" size={14} style={gs.ml12} numberOfLines={1}>
-              {category.name}
-            </PrimaryText>
+            <TouchableOpacity onPress={onToggle} disabled={!hasChildren} style={[gs.rowCenter, gs.flex1]}>
+              <PrimaryText weight="medium" size={14} style={gs.ml12} numberOfLines={1}>
+                {category.name}
+              </PrimaryText>
+              {hasChildren ? <Icon name="chevron-down" size={16} color={colors.secondaryText} /> : null}
+            </TouchableOpacity>
           </View>
         </SwipeableRow>
       </View>
@@ -75,18 +91,45 @@ const CategoryScreen = () => {
   const {colors, refreshing, onRefresh, categories, handleEdit, handleDelete} = useCategory();
   const {t} = useTranslation();
   const openSwipeableRef = useRef<{close: () => void} | null>(null);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const visibleCategories = useMemo(() => {
+    const childrenByParent = new Map<string, Category[]>();
+    for (const category of categories) {
+      if (category.parentId) {
+        childrenByParent.set(category.parentId, [...(childrenByParent.get(category.parentId) ?? []), category]);
+      }
+    }
+    return categories.flatMap(category => {
+      if (category.parentId) return [];
+      const children = childrenByParent.get(category.id) ?? [];
+      const root = {category, depth: 0, hasChildren: children.length > 0};
+      return expandedIds.has(category.id)
+        ? [root, ...children.map(child => ({category: child, depth: 1, hasChildren: false}))]
+        : [root];
+    });
+  }, [categories, expandedIds]);
   const {shouldShowTutorial, tutorialRef, dismissTutorial} = useSwipeTutorial({
     screen: 'category',
     itemCount: categories.length,
   });
 
   const renderCategoryItem = useCallback(
-    ({item: category, index}: {item: Category; index: number}) => (
+    ({item, index}: {item: (typeof visibleCategories)[number]; index: number}) => (
       <CategoryRow
-        category={category}
+        category={item.category}
         colors={colors}
         onEdit={handleEdit}
         onDelete={handleDelete}
+        depth={item.depth}
+        hasChildren={item.hasChildren}
+        onToggle={() =>
+          setExpandedIds(current => {
+            const next = new Set(current);
+            if (next.has(item.category.id)) next.delete(item.category.id);
+            else next.add(item.category.id);
+            return next;
+          })
+        }
         openSwipeableRef={openSwipeableRef}
         tutorialSwipeRef={index === 0 ? tutorialRef : undefined}
       />
@@ -108,9 +151,9 @@ const CategoryScreen = () => {
         {shouldShowTutorial && <SwipeTutorialTooltip onDismiss={dismissTutorial} />}
         <View style={gs.flex1}>
           <FlashList
-            data={categories}
+            data={visibleCategories}
             renderItem={renderCategoryItem}
-            keyExtractor={item => String(item.id)}
+            keyExtractor={item => String(item.category.id)}
             showsVerticalScrollIndicator={false}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
             ListEmptyComponent={ListEmptyComponent}
