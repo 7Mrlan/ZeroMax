@@ -27,6 +27,7 @@
     "security:secrets": "node scripts/secret-scan.js",
     "audit:high": "pnpm audit --prod --audit-level high",
     "performance:validate": "node scripts/validate-performance-report.js",
+    "licenses:generate": "node scripts/generate-license-attribution.js",
     "android:artifact:check": "node scripts/check-android-artifact.js",
     "commitlint:range": "commitlint --from=HEAD~1 --to=HEAD",
     "typecheck": "tsc --strict",
