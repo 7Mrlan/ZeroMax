@@ -46,3 +46,5 @@ page runtime、签名或商店发布。
 同一 API35 debug runtime 还执行了真实 legacy fixtures：Zero v3 与 Zerox v3 均完成 native copy/read-back，首次 verified 后点击 Retry 复用 target 并推进 activated。Zero 保持 1 user、1 category、1 expense、1 budget 及金额 expense 12.5/debt 30/budget 100；Zerox 保持 1 user、2 categories、1 expense、1 income、1 debt 及金额 expense 12.5/income 3000/debt 30。target 分别补齐空 incomes/budgets；合并 WAL/SHM 后两库 `user_version=4`、`integrity_check=ok`。这仍不替代 legacy copy 中途 kill、WAL 锁定 fixture 和性能矩阵。
 
 5000 条 Zero v3 fixture 的 legacy copy fault injection 也已完成：在 target marker=`writing` 时 force-stop，第一次重启清理半成品并进入可重试错误页；点击 Retry 后创建新 generation 并激活 target。最终 target v4 合并 WAL/SHM 检查为 `user_version=4`、`integrity_check=ok`、expenses 5,000 行、金额总和 `240084`、budget 金额 `1000`，与 source v3 一致，source 文件仍保留。这是 legacy copy 中途 kill 的真实证据；WAL 锁定/权限 fixture 和性能矩阵仍待完成。
+
+锁定 fixture：在 app 私有 legacy `watermelon.db` 上用 Android `/system/bin/sqlite3` 保持 `BEGIN EXCLUSIVE`，启动 BootGate 后错误页显示 `database is locked (code 5 SQLITE_BUSY)`，没有打开 writable adapter 或覆盖源库；释放事务后点击 Retry，Zero v3 迁移完成并 marker=`activated`。该证据覆盖 locked source fail-closed/retry，仍不替代权限拒绝和性能矩阵。
