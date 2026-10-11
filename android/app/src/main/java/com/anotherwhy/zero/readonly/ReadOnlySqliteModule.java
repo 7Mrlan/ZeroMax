@@ -89,6 +89,7 @@ public final class ReadOnlySqliteModule extends ReactContextBaseJavaModule {
             result.putMap("tables", readColumns(database));
             result.putMap("indexes", readIndexes(database));
             result.putArray("unknownTables", readUnknownTables(database));
+            result.putMap("unknownColumns", readUnknownColumns(database));
             result.putString("integrity", readIntegrity(database) ? "ok" : "failed");
             promise.resolve(result);
         } catch (SQLiteException error) {
@@ -806,6 +807,39 @@ public final class ReadOnlySqliteModule extends ReactContextBaseJavaModule {
             }
         }
         return unknown;
+    }
+
+    private WritableMap readUnknownColumns(SQLiteDatabase database) {
+        WritableMap unknown = Arguments.createMap();
+        for (String table : INSPECTED_TABLES) {
+            Set<String> allowed = allowedColumns(table);
+            WritableArray columns = Arguments.createArray();
+            try (Cursor cursor = database.rawQuery("PRAGMA table_info(\"" + table + "\")", null)) {
+                int nameIndex = cursor.getColumnIndex("name");
+                while (cursor.moveToNext()) {
+                    String column = cursor.getString(nameIndex);
+                    if (!allowed.contains(column)) columns.pushString(column);
+                }
+            }
+            if (columns.size() > 0) unknown.putArray(table, columns);
+        }
+        return unknown;
+    }
+
+    private Set<String> allowedColumns(String table) {
+        Set<String> columns = new HashSet<>(Arrays.asList("id", "_changed", "_status"));
+        switch (table) {
+            case "users": columns.addAll(Arrays.asList("username", "email")); break;
+            case "categories": columns.addAll(Arrays.asList("name", "category_status", "user_id", "icon", "color", "parent_id", "kind")); break;
+            case "expenses": columns.addAll(Arrays.asList("title", "amount", "description", "category_id", "user_id", "date")); break;
+            case "incomes": columns.addAll(Arrays.asList("title", "amount", "category_id", "user_id", "date")); break;
+            case "currencies": columns.addAll(Arrays.asList("code", "symbol", "name", "user_id")); break;
+            case "debtors": columns.addAll(Arrays.asList("title", "type", "debtor_status", "user_id", "icon", "color")); break;
+            case "debts": columns.addAll(Arrays.asList("description", "amount", "debtor_id", "user_id", "date", "type")); break;
+            case "budgets": columns.addAll(Arrays.asList("user_id", "category_id", "amount", "month", "budget_type")); break;
+            default: break;
+        }
+        return columns;
     }
 
     private WritableArray readRows(SQLiteDatabase database, String table) {
