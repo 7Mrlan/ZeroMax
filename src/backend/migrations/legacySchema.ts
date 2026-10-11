@@ -8,6 +8,8 @@ export interface LegacySchemaSnapshot {
   tables: Record<string, string[]>;
   /** Index names/columns are supplied by the native probe for exact v4 checks. */
   indexes?: Record<string, string[]>;
+  /** Native probes must report every non-Watermelon user table. */
+  unknownTables?: string[];
 }
 
 export type LegacyDatabaseSource = 'zero-v3' | 'zerox-v3' | 'target-v4' | 'unknown';
@@ -35,7 +37,7 @@ const hasCoreTables = (snapshot: LegacySchemaSnapshot): boolean =>
  * than guessing and silently dropping columns.
  */
 export const detectLegacyDatabaseSource = (snapshot: LegacySchemaSnapshot): LegacyDatabaseSource => {
-  if (!Number.isInteger(snapshot.version) || !hasCoreTables(snapshot)) {
+  if (!Number.isInteger(snapshot.version) || !hasCoreTables(snapshot) || (snapshot.unknownTables?.length ?? 0) > 0) {
     return 'unknown';
   }
 

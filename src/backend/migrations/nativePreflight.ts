@@ -23,6 +23,7 @@ const NativeProbeResultSchema = z.discriminatedUnion('status', [
     version: z.number().int().nonnegative(),
     tables: z.record(z.string(), z.array(z.string())),
     indexes: z.record(z.string(), z.array(z.string())),
+    unknownTables: z.array(z.string()).optional(),
     integrity: z.enum(['ok', 'failed']),
   }),
 ]);
@@ -54,7 +55,12 @@ export const normalizeNativeProbeResult = (value: unknown): DatabaseProbeResult 
 
   return {
     kind: 'metadata',
-    snapshot: {version: parsed.data.version, tables: parsed.data.tables, indexes: parsed.data.indexes},
+    snapshot: {
+      version: parsed.data.version,
+      tables: parsed.data.tables,
+      indexes: parsed.data.indexes,
+      ...(parsed.data.unknownTables ? {unknownTables: parsed.data.unknownTables} : {}),
+    },
     integrity: parsed.data.integrity,
   };
 };

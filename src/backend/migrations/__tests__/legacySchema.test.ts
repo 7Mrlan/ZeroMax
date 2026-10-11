@@ -73,5 +73,6 @@ describe('legacy database source detection', () => {
       'unknown',
     );
     expect(detectLegacyDatabaseSource({...targetV4, version: 5})).toBe('unknown');
+    expect(detectLegacyDatabaseSource({...zeroV3, unknownTables: ['custom_events']})).toBe('unknown');
   });
 });

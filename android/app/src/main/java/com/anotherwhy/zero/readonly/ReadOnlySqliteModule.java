@@ -88,6 +88,7 @@ public final class ReadOnlySqliteModule extends ReactContextBaseJavaModule {
             result.putInt("version", database.getVersion());
             result.putMap("tables", readColumns(database));
             result.putMap("indexes", readIndexes(database));
+            result.putArray("unknownTables", readUnknownTables(database));
             result.putString("integrity", readIntegrity(database) ? "ok" : "failed");
             promise.resolve(result);
         } catch (SQLiteException error) {
@@ -787,6 +788,24 @@ public final class ReadOnlySqliteModule extends ReactContextBaseJavaModule {
             }
         }
         return indexes;
+    }
+
+    private WritableArray readUnknownTables(SQLiteDatabase database) {
+        WritableArray unknown = Arguments.createArray();
+        try (Cursor cursor = database.rawQuery(
+                "SELECT name FROM sqlite_master WHERE type = 'table' " +
+                        "AND name NOT LIKE 'sqlite_%' AND name <> 'local_storage'",
+                null
+        )) {
+            int nameIndex = cursor.getColumnIndex("name");
+            while (cursor.moveToNext()) {
+                String table = cursor.getString(nameIndex);
+                if (!Arrays.asList(INSPECTED_TABLES).contains(table)) {
+                    unknown.pushString(table);
+                }
+            }
+        }
+        return unknown;
     }
 
     private WritableArray readRows(SQLiteDatabase database, String table) {
