@@ -2,14 +2,16 @@ import {NativeModules} from 'react-native';
 import {z} from 'zod';
 import type {ActiveDatabaseName} from './activeDatabase';
 import {fingerprintCopyDataset} from './copyFingerprint';
-import {readDatabaseSnapshotReadOnly} from './nativePreflight';
+import {probeDatabaseReadOnly, readDatabaseSnapshotReadOnly, type ReadOnlySqliteBridge} from './nativePreflight';
 import type {MigrationCheckpoint} from './migrationCheckpoint';
 import {decideTargetRecovery, type TargetObservation} from './targetArtifact';
+import {detectLegacyDatabaseSource} from './legacySchema';
 
 export interface TargetArtifactBridge {
   inspectTargetArtifact: () => Promise<unknown>;
   /** Optional until native marker + closed-adapter deletion is implemented. */
   discardTargetArtifact?: () => Promise<unknown>;
+  probe?: (databaseName: ActiveDatabaseName) => Promise<unknown>;
   readSnapshot?: (databaseName: ActiveDatabaseName) => Promise<unknown>;
 }
 
@@ -82,6 +84,23 @@ export const inspectTargetRecovery = async (
   // closed adapter lifecycle must be added before this branch can proceed.
   if (statusForCheckpoint(checkpoint) !== 'verified') {
     return {kind: 'unknown', reason: 'Writing target ownership marker is unavailable'};
+  }
+
+  if (typeof bridge.probe !== 'function') {
+    return {kind: 'unknown', reason: 'Target schema probe is unavailable for verified recovery'};
+  }
+  const targetProbe = await probeDatabaseReadOnly('watermelon_v4', {
+    probe: bridge.probe,
+    readSnapshot: bridge.readSnapshot,
+  } satisfies ReadOnlySqliteBridge);
+  if (targetProbe.kind === 'error') {
+    return {kind: 'unknown', reason: targetProbe.error.message};
+  }
+  if (targetProbe.kind !== 'metadata' || targetProbe.integrity !== 'ok') {
+    return {kind: 'unknown', reason: 'Target schema or SQLite integrity is not verified'};
+  }
+  if (detectLegacyDatabaseSource(targetProbe.snapshot) !== 'target-v4') {
+    return {kind: 'unknown', reason: 'Target database is not the exact v4 schema'};
   }
 
   let fingerprint: string | undefined;

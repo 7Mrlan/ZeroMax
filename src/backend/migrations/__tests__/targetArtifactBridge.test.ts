@@ -2,6 +2,23 @@ import {discardOwnedTargetArtifact, inspectTargetRecovery, normalizeTargetArtifa
 import type {MigrationCheckpoint} from '../migrationCheckpoint';
 import {fingerprintCopyDataset} from '../copyFingerprint';
 
+const targetProbe = {
+  status: 'ready' as const,
+  version: 4,
+  integrity: 'ok' as const,
+  indexes: {},
+  tables: {
+    users: ['username', 'email'],
+    categories: ['name', 'category_status', 'user_id', 'icon', 'color', 'parent_id', 'kind'],
+    expenses: ['title', 'amount', 'description', 'category_id', 'user_id', 'date'],
+    incomes: ['title', 'amount', 'category_id', 'user_id', 'date'],
+    currencies: ['code', 'symbol', 'name', 'user_id'],
+    debtors: ['title', 'type', 'debtor_status', 'user_id', 'icon', 'color'],
+    debts: ['description', 'amount', 'debtor_id', 'user_id', 'date', 'type'],
+    budgets: ['user_id', 'category_id', 'amount', 'month', 'budget_type'],
+  },
+};
+
 const checkpoint = (overrides: Partial<MigrationCheckpoint> = {}): MigrationCheckpoint => ({
   schemaVersion: 1,
   generation: 1,
@@ -85,6 +102,7 @@ describe('target artifact bridge', () => {
         debts: [],
         budgets: [],
       }),
+      probe: async () => targetProbe,
     };
     const snapshot = {
       users: [],
@@ -110,6 +128,23 @@ describe('target artifact bridge', () => {
       attemptId: '1:source-a',
       fingerprint: fingerprintCopyDataset(snapshot),
     });
+  });
+
+  it('blocks verified recovery when the exact target schema probe is unavailable', async () => {
+    await expect(
+      inspectTargetRecovery(
+        checkpoint({state: 'verified', target: {...checkpoint().target, status: 'verified', fingerprint: 'target-a'}}),
+        {
+          inspectTargetArtifact: async () => ({
+            status: 'present',
+            database: {size: 10, lastModified: 20},
+            wal: null,
+            shm: null,
+          }),
+          readSnapshot: async () => ({}),
+        },
+      ),
+    ).resolves.toEqual({kind: 'unknown', reason: 'Target schema probe is unavailable for verified recovery'});
   });
 
   it('refuses to discard a writing artifact without a native ownership marker', async () => {
