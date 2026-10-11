@@ -58,7 +58,7 @@ const AnimatedTabBar = ({state, descriptors, navigation}: BottomTabBarProps) => 
           <Pressable
             key={route.key}
             accessibilityRole="tab"
-            accessibilityState={focused ? {selected: true} : {}}
+            accessibilityState={{selected: focused}}
             accessibilityLabel={options.tabBarAccessibilityLabel ?? route.name}
             testID={options.tabBarButtonTestID ?? `zero-tab-${route.name}`}
             onPress={onPress}
