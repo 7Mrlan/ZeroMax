@@ -57,7 +57,7 @@ const PrimaryView: React.FC<PrimaryViewProps> = ({
         },
         style,
       ]}>
-      <StatusBar backgroundColor={colors.primaryBackground} barStyle={isDark ? 'light-content' : 'dark-content'} />
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
       {children}
     </View>
   );

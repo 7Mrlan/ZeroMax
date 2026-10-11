@@ -1,17 +1,14 @@
+const babelParser = require('@babel/eslint-parser');
+const react = require('eslint-plugin-react');
+const reactHooks = require('eslint-plugin-react-hooks');
+const reactNative = require('eslint-plugin-react-native');
+const globals = require('globals');
+
 /**
- * Flat config (ESLint 9+). Replaces the legacy .eslintrc.js — ESLint 10
- * dropped eslintrc support entirely, and ESLint is pinned to ^9 because
- * eslint-plugin-react-hooks / eslint-plugin-react / @babel/eslint-parser
- * all cap their peer range at 9.
+ * TypeScript 7 is the compiler of record. The RN preset's typescript-eslint
+ * plugin currently rejects TS 7, so lint parsing is syntax-only through Babel;
+ * semantic checks remain in `pnpm run typecheck`.
  */
-const reactNativeConfig = require('@react-native/eslint-config/flat');
-
-// The RN config ships Flow lint rules (eslint-plugin-ft-flow) for **/*.js.
-// This codebase is TypeScript-only, and the pinned ft-flow@2 calls
-// context.getAllComments(), removed in ESLint 9 — it crashes the whole run.
-// Dropping the block is correct here rather than force-resolving ft-flow@3.
-const withoutFlowRules = reactNativeConfig.filter(entry => !entry.plugins?.['ft-flow']);
-
 module.exports = [
   {
     ignores: [
@@ -25,9 +22,40 @@ module.exports = [
       'zerox/**',
     ],
   },
-  ...withoutFlowRules,
   {
-    // Test setup/preload files run in the test runner, not the app.
+    files: ['**/*.{js,jsx,ts,tsx}'],
+    languageOptions: {
+      parser: babelParser,
+      parserOptions: {
+        requireConfigFile: false,
+        babelOptions: {
+          presets: ['module:@react-native/babel-preset'],
+          plugins: [['@babel/plugin-proposal-decorators', {legacy: true}]],
+        },
+        ecmaVersion: 'latest',
+        sourceType: 'module',
+      },
+      globals: {
+        ...globals.es2021,
+        ...globals.node,
+        __DEV__: 'readonly',
+        jest: 'readonly',
+      },
+    },
+    plugins: {react, 'react-hooks': reactHooks, 'react-native': reactNative},
+    settings: {react: {version: 'detect'}},
+    rules: {
+      ...react.configs.recommended.rules,
+      'react/react-in-jsx-scope': 'off',
+      'react/prop-types': 'off',
+      'react/display-name': 'off',
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
+      'react-native/no-inline-styles': 'warn',
+      'react-native/no-raw-text': 'off',
+    },
+  },
+  {
     files: ['jest.setup.js', 'jest.config.js', 'src/testing/**'],
     languageOptions: {
       globals: {jest: 'readonly', require: 'readonly', module: 'writable'},

@@ -1,5 +1,5 @@
 import React, {memo, useCallback, useRef, useState} from 'react';
-import {FlatList, useWindowDimensions, View, ViewToken} from 'react-native';
+import {FlatList, useWindowDimensions, View, ListViewToken} from 'react-native';
 import {useTranslation} from 'react-i18next';
 import PrimaryText from './PrimaryText';
 import useThemeColors from '../../hooks/useThemeColors';
@@ -38,7 +38,7 @@ const Carousel = () => {
 
   // Kept in a ref: FlatList treats a changed onViewableItemsChanged identity
   // as a fatal error, so this callback must be stable for the list's lifetime.
-  const onViewableItemsChanged = useRef(({viewableItems}: {viewableItems: Array<ViewToken>}) => {
+  const onViewableItemsChanged = useRef(({viewableItems}: {viewableItems: Array<ListViewToken>}) => {
     const first = viewableItems[0];
     if (first?.index != null) {
       setActiveIndex(first.index);

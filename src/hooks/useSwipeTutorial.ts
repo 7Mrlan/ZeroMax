@@ -1,5 +1,4 @@
 import {useCallback, useEffect, useRef, useState} from 'react';
-import {InteractionManager} from 'react-native';
 import type {SwipeableMethods} from 'react-native-gesture-handler/ReanimatedSwipeable';
 import StorageService from '../utils/asyncStorageService';
 
@@ -40,7 +39,7 @@ const useSwipeTutorial = ({screen, itemCount}: UseSwipeTutorialOptions): UseSwip
     setActive(true);
 
     // Every timer in the demo chain is tracked so unmount can cancel the whole
-    // thing. Cancelling only the InteractionManager task was not enough: once
+    // thing. Cancelling only the idle callback is not enough: once
     // that callback fired, the nested setTimeouts ran to completion ~2.6s
     // later, calling openLeft/close/openRight on a ref belonging to a row the
     // user had already navigated away from.
@@ -60,7 +59,20 @@ const useSwipeTutorial = ({screen, itemCount}: UseSwipeTutorialOptions): UseSwip
       );
     };
 
-    const task = InteractionManager.runAfterInteractions(() => {
+    const idleApi = globalThis as typeof globalThis & {
+      requestIdleCallback?: (callback: () => void, options?: {timeout: number}) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+    const scheduleIdle = (callback: () => void): {cancel: () => void} => {
+      if (typeof idleApi.requestIdleCallback === 'function') {
+        const id = idleApi.requestIdleCallback(callback, {timeout: 300});
+        return {cancel: () => idleApi.cancelIdleCallback?.(id)};
+      }
+      const id = setTimeout(callback, 0);
+      return {cancel: () => clearTimeout(id)};
+    };
+
+    const task = scheduleIdle(() => {
       if (cancelled) {
         return;
       }

@@ -2,3 +2,7 @@
 # This is the only install script explicitly allowed by the lockfile policy.
 allowBuilds:
   unrs-resolver: true
+
+# Keep a single Worklets runtime across Reanimated and ActionSheet.
+overrides:
+  react-native-worklets: 0.13.0
