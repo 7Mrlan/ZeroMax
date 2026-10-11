@@ -35,9 +35,10 @@ interface CategorySelection {
 interface CategoryEntryProps {
   type: string;
   route?: RouteProp<HomeStackParamList, 'UpdateCategoryScreen'>;
+  kind?: 'expense' | 'income';
 }
 
-const CategoryEntry: React.FC<CategoryEntryProps> = ({type, route}) => {
+const CategoryEntry: React.FC<CategoryEntryProps> = ({type, route, kind = 'expense'}) => {
   const {t} = useTranslation();
   const {showAlert} = useDialog();
   const colors = useThemeColors();
@@ -61,11 +62,25 @@ const CategoryEntry: React.FC<CategoryEntryProps> = ({type, route}) => {
   const [selectedColor, setSelectedColor] = useState<string | null>(
     isAddButton ? '#808080' : resolveIconParam(categoryData?.categoryColor),
   );
+  const [parentId, setParentId] = useState<string | null>(
+    isAddButton ? null : (categoryData?.categoryParentId ?? null),
+  );
   const [selectedCategories, setSelectedCategories] = useState<Array<CategorySelection>>([]);
 
   const selectedCategoryNames = useMemo(() => new Set(selectedCategories.map(c => c.name)), [selectedCategories]);
 
   const allCategories = useAppSelector(selectCategoryData);
+  const parentCategories = useMemo(
+    () =>
+      (allCategories ?? []).filter(
+        category =>
+          category.categoryStatus &&
+          category.kind === kind &&
+          !category.parentId &&
+          category.id !== categoryData?.categoryId,
+      ),
+    [allCategories, categoryData?.categoryId, kind],
+  );
   const existingCategoryNamesSet = useMemo(
     () => new Set((allCategories ?? []).map((category: CategorySelection) => category.name)),
     [allCategories],
@@ -80,7 +95,7 @@ const CategoryEntry: React.FC<CategoryEntryProps> = ({type, route}) => {
 
   const handleAddCategory = useCallback(async () => {
     try {
-      await createCategory(categoryName, userId, selectedIcon, selectedColor);
+      await createCategory(categoryName, userId, selectedIcon, selectedColor, kind, parentId);
       dispatch(fetchCategories());
       goBack();
     } catch (error) {
@@ -88,7 +103,7 @@ const CategoryEntry: React.FC<CategoryEntryProps> = ({type, route}) => {
         console.error('Error creating category:', error);
       }
     }
-  }, [categoryName, userId, selectedIcon, selectedColor, dispatch]);
+  }, [categoryName, userId, selectedIcon, selectedColor, dispatch, kind, parentId]);
 
   const handleAddFromDefaultCategory = useCallback(async () => {
     // Was the one handler here with no try/catch: a rejected createCategory
@@ -96,7 +111,7 @@ const CategoryEntry: React.FC<CategoryEntryProps> = ({type, route}) => {
     // looked like the tap did nothing at all.
     try {
       for (const category of selectedCategories) {
-        await createCategory(category.name, userId, category.icon ?? null, category.color ?? null);
+        await createCategory(category.name, userId, category.icon ?? null, category.color ?? null, kind, null);
       }
       dispatch(fetchCategories());
       goBack();
@@ -109,7 +124,7 @@ const CategoryEntry: React.FC<CategoryEntryProps> = ({type, route}) => {
       dispatch(fetchCategories());
       await showAlert({type: 'error', message: t('category.createFailed')});
     }
-  }, [selectedCategories, userId, dispatch, showAlert, t]);
+  }, [selectedCategories, userId, dispatch, showAlert, t, kind]);
 
   const handleUpdateCategory = useCallback(async () => {
     if (!categoryData?.categoryId) {
@@ -121,6 +136,8 @@ const CategoryEntry: React.FC<CategoryEntryProps> = ({type, route}) => {
         categoryName,
         selectedIcon ?? undefined,
         selectedColor ?? undefined,
+        kind,
+        parentId,
       );
       dispatch(fetchCategories());
       goBack();
@@ -129,15 +146,15 @@ const CategoryEntry: React.FC<CategoryEntryProps> = ({type, route}) => {
         console.error('Error updating category:', error);
       }
     }
-  }, [categoryData?.categoryId, categoryName, selectedIcon, selectedColor, dispatch]);
+  }, [categoryData?.categoryId, categoryName, selectedIcon, selectedColor, dispatch, kind, parentId]);
 
   /** Creates the picked default chips AND the typed name, in one pass. */
   const handleAddBothDefaultsAndTyped = useCallback(async () => {
     try {
       for (const category of selectedCategories) {
-        await createCategory(category.name, userId, category.icon ?? null, category.color ?? null);
+        await createCategory(category.name, userId, category.icon ?? null, category.color ?? null, kind, null);
       }
-      await createCategory(categoryName.trim(), userId, selectedIcon, selectedColor);
+      await createCategory(categoryName.trim(), userId, selectedIcon, selectedColor, kind, parentId);
       dispatch(fetchCategories());
       goBack();
     } catch (error) {
@@ -147,7 +164,7 @@ const CategoryEntry: React.FC<CategoryEntryProps> = ({type, route}) => {
       dispatch(fetchCategories());
       await showAlert({type: 'error', message: t('category.createFailed')});
     }
-  }, [selectedCategories, categoryName, userId, selectedIcon, selectedColor, dispatch, showAlert, t]);
+  }, [selectedCategories, categoryName, userId, selectedIcon, selectedColor, dispatch, showAlert, t, kind, parentId]);
 
   /**
    * A typed name and picked default chips are two different intents, and this
@@ -278,6 +295,41 @@ const CategoryEntry: React.FC<CategoryEntryProps> = ({type, route}) => {
           label={t('category.nameLabel')}
           schema={categorySchema}
         />
+
+        <PrimaryText size={12} color={colors.secondaryText} style={gs.mb8}>
+          {t('category.parentLabel')}
+        </PrimaryText>
+        <View style={[gs.row, gs.gap8, gs.mb15]}>
+          <TouchableOpacity
+            onPress={() => setParentId(null)}
+            style={[
+              gs.py8,
+              gs.px12,
+              gs.rounded12,
+              {backgroundColor: parentId === null ? colors.primaryText : colors.secondaryAccent},
+            ]}
+            accessibilityRole="button">
+            <PrimaryText size={12} color={parentId === null ? colors.buttonText : colors.primaryText}>
+              {t('category.rootLabel')}
+            </PrimaryText>
+          </TouchableOpacity>
+          {parentCategories.map(parent => (
+            <TouchableOpacity
+              key={parent.id}
+              onPress={() => setParentId(parent.id)}
+              style={[
+                gs.py8,
+                gs.px12,
+                gs.rounded12,
+                {backgroundColor: parentId === parent.id ? colors.primaryText : colors.secondaryAccent},
+              ]}
+              accessibilityRole="button">
+              <PrimaryText size={12} color={parentId === parent.id ? colors.buttonText : colors.primaryText}>
+                {parent.name}
+              </PrimaryText>
+            </TouchableOpacity>
+          ))}
+        </View>
 
         <PrimaryText size={12} color={colors.secondaryText} style={gs.mb8}>
           {t('category.appearanceLabel')}

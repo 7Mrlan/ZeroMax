@@ -21,12 +21,14 @@ export type HomeStackParamList = {
     expenseDate: string;
     expenseAmount: number;
   };
-  AddCategoryScreen: undefined;
+  AddCategoryScreen: {kind?: 'expense' | 'income'} | undefined;
   UpdateCategoryScreen: {
     categoryId: string;
     categoryName: string;
     categoryIcon: string;
     categoryColor: string;
+    categoryKind?: 'expense' | 'income';
+    categoryParentId?: string | null;
   };
   EverydayTransactionScreen: {
     dayTransactions?: Array<any>;

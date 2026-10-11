@@ -175,7 +175,7 @@ const ExpenseEntry: React.FC<ExpenseEntryProps> = ({type, route}) => {
   ]);
 
   const handleAddCategory = useCallback(() => {
-    navigate('AddCategoryScreen');
+    navigate('AddCategoryScreen', {});
   }, []);
 
   // Gates validation errors: don't flag an amount until the user has left the

@@ -19,68 +19,66 @@ import {FlashList} from '@shopify/flash-list';
 import {gs, hitSlop} from '../../styles/globalStyles';
 import {hexToRgba} from '../../utils/colorUtils';
 
-const CategoryRow = memo(({
-  category,
-  colors,
-  onEdit,
-  onDelete,
-  openSwipeableRef,
-  tutorialSwipeRef,
-}: {
-  category: Category;
-  colors: Colors;
-  onEdit: (id: string, name: string, icon: string, color: string) => void;
-  onDelete: (id: string) => void;
-  openSwipeableRef: React.RefObject<{close: () => void} | null>;
-  tutorialSwipeRef?: React.RefObject<SwipeableMethods | null>;
-}) => {
-  const handleEdit = useCallback(() => {
-    onEdit(String(category.id), category.name, category.icon ?? '', category.color ?? colors.primaryText);
-  }, [onEdit, category, colors.primaryText]);
+const CategoryRow = memo(
+  ({
+    category,
+    colors,
+    onEdit,
+    onDelete,
+    openSwipeableRef,
+    tutorialSwipeRef,
+  }: {
+    category: Category;
+    colors: Colors;
+    onEdit: (id: string, name: string, icon: string, color: string) => void;
+    onDelete: (id: string) => void;
+    openSwipeableRef: React.RefObject<{close: () => void} | null>;
+    tutorialSwipeRef?: React.RefObject<SwipeableMethods | null>;
+  }) => {
+    const handleEdit = useCallback(() => {
+      onEdit(String(category.id), category.name, category.icon ?? '', category.color ?? colors.primaryText);
+    }, [onEdit, category, colors.primaryText]);
 
-  const handleDelete = useCallback(() => {
-    onDelete(category.id);
-  }, [onDelete, category.id]);
+    const handleDelete = useCallback(() => {
+      onDelete(category.id);
+    }, [onDelete, category.id]);
 
-  return (
-    <View style={gs.mb5}>
-      <SwipeableRow
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        colors={colors}
-        swipeRef={tutorialSwipeRef}
-        openSwipeableRef={openSwipeableRef}>
-        <View
-          style={[
-            gs.rounded12,
-            gs.rowCenter,
-            gs.px14,
-            gs.py12,
-            {backgroundColor: colors.containerColor},
-          ]}>
-          <View
-            style={[
-              gs.size36,
-              gs.rounded10,
-              gs.center,
-              {backgroundColor: hexToRgba(category.color || colors.primaryText, 0.094)},
-            ]}>
-            <Icon name={category.icon || 'shapes'} size={18} color={category.color || colors.primaryText} />
+    return (
+      <View style={gs.mb5}>
+        <SwipeableRow
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          colors={colors}
+          swipeRef={tutorialSwipeRef}
+          openSwipeableRef={openSwipeableRef}>
+          <View style={[gs.rounded12, gs.rowCenter, gs.px14, gs.py12, {backgroundColor: colors.containerColor}]}>
+            <View
+              style={[
+                gs.size36,
+                gs.rounded10,
+                gs.center,
+                {backgroundColor: hexToRgba(category.color || colors.primaryText, 0.094)},
+              ]}>
+              <Icon name={category.icon || 'shapes'} size={18} color={category.color || colors.primaryText} />
+            </View>
+            <PrimaryText weight="medium" size={14} style={gs.ml12} numberOfLines={1}>
+              {category.name}
+            </PrimaryText>
           </View>
-          <PrimaryText weight="medium" size={14} style={gs.ml12} numberOfLines={1}>
-            {category.name}
-          </PrimaryText>
-        </View>
-      </SwipeableRow>
-    </View>
-  );
-});
+        </SwipeableRow>
+      </View>
+    );
+  },
+);
 
 const CategoryScreen = () => {
   const {colors, refreshing, onRefresh, categories, handleEdit, handleDelete} = useCategory();
   const {t} = useTranslation();
   const openSwipeableRef = useRef<{close: () => void} | null>(null);
-  const {shouldShowTutorial, tutorialRef, dismissTutorial} = useSwipeTutorial({screen: 'category', itemCount: categories.length});
+  const {shouldShowTutorial, tutorialRef, dismissTutorial} = useSwipeTutorial({
+    screen: 'category',
+    itemCount: categories.length,
+  });
 
   const renderCategoryItem = useCallback(
     ({item: category, index}: {item: Category; index: number}) => (
@@ -123,7 +121,7 @@ const CategoryScreen = () => {
       <View style={[gs.absolute, gs.bottom15, gs.right15, gs.zIndex1]}>
         <TouchableOpacity
           style={[gs.size50, gs.roundedFull, gs.center, {backgroundColor: colors.primaryText}]}
-          onPress={() => navigate('AddCategoryScreen')}
+          onPress={() => navigate('AddCategoryScreen', {})}
           hitSlop={hitSlop}
           accessibilityLabel={t('categories.addCategory')}
           accessibilityRole="button">

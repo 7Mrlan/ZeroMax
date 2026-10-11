@@ -87,7 +87,7 @@ const IncomeEntry = () => {
           selectedCategories={selectedCategories}
         />
         <PrimaryButton
-          onPress={() => navigate('AddCategoryScreen')}
+          onPress={() => navigate('AddCategoryScreen', {kind: 'income'})}
           colors={colors}
           buttonTitle={t('income.addCategoryButton')}
           variant="ghost"

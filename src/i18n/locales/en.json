@@ -176,6 +176,8 @@
     "editTitle": "Edit Category",
     "nameLabel": "Category Name",
     "namePlaceholder": "eg. Stationary",
+    "parentLabel": "Parent category",
+    "rootLabel": "Top level",
     "appearanceLabel": "Appearance",
     "iconLabel": "Icon",
     "colorLabel": "Color",
