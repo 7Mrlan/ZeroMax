@@ -15,14 +15,15 @@ import StorageService from '../../../utils/asyncStorageService';
 const storage = StorageService as jest.Mocked<typeof StorageService>;
 let stored: string | null;
 
-const category = (kind: 'expense' | 'income', name: string) => ({
-  id: `${kind}-category`,
+const category = (kind: 'expense' | 'income', name: string, parentName: string | null = null) => ({
+  id: `${kind}-${parentName ?? 'root'}-${name}`,
   name,
   categoryStatus: true,
   userId: 'u1',
   icon: '',
   color: '#fff',
-  parentId: '',
+  parentId: parentName ? `${kind}-parent` : '',
+  parentName,
   kind,
 });
 
@@ -91,5 +92,25 @@ describe('AI task coordinator', () => {
         }),
       }),
     ).rejects.toThrow('category');
+  });
+
+  it('resolves a child category by its stable parent name and child name', async () => {
+    const task = createAiTask('salary', 'prompt');
+    claimNextAiTask();
+    const result = await runAiTask(task, {
+      userId: 'u1',
+      categories: async () => [category('income', 'Salary', 'Work')],
+      secretStore: {get: () => 'secret', set: jest.fn(), clear: jest.fn()},
+      allowedHosts: ['api.example.com'],
+      database,
+      fetchImpl: async () => ({
+        ok: true,
+        status: 200,
+        headers: {get: () => null},
+        text: async () =>
+          '{"items":[{"type":"income","title":"Salary","amount":100,"categoryName":"Work·Salary","categoryHint":"","date":"2026-01-01","description":""}]}',
+      }),
+    });
+    expect(result.status).toBe('created');
   });
 });

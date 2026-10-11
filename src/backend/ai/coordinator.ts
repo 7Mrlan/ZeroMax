@@ -22,7 +22,7 @@ const findCategory = (categories: CategoryData[], type: 'expense' | 'income', na
         category.categoryStatus &&
         category.kind === type &&
         (category.name.toLowerCase() === normalized ||
-          `${category.parentId ?? ''}·${category.name}`.toLowerCase() === normalized),
+          `${category.parentName ?? ''}·${category.name}`.toLowerCase() === normalized),
     ) ?? null
   );
 };

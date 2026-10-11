@@ -13,6 +13,7 @@ export interface CategoryData {
   icon: string;
   color: string;
   parentId: string;
+  parentName: string | null;
   kind: 'expense' | 'income';
 }
 
@@ -116,6 +117,7 @@ export const updateCategoryById = async (
  */
 export const getAllCategoriesByUserId = async (userId: string): Promise<CategoryData[]> => {
   const categories = await database.get<Category>('categories').query(Q.where('user_id', userId)).fetch();
+  const namesById = new Map(categories.map(category => [category.id, category.name]));
   return categories.map(c => ({
     id: c.id,
     name: c.name,
@@ -124,6 +126,7 @@ export const getAllCategoriesByUserId = async (userId: string): Promise<Category
     icon: sanitizeString(c.icon, DEFAULTS.icon),
     color: sanitizeString(c.color, DEFAULTS.color),
     parentId: c.parentId ?? '',
+    parentName: c.parentId ? (namesById.get(c.parentId) ?? null) : null,
     kind: c.kind === 'income' ? 'income' : 'expense',
   }));
 };
