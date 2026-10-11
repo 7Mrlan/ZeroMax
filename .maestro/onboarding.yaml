@@ -9,14 +9,21 @@ appId: com.anotherwhy.zero
 - tapOn:
     id: onboarding-name
 - inputText:
-    text: E2E User
+    text: Eve User
 - hideKeyboard
+- waitForAnimationToEnd
 - tapOn:
     id: onboarding-personalize-continue
 - tapOn:
     id: onboarding-category-food
 - tapOn:
     id: onboarding-categories-continue
+- tapOn:
+    id: onboarding-currency-search
+- inputText:
+    text: USD
+- hideKeyboard
+- waitForAnimationToEnd
 - tapOn:
     id: currency-option-USD
 - tapOn:
