@@ -63,5 +63,14 @@ describe('legacy database source detection', () => {
     const ambiguous = {...zeroV3, tables: {...zeroV3.tables, incomes: zeroxV3.tables.incomes}};
     expect(detectLegacyDatabaseSource(ambiguous)).toBe('unknown');
     expect(planLegacyMigration(ambiguous).actions).toEqual([]);
+
+    const tablesWithoutExpenses = {...zeroV3.tables};
+    delete tablesWithoutExpenses.expenses;
+    expect(detectLegacyDatabaseSource({...zeroV3, tables: tablesWithoutExpenses})).toBe('unknown');
+
+    expect(detectLegacyDatabaseSource({...zeroV3, version: 2})).toBe('unknown');
+    expect(detectLegacyDatabaseSource({...targetV4, tables: {...targetV4.tables, expenses: ['title']}})).toBe(
+      'unknown',
+    );
   });
 });

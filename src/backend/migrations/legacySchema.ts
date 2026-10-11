@@ -19,10 +19,13 @@ export interface LegacyMigrationPlan {
   requiresBackup: true;
 }
 
-const hasTable = (snapshot: LegacySchemaSnapshot, table: string): boolean => table in snapshot.tables;
+const hasTable = (snapshot: LegacySchemaSnapshot, table: string): boolean => Array.isArray(snapshot.tables[table]);
 
 const hasColumn = (snapshot: LegacySchemaSnapshot, table: string, column: string): boolean =>
   snapshot.tables[table]?.includes(column) ?? false;
+
+const hasCoreTables = (snapshot: LegacySchemaSnapshot): boolean =>
+  ['users', 'categories', 'expenses', 'currencies', 'debtors', 'debts'].every(table => hasTable(snapshot, table));
 
 /**
  * Detects only shapes that have an explicit, tested migration path. Similar or
@@ -30,6 +33,10 @@ const hasColumn = (snapshot: LegacySchemaSnapshot, table: string, column: string
  * than guessing and silently dropping columns.
  */
 export const detectLegacyDatabaseSource = (snapshot: LegacySchemaSnapshot): LegacyDatabaseSource => {
+  if (!Number.isInteger(snapshot.version) || !hasCoreTables(snapshot)) {
+    return 'unknown';
+  }
+
   const hasIncomeCategories =
     hasColumn(snapshot, 'categories', 'parent_id') && hasColumn(snapshot, 'categories', 'kind');
   const hasIncomeTable = hasTable(snapshot, 'incomes');
