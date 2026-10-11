@@ -37,6 +37,9 @@ Run `pnpm run release:identity:check` before building. It keeps the Android
 applicationId, iOS bundle identifier, marketing/version name and build number
 aligned; it does not prove that an artifact is signed or installable.
 
+`pnpm run e2e:contract:check` validates Maestro flow selectors against source.
+The flows still need to run on an Android device or emulator.
+
 ## 3. Privacy verification (Lossless Protocol claims)
 
 - [ ] `aapt dump permissions <release apk>` → **no `android.permission.INTERNET`**;

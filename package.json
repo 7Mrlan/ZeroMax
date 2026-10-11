@@ -30,6 +30,7 @@
     "licenses:generate": "node scripts/generate-license-attribution.js",
     "android:artifact:check": "node scripts/check-android-artifact.js",
     "release:identity:check": "node scripts/check-release-identity.js",
+    "e2e:contract:check": "node scripts/check-e2e-contract.js",
     "commitlint:range": "commitlint --from=HEAD~1 --to=HEAD",
     "typecheck": "tsc --strict",
     "version:set": "node scripts/bump-version.js",
