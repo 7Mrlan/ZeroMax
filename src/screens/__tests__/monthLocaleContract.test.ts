@@ -1,3 +1,5 @@
+export {};
+
 /**
  * The month list is locale-backed mutable data. Keeping it in a module-level
  * constant makes Home/Reports stale after an in-place language switch, so
