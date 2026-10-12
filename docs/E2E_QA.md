@@ -66,3 +66,5 @@ network remained disabled and no cloud request was made. This confirms the
 offline capture path and stable accessibility IDs only; it does not verify
 network timeout/cancel, manifest recovery after process death, API-key
 lifecycle, TalkBack, or language switching.
+
+- `ai-offline-queue.yaml`：最新代码的 Home AI 快捷入口、离线输入、入队和 Queued 状态；当前已用 API35 adb 手工完成同等步骤，Maestro 运行记录仍待环境中执行。

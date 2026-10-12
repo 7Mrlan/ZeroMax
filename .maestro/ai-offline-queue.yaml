@@ -1,0 +1,47 @@
+appId: com.anotherwhy.zero
+---
+- launchApp:
+    clearState: true
+- tapOn:
+    id: splash-get-started
+- tapOn:
+    id: welcome-get-started
+- tapOn:
+    id: onboarding-name
+- inputText:
+    text: Perf User
+- hideKeyboard
+- waitForAnimationToEnd
+- tapOn:
+    id: onboarding-personalize-continue
+- tapOn:
+    id: onboarding-category-food
+- tapOn:
+    id: onboarding-categories-continue
+- tapOn:
+    id: onboarding-currency-search
+- inputText:
+    text: USD
+- hideKeyboard
+- waitForAnimationToEnd
+- tapOn:
+    id: currency-option-USD
+- tapOn:
+    id: onboarding-currency-continue
+- assertVisible:
+    id: home-screen-header
+- tapOn:
+    id: home-ai-entry
+- assertVisible:
+    id: ai-queue-input
+- tapOn:
+    id: ai-queue-input
+- inputText:
+    text: lunch
+- hideKeyboard
+- tapOn:
+    id: ai-queue-add
+- assertVisible:
+    text: Queued
+- assertVisible:
+    text: AI is off by default

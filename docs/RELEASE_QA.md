@@ -154,3 +154,5 @@ After installing the current `9590e2a` release APK on API35, Home's AI quick
 entry accepted `lunch` offline and displayed a persisted `Queued` task with a
 cancel control. AI remained disabled and no request was sent. Network,
 restart, key lifecycle, TalkBack and production signing remain open.
+
+- [ ] Run `ai-offline-queue.yaml` on the current-code release artifact and record the Maestro output; the equivalent API35 adb smoke is documented above but is not a Maestro pass.
