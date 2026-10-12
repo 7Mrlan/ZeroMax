@@ -1,5 +1,6 @@
 import {normalizeAiEndpoint, parseAiResponse, type AiParserResponse} from './parser';
 import type {AiSecretStore, AiSettings} from './settings';
+import {z} from 'zod';
 
 export interface AiFetchResponse {
   ok: boolean;
@@ -13,6 +14,29 @@ export type AiFetch = (input: string, init: RequestInit) => Promise<AiFetchRespo
 const MAX_RESPONSE_BYTES = 256 * 1024;
 const TIMEOUT_MS = 15_000;
 const RETRYABLE_STATUS = new Set([408, 425, 429, 500, 502, 503, 504]);
+const OpenAiResponseSchema = z
+  .object({
+    choices: z.array(
+      z.object({
+        message: z.object({
+          content: z.union([z.string(), z.array(z.object({text: z.string()}).passthrough())]),
+        }),
+      }),
+    ),
+  })
+  .passthrough();
+
+const extractCompletionContent = (body: string): string => {
+  try {
+    const parsed: unknown = JSON.parse(body);
+    const envelope = OpenAiResponseSchema.safeParse(parsed);
+    if (!envelope.success || envelope.data.choices.length === 0) return body;
+    const content = envelope.data.choices[0].message.content;
+    return typeof content === 'string' ? content : content.map(part => part.text).join('');
+  } catch {
+    return body;
+  }
+};
 
 const wait = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -53,7 +77,7 @@ export const requestAiCompletion = async (
         }
         throw new Error(`AI request failed with status ${response.status}`);
       }
-      return parseAiResponse(body);
+      return parseAiResponse(extractCompletionContent(body));
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
       if (signal?.aborted) throw lastError;

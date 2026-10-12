@@ -22,6 +22,28 @@ describe('AI network boundary', () => {
     });
   });
 
+  it('unwraps an OpenAI-compatible choices message before Zod parsing', async () => {
+    const fetchImpl = jest.fn(async () => ({
+      ok: true,
+      status: 200,
+      headers: {get: () => null},
+      text: async () =>
+        JSON.stringify({
+          choices: [
+            {
+              message: {
+                content:
+                  '{"items":[{"type":"income","title":"Salary","amount":"1000","categoryName":"Salary","categoryHint":"","date":"2026-01-01","description":""}]}',
+              },
+            },
+          ],
+        }),
+    }));
+    await expect(
+      requestAiCompletion(settings, secretStore('secret'), 'prompt', ['api.example.com'], fetchImpl),
+    ).resolves.toMatchObject({items: [{type: 'income', amount: 1000}]});
+  });
+
   it('blocks disabled AI and unavailable secrets before fetch', async () => {
     const fetchImpl = jest.fn();
     await expect(
