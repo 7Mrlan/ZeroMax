@@ -15,10 +15,15 @@ import StorageService from '../../../utils/asyncStorageService';
 const storage = StorageService as jest.Mocked<typeof StorageService>;
 let stored: string | null;
 
-const category = (kind: 'expense' | 'income', name: string, parentName: string | null = null) => ({
+const category = (
+  kind: 'expense' | 'income',
+  name: string,
+  parentName: string | null = null,
+  categoryStatus = true,
+) => ({
   id: `${kind}-${parentName ?? 'root'}-${name}`,
   name,
-  categoryStatus: true,
+  categoryStatus,
   userId: 'u1',
   icon: '',
   color: '#fff',
@@ -114,21 +119,26 @@ describe('AI task coordinator', () => {
   });
 
   it('resolves a child category by its stable parent name and child name', async () => {
-    const task = createAiTask('salary', 'prompt');
+    const task = createAiTask('salary', '');
     claimNextAiTask();
     const result = await runAiTask(task, {
       userId: 'u1',
-      categories: async () => [category('income', 'Salary', 'Work')],
+      categories: async () => [category('income', 'Salary', 'Work'), category('income', 'Legacy', null, false)],
       secretStore: {get: () => 'secret', set: jest.fn(), clear: jest.fn()},
       allowedHosts: ['api.example.com'],
       database,
-      fetchImpl: async () => ({
-        ok: true,
-        status: 200,
-        headers: {get: () => null},
-        text: async () =>
-          '{"items":[{"type":"income","title":"Salary","amount":100,"categoryName":"Work·Salary","categoryHint":"","date":"2026-01-01","description":""}]}',
-      }),
+      fetchImpl: async (_url, init) => {
+        const body = JSON.parse(String(init.body)) as {messages: Array<{content: string}>};
+        expect(body.messages[0]?.content).toContain('Income categories: Work·Salary');
+        expect(body.messages[0]?.content).not.toContain('Legacy');
+        return {
+          ok: true,
+          status: 200,
+          headers: {get: () => null},
+          text: async () =>
+            '{"items":[{"type":"income","title":"Salary","amount":100,"categoryName":"Work·Salary","categoryHint":"","date":"2026-01-01","description":""}]}',
+        };
+      },
     });
     expect(result.status).toBe('created');
   });

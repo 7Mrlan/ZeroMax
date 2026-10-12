@@ -49,14 +49,21 @@ const toRecordInputs = (response: AiParserResponse, categories: CategoryData[], 
   return records;
 };
 
+const categoryPromptLabel = (category: CategoryData): string =>
+  category.parentName ? `${category.parentName}·${category.name}` : category.name;
+
 export const runAiTask = async (task: AiTask, dependencies: AiTaskCoordinatorDependencies): Promise<AiTask> => {
   try {
     if (!task.recordsManifest?.length) {
       const settings = getAiSettings();
       const categories = await dependencies.categories();
       const categoryNames = {
-        expense: categories.filter(category => category.kind === 'expense').map(category => category.name),
-        income: categories.filter(category => category.kind === 'income').map(category => category.name),
+        expense: categories
+          .filter(category => category.categoryStatus && category.kind === 'expense')
+          .map(categoryPromptLabel),
+        income: categories
+          .filter(category => category.categoryStatus && category.kind === 'income')
+          .map(categoryPromptLabel),
       };
       const prompt = task.prompt || buildAiParserPrompt(task.input, categoryNames, task.createdAt);
       const response = await requestAiCompletion(
