@@ -71,3 +71,13 @@ baseline comparison, or performance claim.
 - 临时 test keystore 只用于本次本地 smoke，已清理；这不是生产签名 AAB/商店发布证据。Gradle 输出了既有 AGP legacy variant API deprecation warnings，但构建未失败。
 
 trace-on 包在 API35 `zero-api35` fresh install 后无 Metro 启动，logcat 产生 `process.start`、`app.module_start`、`boot.init_start`、`boot.initBackend.start`、`boot.initBackend`（本次单次 debug/release smoke `durationMs=64.78384000000369`）和 `boot.ready`。这只证明 release bundle、开关和启动 trace 路径；本轮没有完成 tab/entry 交互，因此没有 frame session、query P50/P95 或 TTI 样本，也没有性能百分比结论。
+
+### API35 trace-on interaction smoke（2026-10-12）
+
+在同一 trace-on test-signed release APK（SHA `3f32340bce24cc7cd25931a3125082a2b39d87bfbe03adfefc7cee29e1d1d1a8`）fresh install 后，API35 `zero-api35` 无 Metro 完成 onboarding，并执行 Home → Reports → Categories → Home 和 AddEntry 支出/收入往返。`ZeroPerf` 产生了：
+
+- tab session：duration `133.333328ms` / `16` frames / `0` long frames；`16.666666ms` / `9` / `0`；`166.666660ms` / `15` / `1`。
+- entry session：duration `66.666664ms` / `8` / `1`，以及三次 `249.999990ms` / `16` / `0`。
+- transaction month query duration observations：`52.891074ms`、`17.983448ms`、`1.449500ms`、`1.406081ms`、`2.093581ms`。
+
+这些是一次 debug-like emulator interaction smoke 的原始 trace 摘要，样本不足 30 次、没有 Zero/Zerox 同设备对照，也没有 TTI/RSS/scroll jank 报告；因此不能宣称 60fps、性能提升或比上游更快。
