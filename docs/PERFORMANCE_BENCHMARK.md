@@ -81,3 +81,7 @@ trace-on 包在 API35 `zero-api35` fresh install 后无 Metro 启动，logcat �
 - transaction month query duration observations：`52.891074ms`、`17.983448ms`、`1.449500ms`、`1.406081ms`、`2.093581ms`。
 
 这些是一次 debug-like emulator interaction smoke 的原始 trace 摘要，样本不足 30 次、没有 Zero/Zerox 同设备对照，也没有 TTI/RSS/scroll jank 报告；因此不能宣称 60fps、性能提升或比上游更快。
+
+### 30-session candidate trace smoke（2026-10-12）
+
+同一 API35 `zero-api35` trace-on release 上，使用 adb taps 完成 30 次 tab 往返和 30 次 AddEntry mode 往返；完整原始数组保存在 [`docs/performance/trace-smoke-2026-10-12.json`](./performance/trace-smoke-2026-10-12.json)。tab 30/30 session duration 为 150–166.67ms、每次 16 frames、long-frame 总数 0；entry 30/30 为 233.33–250ms、15/16 frames、long-frame 总数 2。trace window 固定为 260ms，因此这些数据不能直接当作动画耗时、FPS 或 jank 百分比；仍没有 Zero/Zerox 同设备对照和 `performance/latest.json`。
