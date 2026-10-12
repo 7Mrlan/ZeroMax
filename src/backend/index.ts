@@ -23,6 +23,7 @@ import {probeDatabaseReadOnly, readDatabaseSnapshotReadOnly} from './migrations/
 import {detectLegacyDatabaseSource} from './migrations/legacySchema';
 import {COPY_TABLES} from './migrations/copyVerification';
 import {normalizeTargetArtifact} from './migrations/targetArtifactBridge';
+import {requeueInterruptedAiTasks} from './ai/taskQueue';
 
 const verifyFreshTargetReady = async (bridge: AndroidLegacyMigrationBridge): Promise<void> => {
   const probe = await probeDatabaseReadOnly('watermelon_v4', bridge);
@@ -171,6 +172,10 @@ const performInitialization = async (): Promise<BackendInitResult> => {
       const error = migrationResult.error ?? new Error('Data migration failed');
       return {ok: false, kind: 'migration', retryable: true, error};
     }
+    // MMKV survives process death while the Watermelon writer does not. Once
+    // the active v4 database is ready, make any interrupted AI task visible to
+    // the queue as queued so the user can retry it without duplicate writes.
+    requeueInterruptedAiTasks();
     return {ok: true};
   } catch (error) {
     const initError = error instanceof Error ? error : new Error(String(error));

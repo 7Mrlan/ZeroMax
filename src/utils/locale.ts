@@ -72,7 +72,8 @@ export const setLocaleOverride = (locale: string | null): void => {
   }
   cachedLocaleInfo = null;
 
-  const langCode = locale ? locale.split('-')[0] : getDeviceLocaleInfo().languageCode;
+  const requestedLanguage = locale ? locale.split('-')[0].toLowerCase() : getDeviceLocaleInfo().languageCode;
+  const langCode = requestedLanguage === 'zh' || requestedLanguage === 'en' ? requestedLanguage : 'en';
   if (i18n.isInitialized) {
     void i18n.changeLanguage(langCode);
   }
@@ -81,4 +82,3 @@ export const setLocaleOverride = (locale: string | null): void => {
   const {setDayjsLocale} = require('./dateUtils') as typeof import('./dateUtils');
   setDayjsLocale(langCode);
 };
-

@@ -9,11 +9,14 @@ const resources = {
   zh: {translation: zh},
 } as const;
 
+const initialLanguage = getFormatLocale().split('-')[0].toLowerCase();
+const language = initialLanguage === 'zh' || initialLanguage === 'en' ? initialLanguage : 'en';
+
 i18n.use(initReactI18next).init({
   resources,
   // Honour a persisted user override; initialising from the device locale
   // alone silently reverted the user's language choice on every cold start.
-  lng: getFormatLocale().split('-')[0],
+  lng: language,
   fallbackLng: 'en',
   interpolation: {escapeValue: false},
   react: {useSuspense: false},
