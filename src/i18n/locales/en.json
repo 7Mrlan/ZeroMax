@@ -97,7 +97,8 @@
     "perDay": "day",
     "leftToday": "left today",
     "overToday": "over today",
-    "addTransaction": "Add new transaction"
+    "addTransaction": "Add new transaction",
+    "aiQuickEntry": "Describe a transaction with AI"
   },
   "reports": {
     "title": "Reports",
@@ -179,10 +180,12 @@
     "queueTask": "Queue task",
     "processNext": "Process next",
     "processFailed": "Could not process AI task",
+    "undoFailed": "Could not undo the AI records. Your data was left unchanged.",
     "cancel": "Cancel task",
     "privacyNotice": "AI is off by default. Requests use your configured HTTPS endpoint; keys stay in secure device storage.",
     "empty": "No AI tasks yet",
     "retry": "Retry",
+    "undo": "Undo added records",
     "settingsTitle": "AI bookkeeping",
     "settingsSubtitle": "Optional, private, and off by default",
     "enable": "Enable AI network access",
@@ -201,7 +204,8 @@
       "running": "Processing",
       "created": "Added to your records",
       "failed": "Failed",
-      "cancelled": "Cancelled"
+      "cancelled": "Cancelled",
+      "reverted": "Records undone"
     }
   },
   "category": {

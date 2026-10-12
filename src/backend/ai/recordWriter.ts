@@ -1,5 +1,5 @@
 import {database as productionDatabase} from '../../watermelondb/database';
-import {completeAiTask, type AiTask} from './taskQueue';
+import {completeAiTask, revertAiTask, type AiTask} from './taskQueue';
 
 export interface AiRecordInput {
   localId: string;
@@ -62,8 +62,70 @@ export const writeAiRecords = async (
     if (prepared.length > 0) await writer.batch(prepared);
   }, 'ai idempotent record write');
 
-  completeAiTask(task.taskId, recordIds);
+  // Keep the table kind with each key. The stable ID alone cannot prove which
+  // of the two tables is safe to undo if a legacy/imported database reuses an
+  // ID, while the kind-prefixed key remains deterministic and PII-free.
+  completeAiTask(
+    task.taskId,
+    items.map((item, index) => `${item.type}:${recordIds[index]}`),
+  );
   return recordIds;
 };
 
 export const aiRecordId = stableRecordId;
+
+const parseRecordKey = (key: string): {table: 'expenses' | 'incomes'; id: string} | null => {
+  const separator = key.indexOf(':');
+  if (separator <= 0 || separator === key.length - 1) return null;
+  const kind = key.slice(0, separator);
+  if (kind !== 'expense' && kind !== 'income') return null;
+  return {table: kind === 'income' ? 'incomes' : 'expenses', id: key.slice(separator + 1)};
+};
+
+const isMissingRecordError = (error: unknown): boolean =>
+  error instanceof Error && /(?:not found|does not exist|missing)/i.test(error.message);
+
+/**
+ * Removes all records created by one completed AI task in one writer. Missing
+ * rows are treated as already undone, which makes a retry after a crash safe.
+ * Raw legacy keys without a kind prefix are searched in both collections only
+ * as a migration fallback; new tasks always persist the explicit prefix.
+ */
+export const undoAiRecords = async (
+  task: AiTask,
+  database: AiDatabaseLike = productionDatabase as unknown as AiDatabaseLike,
+): Promise<AiTask | null> => {
+  if (task.status === 'reverted') return task;
+  if (task.status !== 'created') throw new Error('Only a completed AI task can be undone');
+
+  await database.write(async writer => {
+    const prepared: unknown[] = [];
+    const keys = [...new Set(task.createdRecordKeys)];
+    for (const key of keys) {
+      const parsed = parseRecordKey(key);
+      const candidates = parsed ? [parsed] : (['expenses', 'incomes'] as const).map(table => ({table, id: key}));
+      for (const candidate of candidates) {
+        try {
+          const record = (await database.get(candidate.table).find(candidate.id)) as {
+            prepareDestroyPermanently?: () => unknown;
+          };
+          if (typeof record.prepareDestroyPermanently !== 'function') {
+            throw new Error('AI record does not support permanent deletion');
+          }
+          prepared.push(record.prepareDestroyPermanently());
+          break;
+        } catch (error) {
+          // A missing row is already undone. Surface adapter errors and
+          // malformed records so an incomplete undo cannot be marked done.
+          if (error instanceof Error && error.message === 'AI record does not support permanent deletion') {
+            throw error;
+          }
+          if (!isMissingRecordError(error)) throw error;
+        }
+      }
+    }
+    if (prepared.length > 0) await writer.batch(prepared);
+  }, 'ai undo records');
+
+  return revertAiTask(task.taskId);
+};

@@ -190,7 +190,16 @@ const HomeScreen = () => {
           tutorialSwipeRef={tutorialRef}
         />
       </PrimaryView>
-      <View style={[gs.absolute, gs.bottom15, gs.right15, gs.zIndex1]}>
+      <View style={[gs.absolute, gs.bottom15, gs.right15, gs.row, gs.gap8, gs.zIndex1]}>
+        <TouchableOpacity
+          style={[gs.size50, gs.rounded8, gs.center, {backgroundColor: colors.secondaryAccent}]}
+          onPress={() => navigate('AiQueueScreen')}
+          testID="home-ai-entry"
+          hitSlop={hitSlop}
+          accessibilityLabel={t('home.aiQuickEntry')}
+          accessibilityRole="button">
+          <Icon name="sparkles" size={24} color={colors.primaryText} />
+        </TouchableOpacity>
         <TouchableOpacity
           style={[gs.size50, gs.rounded8, gs.center, {backgroundColor: colors.secondaryBackground}]}
           onPress={() => navigate('AddEntryScreen')}

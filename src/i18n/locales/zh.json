@@ -97,7 +97,8 @@
     "perDay": "每天",
     "leftToday": "今日剩余",
     "overToday": "今日超出",
-    "addTransaction": "新增记录"
+    "addTransaction": "新增记录",
+    "aiQuickEntry": "用 AI 描述一笔记录"
   },
   "reports": {
     "title": "统计",
@@ -179,10 +180,12 @@
     "queueTask": "加入队列",
     "processNext": "处理下一条",
     "processFailed": "AI 任务处理失败",
+    "undoFailed": "无法撤销 AI 记录，数据未改变。",
     "cancel": "取消排队任务",
     "privacyNotice": "AI 默认关闭。请求使用你配置的 HTTPS 接口，密钥保存在设备安全存储中。",
     "empty": "暂无 AI 任务",
     "retry": "重试",
+    "undo": "撤销已加入的记录",
     "settingsTitle": "AI 记账",
     "settingsSubtitle": "可选、私密、默认关闭",
     "enable": "开启 AI 网络访问",
@@ -201,7 +204,8 @@
       "running": "处理中",
       "created": "已加入账本",
       "failed": "失败",
-      "cancelled": "已取消"
+      "cancelled": "已取消",
+      "reverted": "记录已撤销"
     }
   },
   "category": {

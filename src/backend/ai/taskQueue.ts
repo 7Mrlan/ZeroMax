@@ -2,7 +2,7 @@ import {nanoid} from 'nanoid';
 import {z} from 'zod';
 import StorageService from '../../utils/asyncStorageService';
 
-export type AiTaskStatus = 'queued' | 'running' | 'created' | 'failed' | 'cancelled';
+export type AiTaskStatus = 'queued' | 'running' | 'created' | 'failed' | 'cancelled' | 'reverted';
 
 export interface AiTask {
   version: 1;
@@ -27,7 +27,7 @@ const TaskSchema = z
     idempotencyKey: z.string().min(1).max(128),
     input: z.string().max(10_000),
     prompt: z.string().max(50_000),
-    status: z.enum(['queued', 'running', 'created', 'failed', 'cancelled']),
+    status: z.enum(['queued', 'running', 'created', 'failed', 'cancelled', 'reverted']),
     createdAt: z.string(),
     updatedAt: z.string(),
     errorMessage: z.string().max(1_000).optional(),
@@ -115,6 +115,21 @@ export const completeAiTask = (taskId: string, createdRecordKeys: string[]): AiT
   return completed;
 };
 
+/**
+ * Marks a completed task as reverted after its stable records have been removed.
+ * The state transition is deliberately idempotent so a retry after a process
+ * interruption cannot make a successful undo look like a new failure.
+ */
+export const revertAiTask = (taskId: string): AiTask | null => {
+  const tasks = readTasks();
+  const current = tasks.find(task => task.taskId === taskId);
+  if (!current || current.status === 'reverted') return current ?? null;
+  if (current.status !== 'created') return current;
+  const reverted = {...current, status: 'reverted' as const, updatedAt: now()};
+  writeTasks(tasks.map(task => (task.taskId === taskId ? reverted : task)));
+  return reverted;
+};
+
 export const failAiTask = (taskId: string, errorMessage: string): AiTask | null => {
   const tasks = readTasks();
   const current = tasks.find(task => task.taskId === taskId);
@@ -147,7 +162,13 @@ export const cancelQueuedAiTask = (taskId: string): AiTask | null => {
 export const cancelAiTask = (taskId: string): AiTask | null => {
   const tasks = readTasks();
   const current = tasks.find(task => task.taskId === taskId);
-  if (!current || current.status === 'created' || current.status === 'failed' || current.status === 'cancelled') {
+  if (
+    !current ||
+    current.status === 'created' ||
+    current.status === 'failed' ||
+    current.status === 'cancelled' ||
+    current.status === 'reverted'
+  ) {
     return current ?? null;
   }
   const cancelled = {...current, status: 'cancelled' as const, updatedAt: now()};

@@ -14,6 +14,7 @@ import {
   createAiTask,
   recordIdempotencyKey,
   requeueInterruptedAiTasks,
+  revertAiTask,
 } from '../taskQueue';
 
 const storage = StorageService as jest.Mocked<typeof StorageService>;
@@ -57,5 +58,14 @@ describe('AI task queue', () => {
     const running = createAiTask('running', 'prompt');
     claimNextAiTask();
     expect(cancelQueuedAiTask(running.taskId)?.status).toBe('running');
+  });
+
+  it('reverts a completed task once and keeps the transition idempotent', () => {
+    const task = createAiTask('lunch', 'prompt');
+    claimNextAiTask();
+    completeAiTask(task.taskId, ['expense:e1']);
+
+    expect(revertAiTask(task.taskId)?.status).toBe('reverted');
+    expect(revertAiTask(task.taskId)?.status).toBe('reverted');
   });
 });

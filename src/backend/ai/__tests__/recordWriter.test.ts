@@ -1,10 +1,18 @@
+let mockStored: string | null = null;
+
 jest.mock('../../../utils/asyncStorageService', () => ({
   __esModule: true,
-  default: {getItemSync: jest.fn(() => null), setItemSync: jest.fn()},
+  default: {
+    getItemSync: jest.fn(() => mockStored),
+    setItemSync: jest.fn((_key: string, value: string) => {
+      mockStored = value;
+    }),
+  },
 }));
 
 import {createAiTask} from '../taskQueue';
-import {aiRecordId, writeAiRecords} from '../recordWriter';
+import {aiRecordId, undoAiRecords, writeAiRecords} from '../recordWriter';
+import {claimNextAiTask, completeAiTask} from '../taskQueue';
 
 const makeDatabase = () => {
   const existing = new Set<string>();
@@ -30,6 +38,10 @@ const makeDatabase = () => {
 };
 
 describe('AI idempotent record writer', () => {
+  beforeEach(() => {
+    mockStored = null;
+  });
+
   it('uses stable IDs and writes expense/income in one writer', async () => {
     const task = createAiTask('lunch and salary', 'prompt');
     const {database, prepared} = makeDatabase();
@@ -74,5 +86,64 @@ describe('AI idempotent record writer', () => {
     existing.add(`expenses:${aiRecordId(task, item)}`);
     await writeAiRecords(task, [item], database);
     expect(prepared).toHaveLength(0);
+  });
+
+  it('undoes all task records in one writer and is safe to retry', async () => {
+    const task = createAiTask('lunch and salary', 'prompt');
+    claimNextAiTask();
+    const expenseId = aiRecordId(task, {
+      localId: 'a',
+      type: 'expense',
+      title: 'Lunch',
+      amount: 10,
+      categoryId: 'c1',
+      userId: 'u1',
+      date: '2026-01-01',
+    });
+    const incomeId = aiRecordId(task, {
+      localId: 'b',
+      type: 'income',
+      title: 'Salary',
+      amount: 100,
+      categoryId: 'c2',
+      userId: 'u1',
+      date: '2026-01-01',
+    });
+    const recordKeys = [`expense:${expenseId}`, `income:${incomeId}`];
+    completeAiTask(task.taskId, recordKeys);
+    const taskWithRecords = {...task, status: 'created' as const, createdRecordKeys: recordKeys};
+    const destroyed: string[] = [];
+    const database = {
+      get: jest.fn((table: string) => ({
+        find: jest.fn(async (id: string) => ({
+          prepareDestroyPermanently: () => {
+            destroyed.push(`${table}:${id}`);
+            return `${table}:${id}`;
+          },
+        })),
+        prepareCreateFromDirtyRaw: jest.fn(),
+      })),
+      write: jest.fn(
+        async (work: (writer: {batch: (records: ReadonlyArray<unknown>) => Promise<void>}) => Promise<void>) =>
+          work({batch: async () => undefined}),
+      ),
+    };
+
+    const reverted = await undoAiRecords(taskWithRecords, database);
+    expect(reverted?.status).toBe('reverted');
+    expect(destroyed).toEqual([`expenses:${expenseId}`, `incomes:${incomeId}`]);
+    await expect(undoAiRecords(reverted!, database)).resolves.toEqual(reverted);
+    expect(database.write).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not mark an undo complete when the writer cannot delete a record', async () => {
+    const task = createAiTask('lunch', 'prompt');
+    const completed = {...task, status: 'created' as const, createdRecordKeys: ['expense:stable-id']};
+    const database = {
+      get: () => ({find: async () => ({}), prepareCreateFromDirtyRaw: () => undefined}),
+      write: async (work: (writer: {batch: (records: ReadonlyArray<unknown>) => Promise<void>}) => Promise<void>) =>
+        work({batch: async () => undefined}),
+    };
+    await expect(undoAiRecords(completed, database)).rejects.toThrow('does not support permanent deletion');
   });
 });

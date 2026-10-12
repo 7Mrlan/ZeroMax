@@ -1,4 +1,4 @@
-import React, {useCallback, useState, useSyncExternalStore} from 'react';
+import React, {useCallback, useRef, useState, useSyncExternalStore} from 'react';
 import {Alert, TextInput, View} from 'react-native';
 import {FlashList} from '@shopify/flash-list';
 import {useTranslation} from 'react-i18next';
@@ -15,6 +15,7 @@ import {
   subscribeAiTasks,
   type AiTask,
 } from '../../backend/ai/taskQueue';
+import {undoAiRecords} from '../../backend/ai/recordWriter';
 import {createNativeAiSecretStore, getAiSettings} from '../../backend/ai/settings';
 import {runNextAiTask} from '../../backend/ai/coordinator';
 import {getAllCategoriesByUserId} from '../../watermelondb/services';
@@ -29,12 +30,40 @@ const AiQueueScreen = () => {
   const userId = useAppSelector(selectUserId);
   const [input, setInput] = useState('');
   const [processing, setProcessing] = useState(false);
+  const [undoingTaskIds, setUndoingTaskIds] = useState<ReadonlySet<string>>(new Set());
+  const undoingTaskIdsRef = useRef<Set<string>>(new Set());
   const abortControllerRef = React.useRef<AbortController | null>(null);
   const activeTaskIdRef = React.useRef<string | null>(null);
   const tasks = useSyncExternalStore(subscribeAiTasks, getAiTasks, getAiTasks);
   const retry = useCallback((taskId: string) => {
     retryAiTask(taskId);
   }, []);
+  const undo = useCallback(
+    async (task: AiTask) => {
+      if (undoingTaskIdsRef.current.has(task.taskId)) return;
+      undoingTaskIdsRef.current.add(task.taskId);
+      setUndoingTaskIds(current => {
+        if (current.has(task.taskId)) return current;
+        const next = new Set(current);
+        next.add(task.taskId);
+        return next;
+      });
+      try {
+        await undoAiRecords(task);
+      } catch (error) {
+        if (__DEV__) console.error('AI task undo failed', error);
+        Alert.alert(t('ai.processFailed'), t('ai.undoFailed'));
+      } finally {
+        undoingTaskIdsRef.current.delete(task.taskId);
+        setUndoingTaskIds(current => {
+          const next = new Set(current);
+          next.delete(task.taskId);
+          return next;
+        });
+      }
+    },
+    [t],
+  );
 
   const queueTask = useCallback(() => {
     const trimmed = input.trim();
@@ -97,6 +126,19 @@ const AiQueueScreen = () => {
             fullWidth={false}
           />
         ) : null}
+        {item.status === 'created' ? (
+          <PrimaryButton
+            testID={`ai-undo-${item.taskId}`}
+            onPress={() => void undo(item)}
+            colors={colors}
+            buttonTitle={t('ai.undo')}
+            disabled={undoingTaskIds.has(item.taskId)}
+            loading={undoingTaskIds.has(item.taskId)}
+            variant="ghost"
+            size="sm"
+            fullWidth={false}
+          />
+        ) : null}
         {item.status === 'queued' || item.status === 'running' ? (
           <PrimaryButton
             testID={`ai-cancel-${item.taskId}`}
@@ -113,7 +155,7 @@ const AiQueueScreen = () => {
         ) : null}
       </View>
     ),
-    [colors, retry, t],
+    [colors, retry, t, undo, undoingTaskIds],
   );
 
   return (
