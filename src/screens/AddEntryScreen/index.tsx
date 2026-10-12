@@ -1,6 +1,13 @@
-import React, {useState} from 'react';
+import React, {useCallback, useState} from 'react';
 import {Pressable, StyleSheet, Text, View} from 'react-native';
-import Animated, {Easing, ReduceMotion, useAnimatedStyle, useSharedValue, withTiming} from 'react-native-reanimated';
+import Animated, {
+  Easing,
+  ReduceMotion,
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import ExpenseEntry from '../../components/molecules/ExpenseEntry';
 import IncomeEntry from '../../components/molecules/IncomeEntry';
 import useThemeColors from '../../hooks/useThemeColors';
@@ -13,44 +20,49 @@ const entryStyles = StyleSheet.create({
   segment: {borderRadius: 12},
   indicator: {position: 'absolute', top: 10, height: 34, borderRadius: 12},
   transparent: {backgroundColor: 'transparent'},
+  formViewport: {flex: 1, position: 'relative'},
+  formLayer: StyleSheet.absoluteFill,
 });
 
 const AddEntryScreen = () => {
   const colors = useThemeColors();
   const {t} = useTranslation();
   const [mode, setMode] = useState<EntryMode>('expense');
+  const [visitedModes, setVisitedModes] = useState<Record<EntryMode, boolean>>({expense: true, income: false});
   const [segmentWidth, setSegmentWidth] = useState(0);
-  const indicatorProgress = useSharedValue(0);
-  const contentOpacity = useSharedValue(1);
+  const modeProgress = useSharedValue(0);
 
-  const switchMode = (nextMode: EntryMode) => {
-    if (nextMode === mode) return;
-    indicatorProgress.value = withTiming(nextMode === 'income' ? 1 : 0, {
-      duration: 180,
-      easing: Easing.out(Easing.cubic),
-      reduceMotion: ReduceMotion.System,
-    });
-    contentOpacity.value = 0;
-    setMode(nextMode);
-    requestAnimationFrame(() => {
-      contentOpacity.value = withTiming(1, {
+  const switchMode = useCallback(
+    (nextMode: EntryMode) => {
+      if (nextMode === mode) return;
+      modeProgress.value = withTiming(nextMode === 'income' ? 1 : 0, {
         duration: 180,
         easing: Easing.out(Easing.cubic),
         reduceMotion: ReduceMotion.System,
       });
-    });
-  };
+      setVisitedModes(current => (current[nextMode] ? current : {...current, [nextMode]: true}));
+      setMode(nextMode);
+    },
+    [mode, modeProgress],
+  );
 
   const indicatorStyle = useAnimatedStyle(
     () => ({
       opacity: segmentWidth > 0 ? 1 : 0,
       width: segmentWidth / 2 - 4,
       backgroundColor: colors.primaryText,
-      transform: [{translateX: indicatorProgress.value * (segmentWidth / 2)}],
+      transform: [{translateX: modeProgress.value * (segmentWidth / 2)}],
     }),
-    [colors.primaryText, segmentWidth],
+    [colors.primaryText, modeProgress, segmentWidth],
   );
-  const contentStyle = useAnimatedStyle(() => ({opacity: contentOpacity.value}));
+  const expenseFormStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(modeProgress.value, [0, 1], [1, 0]),
+    transform: [{translateX: interpolate(modeProgress.value, [0, 1], [0, -12])}],
+  }));
+  const incomeFormStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(modeProgress.value, [0, 1], [0, 1]),
+    transform: [{translateX: interpolate(modeProgress.value, [0, 1], [12, 0])}],
+  }));
 
   return (
     <View style={gs.flex1}>
@@ -81,9 +93,26 @@ const AddEntryScreen = () => {
           </Text>
         </Pressable>
       </View>
-      <Animated.View style={[gs.flex1, contentStyle]}>
-        {mode === 'expense' ? <ExpenseEntry type="Add" /> : <IncomeEntry />}
-      </Animated.View>
+      <View style={entryStyles.formViewport}>
+        {visitedModes.expense ? (
+          <Animated.View
+            style={[entryStyles.formLayer, expenseFormStyle]}
+            pointerEvents={mode === 'expense' ? 'auto' : 'none'}
+            accessibilityElementsHidden={mode !== 'expense'}
+            importantForAccessibility={mode === 'expense' ? 'yes' : 'no-hide-descendants'}>
+            <ExpenseEntry type="Add" />
+          </Animated.View>
+        ) : null}
+        {visitedModes.income ? (
+          <Animated.View
+            style={[entryStyles.formLayer, incomeFormStyle]}
+            pointerEvents={mode === 'income' ? 'auto' : 'none'}
+            accessibilityElementsHidden={mode !== 'income'}
+            importantForAccessibility={mode === 'income' ? 'yes' : 'no-hide-descendants'}>
+            <IncomeEntry />
+          </Animated.View>
+        ) : null}
+      </View>
     </View>
   );
 };
