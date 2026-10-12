@@ -35,7 +35,7 @@ describe('importAllData category relationships', () => {
     (database.write as jest.Mock).mockImplementation(async (work: () => Promise<void>) => work());
     (database.batch as jest.Mock).mockResolvedValue(undefined);
 
-    await importAllData({
+    const result = await importAllData({
       users: [{username: 'Ada', email: ''}],
       categories: [
         {name: 'Salary', kind: 'income', parentName: null},
@@ -67,5 +67,6 @@ describe('importAllData category relationships', () => {
     expect(created.filter(item => item.table === 'incomes')[0]?.record).toEqual(
       expect.objectContaining({categoryId: bonus?._raw && (bonus._raw as {id: string}).id}),
     );
+    expect(result.stats.incomes).toBe(1);
   });
 });

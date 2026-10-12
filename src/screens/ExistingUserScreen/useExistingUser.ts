@@ -32,6 +32,7 @@ interface SyncStatus {
   debtors: EntityStatus;
   currencies: EntityStatus;
   expenses: EntityStatus;
+  incomes: EntityStatus;
   debts: EntityStatus;
   budgets: EntityStatus;
 }
@@ -39,6 +40,7 @@ interface SyncStatus {
 interface SyncStats {
   categories: number;
   expenses: number;
+  incomes: number;
   debtors: number;
   debts: number;
   budgets: number;
@@ -51,6 +53,7 @@ const allStatuses = (status: EntityStatus): SyncStatus => ({
   debtors: status,
   currencies: status,
   expenses: status,
+  incomes: status,
   debts: status,
   budgets: status,
 });
@@ -58,6 +61,7 @@ const allStatuses = (status: EntityStatus): SyncStatus => ({
 const EMPTY_STATS: SyncStats = {
   categories: 0,
   expenses: 0,
+  incomes: 0,
   debtors: 0,
   debts: 0,
   budgets: 0,
@@ -213,6 +217,7 @@ const useExistingUser = () => {
       setSyncStats({
         categories: stats.categories,
         expenses: stats.expenses,
+        incomes: stats.incomes ?? 0,
         debtors: stats.debtors,
         debts: stats.debts,
         budgets: stats.budgets,

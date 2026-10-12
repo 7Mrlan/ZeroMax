@@ -162,6 +162,12 @@ const ExistingUserScreen = () => {
               colors={colors}
             />
             <SyncStatusItem
+              label={t('existingUser.syncIncomes')}
+              status={syncStatus.incomes}
+              count={syncStats.incomes}
+              colors={colors}
+            />
+            <SyncStatusItem
               label={t('existingUser.syncDebtors')}
               status={syncStatus.debtors}
               count={syncStats.debtors}
