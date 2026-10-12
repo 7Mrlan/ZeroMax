@@ -21,6 +21,7 @@ import SwipeableRow from '../atoms/SwipeableRow';
 import useFormatAmount from '../../hooks/useFormatAmount';
 import {FlashList} from '@shopify/flash-list';
 import {gs} from '../../styles/globalStyles';
+import {formatCategoryLabel} from '../../utils/categoryLabel';
 import {
   flattenTransactionList,
   getTransactionKind,
@@ -69,9 +70,7 @@ const ExpenseRow: React.FC<ExpenseRowProps> = React.memo(
       onDelete(transaction);
     }, [onDelete, transaction]);
 
-    const categoryLabel = transaction.category?.parentName
-      ? `${transaction.category.parentName} · ${transaction.category.name ?? ''}`
-      : transaction.category?.name;
+    const categoryLabel = formatCategoryLabel(transaction.category?.name ?? '', transaction.category?.parentName);
 
     return (
       <View style={gs.mb5}>

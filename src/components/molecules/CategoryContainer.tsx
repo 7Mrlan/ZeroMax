@@ -4,6 +4,7 @@ import Icon from '../atoms/Icons';
 import PrimaryText from '../atoms/PrimaryText';
 import {Colors} from '../../hooks/useThemeColors';
 import {gs} from '../../styles/globalStyles';
+import {formatCategoryLabel} from '../../utils/categoryLabel';
 
 interface Category {
   id?: string;
@@ -13,6 +14,7 @@ interface Category {
   color?: string;
   categoryStatus?: boolean;
   userId?: string;
+  parentName?: string | null;
 }
 
 interface CategoryContainerProps {
@@ -24,16 +26,25 @@ interface CategoryContainerProps {
 
 const CategoryContainer: React.FC<CategoryContainerProps> = React.memo(
   ({categories, colors, toggleCategorySelection, selectedCategories}) => {
+    const selectedKey = selectedCategories[0]
+      ? String(selectedCategories[0].id || selectedCategories[0]._id || selectedCategories[0].name)
+      : null;
+
     return (
       <View style={[gs.row, gs.wrap]}>
         {categories.map(category => {
-          const isSelected = category?.name === selectedCategories[0]?.name;
+          const categoryKey = String(category.id || category._id || category.name);
+          const isSelected = categoryKey === selectedKey;
+          const label = formatCategoryLabel(category.name, category.parentName);
 
           return (
             <TouchableOpacity
-              key={String(category.id || category._id || category.name)}
+              key={categoryKey}
               onPress={() => toggleCategorySelection(category)}
-              activeOpacity={0.7}>
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={label}
+              accessibilityState={{selected: isSelected}}>
               <View
                 style={[
                   gs.py8,
@@ -49,14 +60,14 @@ const CategoryContainer: React.FC<CategoryContainerProps> = React.memo(
                   <Icon
                     name={category.icon}
                     size={16}
-                    color={isSelected ? colors.buttonText : (category.color || colors.secondaryText)}
+                    color={isSelected ? colors.buttonText : category.color || colors.secondaryText}
                   />
                 )}
                 <PrimaryText
                   size={13}
                   weight={isSelected ? 'semibold' : 'regular'}
                   color={isSelected ? colors.buttonText : colors.primaryText}>
-                  {category.name}
+                  {label}
                 </PrimaryText>
               </View>
             </TouchableOpacity>
