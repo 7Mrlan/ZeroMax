@@ -93,3 +93,7 @@ trace-on 包在 API35 `zero-api35` fresh install 后无 Metro 启动，logcat �
 Zero `d7725cd` release APK（SHA `0b94f4c9c46c7ec78eeb045282489de73a452d61b715ec27a134c1e11038009f`）和候选 `1941c92` trace-on release APK（SHA `3f32340bce24cc7cd25931a3125082a2b39d87bfbe03adfefc7cee29e1d1d1a8`）在同一 API35 `zero-api35` AVD 各执行 30 次 `adb shell am start -W`，原始数组保存在 [`docs/performance/activity-start-smoke-2026-10-12.json`](./performance/activity-start-smoke-2026-10-12.json)。
 
 按 `TotalTime`：Zero p50 `505ms` / p95 `616ms`，候选 p50 `502.5ms` / p95 `575ms`。这只是 Activity-start smoke；它不是 BootGate TTI、FPS、RSS、scroll jank、DB query 或 AI latency。两个包都使用临时 test signing，样本没有 Zerox 对照和完整 fixture matrix，不能据此宣称整体性能提升。
+
+### Current-code release rebuild（2026-10-12，代码 `9590e2a`）
+
+在 durable AI、OpenAI response 和完整中文文案合入后，重新完成 trace-off/trace-on 两次 `:app:assembleRelease`，各 740 actionable tasks 成功。最新 trace-on APK 为 102,069,263 bytes，SHA-256 `67fd6cc8b9e31aa9343355c80312e8947075347824f41574cb98e595137892c3`；v2 签名和 Android artifact contract 通过，临时 keystore 已清理。该构建确认最新 JS 能进入 release bundle，但尚未完成最新包的语言/AI/TalkBack 设备回归，也不产生性能百分比。

@@ -143,3 +143,7 @@ close the denied-permission item.
 ## 2026-10-12 集中 release smoke
 
 代码 `1941c92` 在本地主机使用临时 test keystore 完成 trace-off/trace-on 两次 `:app:assembleRelease`（各 740 actionable tasks）。trace-on APK SHA-256 为 `3f32340bce24cc7cd25931a3125082a2b39d87bfbe03adfefc7cee29e1d1d1a8`，v2 签名和 Android artifact contract 通过；安装到 API35 `zero-api35` 后无 Metro 启动并产生 ZeroPerf boot marks。临时 keystore 已清理，正式签名、AAB、物理设备、TalkBack、网络和真实性能仍未通过。
+
+## Current-code rebuild (2026-10-12)
+
+After `9590e2a` (durable AI queue, OpenAI envelope, Chinese copy), trace-off and trace-on `assembleRelease` both completed with 740 actionable tasks. The latest trace-on APK SHA-256 is `67fd6cc8b9e31aa9343355c80312e8947075347824f41574cb98e595137892c3`; v2 signing and artifact checks passed. This remains temporary test signing; latest language/AI/accessibility device flows and production signing are pending.
