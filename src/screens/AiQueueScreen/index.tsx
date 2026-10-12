@@ -11,6 +11,8 @@ import {
   cancelAiTask,
   createAiTask,
   getAiTasks,
+  getAiTaskStoreError,
+  removeAiTask,
   retryAiTask,
   subscribeAiTasks,
   type AiTask,
@@ -35,6 +37,7 @@ const AiQueueScreen = () => {
   const abortControllerRef = React.useRef<AbortController | null>(null);
   const activeTaskIdRef = React.useRef<string | null>(null);
   const tasks = useSyncExternalStore(subscribeAiTasks, getAiTasks, getAiTasks);
+  const taskStoreError = getAiTaskStoreError();
   const retry = useCallback((taskId: string) => {
     retryAiTask(taskId);
   }, []);
@@ -68,9 +71,13 @@ const AiQueueScreen = () => {
   const queueTask = useCallback(() => {
     const trimmed = input.trim();
     if (!trimmed) return;
-    createAiTask(trimmed, '');
-    setInput('');
-  }, [input]);
+    try {
+      createAiTask(trimmed, '');
+      setInput('');
+    } catch {
+      Alert.alert(t('ai.processFailed'), t('ai.queueFailed'));
+    }
+  }, [input, t]);
 
   const processNext = useCallback(async () => {
     if (processing) return;
@@ -139,6 +146,17 @@ const AiQueueScreen = () => {
             fullWidth={false}
           />
         ) : null}
+        {item.status === 'failed' || item.status === 'cancelled' || item.status === 'reverted' ? (
+          <PrimaryButton
+            testID={`ai-clear-${item.taskId}`}
+            onPress={() => removeAiTask(item.taskId)}
+            colors={colors}
+            buttonTitle={t('ai.clearTask')}
+            variant="ghost"
+            size="sm"
+            fullWidth={false}
+          />
+        ) : null}
         {item.status === 'queued' || item.status === 'running' ? (
           <PrimaryButton
             testID={`ai-cancel-${item.taskId}`}
@@ -164,6 +182,11 @@ const AiQueueScreen = () => {
       <PrimaryText size={12} color={colors.secondaryText} style={gs.mt10}>
         {t('ai.privacyNotice')}
       </PrimaryText>
+      {taskStoreError ? (
+        <PrimaryText size={12} color={colors.accentRed} style={gs.mt10}>
+          {t('ai.storageError')}
+        </PrimaryText>
+      ) : null}
       <TextInput
         testID="ai-queue-input"
         accessibilityLabel={t('ai.capturePlaceholder')}

@@ -13,6 +13,7 @@ jest.mock('../../../utils/asyncStorageService', () => ({
 import {createAiTask} from '../taskQueue';
 import {aiRecordId, undoAiRecords, writeAiRecords} from '../recordWriter';
 import {claimNextAiTask, completeAiTask} from '../taskQueue';
+import StorageService from '../../../utils/asyncStorageService';
 
 const makeDatabase = () => {
   const existing = new Set<string>();
@@ -36,6 +37,8 @@ const makeDatabase = () => {
   };
   return {database, existing, prepared};
 };
+
+const storage = StorageService as jest.Mocked<typeof StorageService>;
 
 describe('AI idempotent record writer', () => {
   beforeEach(() => {
@@ -86,6 +89,37 @@ describe('AI idempotent record writer', () => {
     existing.add(`expenses:${aiRecordId(task, item)}`);
     await writeAiRecords(task, [item], database);
     expect(prepared).toHaveLength(0);
+  });
+
+  it('persists the manifest before the database writer runs', async () => {
+    const task = createAiTask('lunch', 'prompt');
+    claimNextAiTask();
+    const writes: string[] = [];
+    storage.setItemSync.mockImplementation((_key, value) => {
+      writes.push(value);
+      mockStored = value;
+    });
+    const {database} = makeDatabase();
+    await writeAiRecords(
+      task,
+      [
+        {
+          localId: '0:expense',
+          type: 'expense',
+          title: 'Lunch',
+          amount: 10,
+          categoryId: 'c1',
+          userId: 'u1',
+          date: '2026-01-01',
+        },
+      ],
+      database,
+    );
+    const committed = writes
+      .map(value => JSON.parse(value) as Array<{status: string; recordsManifest?: unknown[]}>)
+      .flat()
+      .find(taskState => taskState.status === 'committing');
+    expect(committed?.recordsManifest).toHaveLength(1);
   });
 
   it('undoes all task records in one writer and is safe to retry', async () => {

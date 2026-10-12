@@ -1,5 +1,5 @@
 import {database as productionDatabase} from '../../watermelondb/database';
-import {completeAiTask, revertAiTask, type AiTask} from './taskQueue';
+import {completeAiTask, prepareAiTaskCommit, revertAiTask, type AiRecordManifest, type AiTask} from './taskQueue';
 
 export interface AiRecordInput {
   localId: string;
@@ -29,23 +29,29 @@ export interface AiDatabaseLike {
 const stableRecordId = (task: AiTask, item: AiRecordInput): string =>
   `${task.idempotencyKey}-${item.type}-${item.localId}`.replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 180);
 
+const isMissingRecordError = (error: unknown): boolean =>
+  error instanceof Error && /(?:not found|does not exist|missing)/i.test(error.message);
+
 export const writeAiRecords = async (
   task: AiTask,
   items: readonly AiRecordInput[],
   database: AiDatabaseLike = productionDatabase as unknown as AiDatabaseLike,
 ): Promise<string[]> => {
-  const recordIds = items.map(item => stableRecordId(task, item));
+  const manifest: AiRecordManifest[] = task.recordsManifest?.length
+    ? task.recordsManifest
+    : items.map(item => ({...item, recordId: stableRecordId(task, item)}));
+  prepareAiTaskCommit(task.taskId, manifest);
   await database.write(async writer => {
     const prepared: unknown[] = [];
-    for (let index = 0; index < items.length; index += 1) {
-      const item = items[index];
-      const id = recordIds[index];
+    for (const item of manifest) {
+      const id = item.recordId;
       const collection = database.get(item.type === 'income' ? 'incomes' : 'expenses');
       try {
         await collection.find(id);
         continue;
-      } catch {
+      } catch (error) {
         // Missing stable id means this item has not been committed yet.
+        if (!isMissingRecordError(error)) throw error;
       }
       prepared.push(
         collection.prepareCreateFromDirtyRaw({
@@ -65,11 +71,8 @@ export const writeAiRecords = async (
   // Keep the table kind with each key. The stable ID alone cannot prove which
   // of the two tables is safe to undo if a legacy/imported database reuses an
   // ID, while the kind-prefixed key remains deterministic and PII-free.
-  completeAiTask(
-    task.taskId,
-    items.map((item, index) => `${item.type}:${recordIds[index]}`),
-  );
-  return recordIds;
+  completeAiTask(task.taskId, manifest);
+  return manifest.map(item => item.recordId);
 };
 
 export const aiRecordId = stableRecordId;
@@ -81,9 +84,6 @@ const parseRecordKey = (key: string): {table: 'expenses' | 'incomes'; id: string
   if (kind !== 'expense' && kind !== 'income') return null;
   return {table: kind === 'income' ? 'incomes' : 'expenses', id: key.slice(separator + 1)};
 };
-
-const isMissingRecordError = (error: unknown): boolean =>
-  error instanceof Error && /(?:not found|does not exist|missing)/i.test(error.message);
 
 /**
  * Removes all records created by one completed AI task in one writer. Missing

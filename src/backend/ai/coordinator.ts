@@ -51,23 +51,34 @@ const toRecordInputs = (response: AiParserResponse, categories: CategoryData[], 
 
 export const runAiTask = async (task: AiTask, dependencies: AiTaskCoordinatorDependencies): Promise<AiTask> => {
   try {
-    const settings = getAiSettings();
-    const categories = await dependencies.categories();
-    const categoryNames = {
-      expense: categories.filter(category => category.kind === 'expense').map(category => category.name),
-      income: categories.filter(category => category.kind === 'income').map(category => category.name),
-    };
-    const prompt = task.prompt || buildAiParserPrompt(task.input, categoryNames, task.createdAt);
-    const response = await requestAiCompletion(
-      settings,
-      dependencies.secretStore,
-      prompt,
-      dependencies.allowedHosts,
-      dependencies.fetchImpl,
-      dependencies.signal,
-    );
-    const records = toRecordInputs(response, categories, dependencies.userId);
-    await writeAiRecords(task, records, dependencies.database);
+    if (!task.recordsManifest?.length) {
+      const settings = getAiSettings();
+      const categories = await dependencies.categories();
+      const categoryNames = {
+        expense: categories.filter(category => category.kind === 'expense').map(category => category.name),
+        income: categories.filter(category => category.kind === 'income').map(category => category.name),
+      };
+      const prompt = task.prompt || buildAiParserPrompt(task.input, categoryNames, task.createdAt);
+      const response = await requestAiCompletion(
+        settings,
+        dependencies.secretStore,
+        prompt,
+        dependencies.allowedHosts,
+        dependencies.fetchImpl,
+        dependencies.signal,
+      );
+      const records = toRecordInputs(response, categories, dependencies.userId).map((record, index) => ({
+        ...record,
+        // The item index is immutable for this task and prevents duplicate
+        // model lines with the same title/date/amount from colliding.
+        localId: `${index}:${record.type}`,
+      }));
+      await writeAiRecords(task, records, dependencies.database);
+    } else {
+      // A committing task has a persisted manifest. Re-run only the idempotent
+      // writer; never call the model a second time after DB commit uncertainty.
+      await writeAiRecords(task, [], dependencies.database);
+    }
     return getAiTasks().find(current => current.taskId === task.taskId) ?? task;
   } catch (error) {
     const current = getAiTasks().find(candidate => candidate.taskId === task.taskId);
