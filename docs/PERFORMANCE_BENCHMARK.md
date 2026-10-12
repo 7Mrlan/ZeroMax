@@ -103,3 +103,20 @@ Zero `d7725cd` release APK（SHA `0b94f4c9c46c7ec78eeb045282489de73a452d61b715ec
 按集中 native/performance 模块规则，当前 HEAD 依次执行 trace-off/trace-on `:app:assembleRelease`，使用临时 JDK17/SDK37/NDK28 工具链和 test keystore；临时 keystore 与 `android/keystore.properties` 已清理。最终 trace-on APK 为 102,067,727 bytes，SHA-256 `37f6b50803394bcaba1faea96af55ccd234e128ec553ff0fc1443670b2b01c9a`，APK Signature Scheme v2 验证通过，manifest target SDK 36、arm64/Hermes 内容存在。
 
 当前主机没有可用 emulator 或 Maestro CLI，故本轮只记录构建/签名/产物事实；没有把它扩展成启动、迁移、帧率、TTI、RSS、语言、AI、TalkBack 或性能提升证据。`performance/latest.json` 仍缺失。
+
+### Current HEAD API35 manual trace smoke（2026-10-12，代码 `cf5f53e`）
+
+The API35 `zero-api35` emulator was started from the local SDK toolchain. The
+current trace-on APK was installed after removing the prior test-signed package;
+no-Metro cold start reached fresh v4/Home and logcat showed WatermelonDB JSI,
+`watermelon_v4.db`, schema v4, BootGate ready, and ZeroPerf boot marks.
+
+Using adb taps, the same session completed 30 four-tab round trips (120 tab
+sessions) and 30 expense/income mode round trips (60 entry sessions). Raw
+observations are stored in [`trace-smoke-current-cf5f53e.json`](./performance/trace-smoke-current-cf5f53e.json)
+and [`trace-smoke-current-cf5f53e-entry.json`](./performance/trace-smoke-current-cf5f53e-entry.json).
+The raw tab duration p50 is about 166.67 ms and entry duration p50 about 250 ms.
+These are fixed-window UI-runtime traces from a manual adb rhythm; they are not
+FPS, TTI, scroll-jank, RSS, or candidate-vs-Zero/Zerox performance results.
+Maestro, TalkBack, language switching, AI network/restart, and physical-device
+validation remain open. `performance/latest.json` is intentionally still absent.

@@ -169,3 +169,14 @@ APK Signature Scheme v2 verification passed, and the temporary keystore plus
 The current host has no usable emulator or Maestro CLI, so the current artifact
 has no new startup, migration, language, AI, TalkBack, or performance runtime
 pass. Production signing/AAB and physical-device validation remain open.
+
+## Current HEAD API35 adb smoke (2026-10-12)
+
+The current `cf5f53e` trace-on artifact was installed after removing the prior
+test-signed package on API35 `zero-api35`. A no-Metro cold start reached fresh
+v4/Home and logcat showed WatermelonDB JSI, schema v4, BootGate ready, and
+ZeroPerf boot marks. Manual adb taps then completed 30 four-tab round trips and
+30 expense/income mode round trips. Raw traces are linked from
+[`PERFORMANCE_BENCHMARK.md`](./PERFORMANCE_BENCHMARK.md); this is not a Maestro
+pass and does not cover TalkBack, language switching, AI network/restart,
+physical devices, or a comparative performance claim.
