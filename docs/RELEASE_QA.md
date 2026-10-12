@@ -147,3 +147,10 @@ close the denied-permission item.
 ## Current-code rebuild (2026-10-12)
 
 After `9590e2a` (durable AI queue, OpenAI envelope, Chinese copy), trace-off and trace-on `assembleRelease` both completed with 740 actionable tasks. The latest trace-on APK SHA-256 is `67fd6cc8b9e31aa9343355c80312e8947075347824f41574cb98e595137892c3`; v2 signing and artifact checks passed. This remains temporary test signing; latest language/AI/accessibility device flows and production signing are pending.
+
+## Current-code offline AI smoke (2026-10-12)
+
+After installing the current `9590e2a` release APK on API35, Home's AI quick
+entry accepted `lunch` offline and displayed a persisted `Queued` task with a
+cancel control. AI remained disabled and no request was sent. Network,
+restart, key lifecycle, TalkBack and production signing remain open.

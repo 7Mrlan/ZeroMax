@@ -56,3 +56,13 @@ Maestro 原始运行目录保留在本机：`070712/onboarding`、`070842/catego
 2026-10-12 历史尝试：Maestro 2.11.0 在 API35 emulator-5554 上启动 debug APK，曾到达 Welcome，但 `onboarding-name` 未取得稳定通过；早期失败与 Welcome 清库 writer 阻塞有关，`18bfcf3` 已移除该首帧等待并改用 typed onboarding push。重启 Metro 后仍受首次 bundle/React host 启动时序影响；该记录已被上面的 release flow 通过证据取代。
 
 2026-10-12 历史尝试：debug Metro 首次 bundle 时序和旧的 onboarding 夹具曾导致 selector 等待超时；这些记录保留用于解释排障过程，不覆盖上面的 release 通过记录。
+
+## Current-code offline AI smoke (2026-10-12)
+
+The current-code `9590e2a` trace-on release APK was installed fresh on API35
+`zero-api35`. Onboarding reached Home; Home → AI quick entry opened the queue,
+input `lunch` was persisted and rendered as `Queued` with a cancel action. AI
+network remained disabled and no cloud request was made. This confirms the
+offline capture path and stable accessibility IDs only; it does not verify
+network timeout/cancel, manifest recovery after process death, API-key
+lifecycle, TalkBack, or language switching.
