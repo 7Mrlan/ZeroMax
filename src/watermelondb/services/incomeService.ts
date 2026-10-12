@@ -14,7 +14,7 @@ export interface IncomeData {
 
 export interface IncomeWithCategory extends IncomeData {
   transactionType: 'income';
-  category?: {id: string; name: string; icon?: string; color: string};
+  category?: {id: string; name: string; icon?: string; color: string; parentName?: string};
 }
 
 const categoryMapForUser = async (userId: string): Promise<Map<string, IncomeWithCategory['category']>> => {
@@ -22,10 +22,17 @@ const categoryMapForUser = async (userId: string): Promise<Map<string, IncomeWit
     .get<Category>('categories')
     .query(Q.where('user_id', userId), Q.where('kind', 'income'))
     .fetch();
+  const namesById = new Map(categories.map(category => [category.id, category.name]));
   return new Map(
     categories.map(category => [
       category.id,
-      {id: category.id, name: category.name, icon: category.icon ?? '', color: category.color ?? '#808080'},
+      {
+        id: category.id,
+        name: category.name,
+        icon: category.icon ?? '',
+        color: category.color ?? '#808080',
+        parentName: category.parentId ? namesById.get(category.parentId) : undefined,
+      },
     ]),
   );
 };

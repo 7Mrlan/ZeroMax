@@ -12,7 +12,7 @@ export interface TransactionRecord {
   categoryId: string;
   userId: string;
   date: string;
-  category?: {id: string; name: string; icon?: string; color: string};
+  category?: {id: string; name: string; icon?: string; color: string; parentName?: string};
 }
 
 export const transactionRecordKey = (record: Pick<TransactionRecord, 'kind' | 'id'>): string =>

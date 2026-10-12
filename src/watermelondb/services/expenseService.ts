@@ -21,6 +21,7 @@ export interface ExpenseWithCategory extends ExpenseData {
     name: string;
     icon?: string;
     color: string;
+    parentName?: string;
   };
 }
 
@@ -29,6 +30,7 @@ type CategoryInfo = {
   name: string;
   icon: string;
   color: string;
+  parentName?: string;
 };
 
 const buildCategoryMap = async (userId: string): Promise<Map<string, CategoryInfo>> => {
@@ -36,8 +38,18 @@ const buildCategoryMap = async (userId: string): Promise<Map<string, CategoryInf
   // expenses under soft-deleted categories still resolve their name/icon/color.
   // Do NOT add a status filter here — it would break historical categorization.
   const categories = await database.get<Category>('categories').query(Q.where('user_id', userId)).fetch();
+  const namesById = new Map(categories.map(category => [category.id, category.name]));
   return new Map(
-    categories.map(cat => [cat.id, {id: cat.id, name: cat.name, icon: cat.icon ?? '', color: cat.color ?? '#808080'}]),
+    categories.map(cat => [
+      cat.id,
+      {
+        id: cat.id,
+        name: cat.name,
+        icon: cat.icon ?? '',
+        color: cat.color ?? '#808080',
+        parentName: cat.parentId ? namesById.get(cat.parentId) : undefined,
+      },
+    ]),
   );
 };
 
