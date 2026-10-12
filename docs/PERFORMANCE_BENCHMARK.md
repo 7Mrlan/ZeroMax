@@ -61,3 +61,13 @@ The benchmark debug smoke ran on API35 `zero-api35` and emitted a single
 `boot.initBackend` duration of `414.857359ms` plus process/app/ready marks.
 That one debug observation only proves the trace path; it is not a TTI sample,
 baseline comparison, or performance claim.
+
+## 集中 release/Hermes/Fabric smoke（2026-10-12，代码 `1941c92`）
+
+按“完整大模块集中构建”规则，本轮在 JDK 17.0.20、SDK 37/Build Tools 35.0.0、NDK 28 环境完成两次 release `assembleRelease`：
+
+- `-PzeroPerf=false`：740 actionable tasks 成功；test-signed APK 102,061,107 bytes，SHA-256 `f96dc3faa8206d117f8378041f90eeb6fd72c1741e36a7a32b112fd890b6616c`。
+- `-PzeroPerf=true`：740 actionable tasks 成功；APK 102,061,107 bytes，SHA-256 `3f32340bce24cc7cd25931a3125082a2b39d87bfbe03adfefc7cee29e1d1d1a8`；`apksigner verify --verbose` 通过 v2；`check-android-artifact.js` 通过。
+- 临时 test keystore 只用于本次本地 smoke，已清理；这不是生产签名 AAB/商店发布证据。Gradle 输出了既有 AGP legacy variant API deprecation warnings，但构建未失败。
+
+trace-on 包在 API35 `zero-api35` fresh install 后无 Metro 启动，logcat 产生 `process.start`、`app.module_start`、`boot.init_start`、`boot.initBackend.start`、`boot.initBackend`（本次单次 debug/release smoke `durationMs=64.78384000000369`）和 `boot.ready`。这只证明 release bundle、开关和启动 trace 路径；本轮没有完成 tab/entry 交互，因此没有 frame session、query P50/P95 或 TTI 样本，也没有性能百分比结论。

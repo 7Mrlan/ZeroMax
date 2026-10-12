@@ -139,3 +139,7 @@ close the denied-permission item.
 - [ ] Automated gate green
 - [ ] Sections 3–7 walked on at least one recent iPhone and one mid/low-end Android
 - [ ] Note the OS versions and devices used in the release notes
+
+## 2026-10-12 集中 release smoke
+
+代码 `1941c92` 在本地主机使用临时 test keystore 完成 trace-off/trace-on 两次 `:app:assembleRelease`（各 740 actionable tasks）。trace-on APK SHA-256 为 `3f32340bce24cc7cd25931a3125082a2b39d87bfbe03adfefc7cee29e1d1d1a8`，v2 签名和 Android artifact contract 通过；安装到 API35 `zero-api35` 后无 Metro 启动并产生 ZeroPerf boot marks。临时 keystore 已清理，正式签名、AAB、物理设备、TalkBack、网络和真实性能仍未通过。
