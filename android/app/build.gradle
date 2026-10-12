@@ -93,12 +93,16 @@ android {
     compileSdk rootProject.ext.compileSdkVersion
 
     namespace "com.anotherwhy.zero"
+    buildFeatures {
+        buildConfig true
+    }
     defaultConfig {
         applicationId "com.anotherwhy.zero"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 19
         versionName "2.6.6"
+        buildConfigField "boolean", "ZERO_PERF_ENABLED", ((project.findProperty("zeroPerf") ?: "false") == "true").toString()
     }
 
     // 16 KB page size support (required for Android 15+ / Play submissions):

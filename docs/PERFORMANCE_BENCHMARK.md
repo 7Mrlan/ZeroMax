@@ -44,3 +44,15 @@ evidence. The candidate P95 for every required metric must be no more than
 release block. This check is a guardrail only and does not create measurements.
 
 Only the candidate report may claim a performance improvement. A candidate P95 regression over 5% against the Zero baseline blocks release; a claim of improvement requires the same input/device/build and statistically comparable repeated samples. Static FlashList counts, bundle size, test count, or a successful APK build are not performance evidence.
+
+## Opt-in trace instrumentation
+
+The candidate now has an Android `ZeroPerformance` bridge behind the Gradle
+property `-PzeroPerf=true`. It stores bounded, PII-free mark/measure events in
+memory and flushes them as `ZeroPerf` logcat JSON only when the benchmark flag
+is enabled. The default build uses `ZERO_PERF_ENABLED=false`; an API35 runtime
+check produced no `ZeroPerf` lines in the default debug package, while the
+benchmark debug package emitted `process.start`, `boot.initBackend` and
+`boot.ready` records. This proves the switch and bridge, not a performance
+result. Frame sessions, query metrics, release Hermes collection and the raw
+30-sample report are still pending.

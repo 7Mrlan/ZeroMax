@@ -16,6 +16,9 @@ import ErrorBoundary from './src/components/atoms/ErrorBoundary';
 import {initBackend, retryBackend, type BackendInitResult} from './src/backend';
 import './src/sheets/sheets';
 import './src/utils/globalErrorHandler';
+import {flushPerformanceTrace, markPerformance, measurePerformance} from './src/utils/performanceTrace';
+
+markPerformance('app.module_start');
 
 // Deliberately renders outside every provider (like ErrorBoundary): plain
 // Text + Appearance, because ThemeProvider is unavailable when the DB fails.
@@ -84,17 +87,26 @@ const App = () => {
     // Await SQLite setup and data migrations before mounting screens.
     const init = async () => {
       try {
-        const result = await (retryAttempt === 0 ? initBackend() : retryBackend());
+        markPerformance('boot.init_start');
+        const result = await measurePerformance('boot.initBackend', () =>
+          retryAttempt === 0 ? initBackend() : retryBackend(),
+        );
         if (cancelled) {
           return;
         }
         if (result.ok) {
+          markPerformance('boot.ready');
+          flushPerformanceTrace();
           setInitState({status: 'ready'});
         } else {
+          markPerformance('boot.failed');
+          flushPerformanceTrace();
           setInitState({status: 'failed', result});
         }
       } catch (error) {
         if (!cancelled) {
+          markPerformance('boot.failed');
+          flushPerformanceTrace();
           setInitState({
             status: 'failed',
             result: {
