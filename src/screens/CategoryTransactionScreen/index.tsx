@@ -15,16 +15,8 @@ import {hexToRgba} from '../../utils/colorUtils';
 
 const CategoryTransactionScreen = () => {
   const route = useRoute<CategoryTransactionRouteProp>();
-  const {
-    colors,
-    transactions,
-    totalAmount,
-    categoryName,
-    categoryColor,
-    categoryIcon,
-    monthLabel,
-    yearMonth,
-  } = useCategoryTransaction(route);
+  const {colors, transactions, totalAmount, error, categoryName, categoryColor, categoryIcon, monthLabel, yearMonth} =
+    useCategoryTransaction(route);
   const {t} = useTranslation();
   const formatAmount = useFormatAmount();
 
@@ -36,7 +28,9 @@ const CategoryTransactionScreen = () => {
             <Icon name={categoryIcon || 'shapes'} size={18} color={categoryColor} />
           </View>
           <View style={gs.flex1}>
-            <PrimaryText size={11} color={colors.secondaryText}>{monthLabel}</PrimaryText>
+            <PrimaryText size={11} color={colors.secondaryText}>
+              {monthLabel}
+            </PrimaryText>
             <PrimaryText size={15} weight="semibold" variant="number">
               {formatAmount(totalAmount)}
             </PrimaryText>
@@ -59,11 +53,11 @@ const CategoryTransactionScreen = () => {
           <Icon name="receipt" size={22} color={colors.secondaryText} />
         </View>
         <PrimaryText size={13} color={colors.secondaryText} style={gs.mt10}>
-          {t('transaction.noTransactionsInCategory', {category: categoryName})}
+          {error ? t('transaction.loadFailed') : t('transaction.noTransactionsInCategory', {category: categoryName})}
         </PrimaryText>
       </View>
     ),
-    [colors, categoryName, t],
+    [colors, categoryName, error, t],
   );
 
   return (

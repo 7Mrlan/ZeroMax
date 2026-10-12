@@ -40,4 +40,19 @@ describe('transaction repository', () => {
     });
     await expect(repository.getByMonth('u1', '2026-01')).rejects.toThrow('income table unavailable');
   });
+
+  it('queries only the requested kind for category detail', async () => {
+    const getExpensesByCategory = jest.fn(async () => [expense]);
+    const getIncomesByCategory = jest.fn(async () => [income]);
+    const repository = createTransactionRepository({getExpensesByCategory, getIncomesByCategory});
+
+    const incomeRecords = await repository.getByCategory('u1', 'c2', '2026-01', 'income', ['c2', 'c3']);
+    expect(incomeRecords.map(record => transactionRecordKey(record))).toEqual(['income:i1']);
+    expect(getIncomesByCategory).toHaveBeenCalledWith('u1', ['c2', 'c3'], '2026-01');
+    expect(getExpensesByCategory).not.toHaveBeenCalled();
+
+    const expenseRecords = await repository.getByCategory('u1', 'c1', '2026-01', 'expense');
+    expect(expenseRecords.map(record => transactionRecordKey(record))).toEqual(['expense:e1']);
+    expect(getExpensesByCategory).toHaveBeenCalledWith('u1', ['c1'], '2026-01');
+  });
 });

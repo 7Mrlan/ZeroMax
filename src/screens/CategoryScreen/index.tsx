@@ -18,6 +18,7 @@ import {Colors} from '../../hooks/useThemeColors';
 import {FlashList} from '@shopify/flash-list';
 import {gs, hitSlop} from '../../styles/globalStyles';
 import {hexToRgba} from '../../utils/colorUtils';
+import useFormatAmount from '../../hooks/useFormatAmount';
 
 const CategoryRow = memo(
   ({
@@ -25,24 +26,31 @@ const CategoryRow = memo(
     colors,
     onEdit,
     onDelete,
+    onOpen,
     onToggle,
     depth,
     hasChildren,
     expanded,
     openSwipeableRef,
     tutorialSwipeRef,
+    totalAmount,
+    formatAmount,
   }: {
     category: Category;
     colors: Colors;
     onEdit: (id: string, name: string, icon: string, color: string) => void;
     onDelete: (id: string) => void;
+    onOpen: (id: string, name: string, icon: string, color: string, kind: 'expense' | 'income') => void;
     onToggle: () => void;
     depth: number;
     hasChildren: boolean;
     expanded: boolean;
     openSwipeableRef: React.RefObject<{close: () => void} | null>;
     tutorialSwipeRef?: React.RefObject<SwipeableMethods | null>;
+    totalAmount: number;
+    formatAmount: (amount: number) => string;
   }) => {
+    const {t} = useTranslation();
     const handleEdit = useCallback(() => {
       onEdit(String(category.id), category.name, category.icon ?? '', category.color ?? colors.primaryText);
     }, [onEdit, category, colors.primaryText]);
@@ -50,6 +58,9 @@ const CategoryRow = memo(
     const handleDelete = useCallback(() => {
       onDelete(category.id);
     }, [onDelete, category.id]);
+    const handleOpen = useCallback(() => {
+      onOpen(category.id, category.name, category.icon ?? '', category.color ?? colors.primaryText, category.kind);
+    }, [category, colors.primaryText, onOpen]);
 
     return (
       <View style={gs.mb5}>
@@ -89,6 +100,19 @@ const CategoryRow = memo(
               </PrimaryText>
               {hasChildren ? <Icon name="chevron-down" size={16} color={colors.secondaryText} /> : null}
             </TouchableOpacity>
+            {totalAmount > 0 ? (
+              <PrimaryText size={12} color={colors.secondaryText} variant="number" style={gs.mr5}>
+                {formatAmount(totalAmount)}
+              </PrimaryText>
+            ) : null}
+            <TouchableOpacity
+              onPress={handleOpen}
+              style={[gs.size32, gs.center]}
+              testID={`category-details-${String(category.id)}`}
+              accessibilityRole="button"
+              accessibilityLabel={t('categories.openDetails', {name: category.name})}>
+              <Icon name="chevron-right" size={16} color={colors.secondaryText} />
+            </TouchableOpacity>
           </View>
         </SwipeableRow>
       </View>
@@ -97,8 +121,10 @@ const CategoryRow = memo(
 );
 
 const CategoryScreen = () => {
-  const {colors, refreshing, onRefresh, categories, handleEdit, handleDelete} = useCategory();
+  const {colors, refreshing, onRefresh, categories, categoryTotals, handleEdit, handleOpen, handleDelete} =
+    useCategory();
   const {t} = useTranslation();
+  const formatAmount = useFormatAmount();
   const openSwipeableRef = useRef<{close: () => void} | null>(null);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const visibleCategories = useMemo(() => {
@@ -129,6 +155,7 @@ const CategoryScreen = () => {
         colors={colors}
         onEdit={handleEdit}
         onDelete={handleDelete}
+        onOpen={handleOpen}
         depth={item.depth}
         hasChildren={item.hasChildren}
         expanded={expandedIds.has(item.category.id)}
@@ -142,9 +169,11 @@ const CategoryScreen = () => {
         }
         openSwipeableRef={openSwipeableRef}
         tutorialSwipeRef={index === 0 ? tutorialRef : undefined}
+        totalAmount={categoryTotals.get(item.category.id) ?? 0}
+        formatAmount={formatAmount}
       />
     ),
-    [colors, expandedIds, handleEdit, handleDelete, tutorialRef],
+    [categoryTotals, colors, expandedIds, formatAmount, handleEdit, handleDelete, handleOpen, tutorialRef],
   );
 
   const ListEmptyComponent = useCallback(

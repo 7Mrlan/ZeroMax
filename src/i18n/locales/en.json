@@ -136,7 +136,8 @@
   },
   "categories": {
     "title": "Categories",
-    "addCategory": "Add new category"
+    "addCategory": "Add new category",
+    "openDetails": "Open {{name}} details"
   },
   "transaction": {
     "addTitle": "Add Transaction",
@@ -156,6 +157,7 @@
     "totalSpent": "Total Spent",
     "noTransactionsOnDate": "No transactions on {{date}}",
     "noTransactionsInCategory": "No transactions in {{category}}",
+    "loadFailed": "Could not load this category's records",
     "txnCount_one": "{{count}} txn",
     "txnCount_other": "{{count}} txns"
   },

@@ -48,6 +48,8 @@ export type HomeStackParamList = {
     categoryName: string;
     categoryColor: string;
     categoryIcon?: string;
+    kind: 'expense' | 'income';
+    categoryIds?: string[];
     yearMonth: string;
     monthLabel: string;
   };

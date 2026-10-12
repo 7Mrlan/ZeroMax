@@ -35,10 +35,10 @@ const useEverydayTransaction = (route: EverydayTransactionRouteProp) => {
   );
 
   /**
-   * `filteredExpenses` is ONE slot shared with CategoryTransactionScreen, so
-   * between navigating here and this day's fetch resolving it still holds the
-   * previous screen's rows. The slice has always written a `filterKey` for
-   * exactly this — it just was never read, so the stale list flashed anyway.
+   * `filteredExpenses` is a shared date-filter slot, so between navigating
+   * here and this day's fetch resolving it may still hold another day's rows.
+   * The slice writes a `filterKey` for exactly this boundary; gate on it
+   * rather than allowing stale expense rows to flash.
    *
    * Gate on it: until the store's key matches the day we asked for, this
    * screen has no data rather than the wrong data.

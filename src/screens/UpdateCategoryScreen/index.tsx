@@ -9,6 +9,8 @@ export type UpdateCategoryScreenRouteProp = RouteProp<
       categoryName: string;
       categoryIcon: string;
       categoryColor: string;
+      categoryKind?: 'expense' | 'income';
+      categoryParentId?: string | null;
     };
   },
   'UpdateCategoryScreen'
@@ -17,7 +19,7 @@ export type UpdateCategoryScreenRouteProp = RouteProp<
 const UpdateCategoryScreen = () => {
   const route = useRoute<UpdateCategoryScreenRouteProp>();
 
-  return <CategoryEntry type={'Update'} route={route} />;
+  return <CategoryEntry type="Update" route={route} kind={route.params.categoryKind ?? 'expense'} />;
 };
 
 export default UpdateCategoryScreen;

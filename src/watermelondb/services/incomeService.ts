@@ -96,6 +96,34 @@ export const getAllIncomesByMonth = async (userId: string, yearMonth: string): P
   return incomes.map(income => mapIncome(income, categories));
 };
 
+/** Gets income rows for one category and month without touching expense state. */
+export const getAllIncomesByCategoryAndMonth = async (
+  userId: string,
+  categoryId: string,
+  yearMonth: string,
+): Promise<IncomeWithCategory[]> => {
+  return getAllIncomesByCategoriesAndMonth(userId, [categoryId], yearMonth);
+};
+
+/** Gets income rows for a category subtree in one indexed `IN` query. */
+export const getAllIncomesByCategoriesAndMonth = async (
+  userId: string,
+  categoryIds: readonly string[],
+  yearMonth: string,
+): Promise<IncomeWithCategory[]> => {
+  if (categoryIds.length === 0) return [];
+  const incomes = await database
+    .get<Income>('incomes')
+    .query(
+      Q.where('user_id', userId),
+      Q.where('category_id', Q.oneOf([...new Set(categoryIds)])),
+      Q.where('date', Q.like(`${Q.sanitizeLikeString(yearMonth)}%`)),
+    )
+    .fetch();
+  const categories = await categoryMapForUser(userId);
+  return incomes.map(income => mapIncome(income, categories));
+};
+
 export const getIncomeById = async (incomeId: string): Promise<IncomeData | null> => {
   try {
     return mapIncome(await database.get<Income>('incomes').find(incomeId));

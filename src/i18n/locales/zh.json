@@ -136,7 +136,8 @@
   },
   "categories": {
     "title": "分类",
-    "addCategory": "新增分类"
+    "addCategory": "新增分类",
+    "openDetails": "查看{{name}}详情"
   },
   "transaction": {
     "addTitle": "新增记录",
@@ -156,6 +157,7 @@
     "totalSpent": "总支出",
     "noTransactionsOnDate": "{{date}} 没有记录",
     "noTransactionsInCategory": "{{category}} 没有记录",
+    "loadFailed": "无法加载此分类的记录",
     "txnCount_one": "{{count}} 笔",
     "txnCount_other": "{{count}} 笔"
   },

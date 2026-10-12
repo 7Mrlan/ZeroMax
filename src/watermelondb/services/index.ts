@@ -15,6 +15,7 @@ export {
   getAllExpensesByDate,
   getAllExpensesByMonth,
   getAllExpensesByCategoryAndMonth,
+  getAllExpensesByCategoriesAndMonth,
   getAvailableExpenseYears,
 } from './expenseService';
 export type {ExpenseData, ExpenseWithCategory} from './expenseService';
@@ -25,6 +26,8 @@ export {
   updateIncomeById,
   deleteIncomeById,
   getAllIncomesByMonth,
+  getAllIncomesByCategoryAndMonth,
+  getAllIncomesByCategoriesAndMonth,
   getIncomeById,
   getAvailableIncomeYears,
 } from './incomeService';

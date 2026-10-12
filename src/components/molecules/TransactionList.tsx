@@ -344,12 +344,11 @@ const TransactionList: React.FC<TransactionListProps> = ({
         return <InlineUndo colors={colors} onUndo={() => handleUndo(item.id)} edgeToEdge={edgeToEdge} />;
       }
 
-      const transactionKind = getTransactionKind(item.transaction);
       return (
         <ExpenseRow
           transaction={item.transaction}
           colors={colors}
-          onEdit={transactionKind === 'expense' ? handleEdit : undefined}
+          onEdit={handleEdit}
           onDelete={handleDelete}
           openSwipeableRef={openSwipeableRef}
           edgeToEdge={edgeToEdge}

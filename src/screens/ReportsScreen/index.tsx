@@ -134,6 +134,7 @@ const ReportsScreen = () => {
         categoryName,
         categoryColor,
         categoryIcon,
+        kind: 'expense',
         yearMonth,
         monthLabel: `${selectedMonth} ${selectedYear}`,
       });
