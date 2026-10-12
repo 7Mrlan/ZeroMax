@@ -87,3 +87,9 @@ trace-on 包在 API35 `zero-api35` fresh install 后无 Metro 启动，logcat �
 ### 30-session candidate trace smoke（2026-10-12）
 
 同一 API35 `zero-api35` trace-on release 上，使用 adb taps 完成 30 次 tab 往返和 30 次 AddEntry mode 往返；完整原始数组保存在 [`docs/performance/trace-smoke-2026-10-12.json`](./performance/trace-smoke-2026-10-12.json)。tab 30/30 session duration 为 150–166.67ms、每次 16 frames、long-frame 总数 0；entry 30/30 为 233.33–250ms、15/16 frames、long-frame 总数 2。trace window 固定为 260ms，因此这些数据不能直接当作动画耗时、FPS 或 jank 百分比；仍没有 Zero/Zerox 同设备对照和 `performance/latest.json`。
+
+### Zero release activity-start smoke（2026-10-12）
+
+Zero `d7725cd` release APK（SHA `0b94f4c9c46c7ec78eeb045282489de73a452d61b715ec27a134c1e11038009f`）和候选 `1941c92` trace-on release APK（SHA `3f32340bce24cc7cd25931a3125082a2b39d87bfbe03adfefc7cee29e1d1d1a8`）在同一 API35 `zero-api35` AVD 各执行 30 次 `adb shell am start -W`，原始数组保存在 [`docs/performance/activity-start-smoke-2026-10-12.json`](./performance/activity-start-smoke-2026-10-12.json)。
+
+按 `TotalTime`：Zero p50 `505ms` / p95 `616ms`，候选 p50 `502.5ms` / p95 `575ms`。这只是 Activity-start smoke；它不是 BootGate TTI、FPS、RSS、scroll jank、DB query 或 AI latency。两个包都使用临时 test signing，样本没有 Zerox 对照和完整 fixture matrix，不能据此宣称整体性能提升。

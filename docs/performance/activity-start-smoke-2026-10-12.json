@@ -1,0 +1,38 @@
+{
+  "kind": "activity-start-smoke",
+  "date": "2026-10-12",
+  "device": {
+    "avd": "zero-api35",
+    "apiLevel": 35,
+    "architecture": "x86_64"
+  },
+  "metric": "adb shell am start -W TotalTime",
+  "builds": {
+    "zero-d7725cd": {
+      "apkSha256": "0b94f4c9c46c7ec78eeb045282489de73a452d61b715ec27a134c1e11038009f",
+      "variant": "release",
+      "signing": "temporary-test"
+    },
+    "candidate-1941c92": {
+      "apkSha256": "3f32340bce24cc7cd25931a3125082a2b39d87bfbe03adfefc7cee29e1d1d1a8",
+      "variant": "release",
+      "signing": "temporary-test"
+    }
+  },
+  "samples": {
+    "zero-d7725cd": [
+      412, 562, 416, 485, 489, 412, 628, 498, 488, 538, 602, 476, 591, 501, 551, 584, 481, 455, 600, 511, 546, 465, 576,
+      474, 512, 485, 616, 587, 453, 509
+    ],
+    "candidate-1941c92": [
+      448, 495, 419, 504, 547, 495, 497, 475, 487, 501, 449, 544, 546, 547, 483, 560, 450, 466, 575, 562, 494, 538, 546,
+      514, 485, 523, 576, 532, 473, 562
+    ]
+  },
+  "limitations": [
+    "activity-start TotalTime is not BootGate TTI",
+    "same AVD but fresh app data and temporary test signatures",
+    "does not measure RSS, scroll jank, DB query, AI latency, or iOS",
+    "not a complete performance/latest.json and not a general performance claim"
+  ]
+}
