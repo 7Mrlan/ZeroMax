@@ -47,15 +47,17 @@ Only the candidate report may claim a performance improvement. A candidate P95 r
 
 ## Opt-in trace instrumentation
 
-The candidate at code commit `81b278a` now has an Android `ZeroPerformance` bridge behind the Gradle
-property `-PzeroPerf=true`. It stores bounded, PII-free mark/measure events in
-memory and flushes them as `ZeroPerf` logcat JSON only when the benchmark flag
-is enabled. The default build uses `ZERO_PERF_ENABLED=false`; an API35 runtime
-check produced no `ZeroPerf` lines in the default debug package, while the
-benchmark debug package emitted `process.start`, `boot.initBackend` and
-`boot.ready` records. This proves the switch and bridge, not a performance
-result. Frame sessions, query metrics, release Hermes collection and the raw
-30-sample report are still pending.
+The candidate at code commit `1941c92` includes the Android `ZeroPerformance`
+bridge behind `-PzeroPerf=true`, UI-thread frame sessions for tab/entry
+switches, and PII-free TransactionRecord query durations. It stores bounded
+events in memory and flushes them as `ZeroPerf` logcat JSON only when the
+benchmark flag is enabled. The default build uses
+`ZERO_PERF_ENABLED=false`; an API35 runtime check produced no `ZeroPerf` lines
+in the default debug package, while the benchmark release package emitted
+boot, frame-session and query records. This proves the switch and collection
+path, not a performance result. Release Hermes 30-sample comparison,
+Zero/Zerox baselines, RSS/TTI/scroll metrics and `performance/latest.json`
+remain pending.
 
 The benchmark debug smoke ran on API35 `zero-api35` and emitted a single
 `boot.initBackend` duration of `414.857359ms` plus process/app/ready marks.
