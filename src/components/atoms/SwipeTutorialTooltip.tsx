@@ -2,7 +2,7 @@ import React from 'react';
 import {View} from 'react-native';
 import {TouchableOpacity} from 'react-native-gesture-handler';
 import {useTranslation} from 'react-i18next';
-import Animated, {FadeIn, FadeOut} from 'react-native-reanimated';
+import Animated, {FadeIn, FadeOut, ReduceMotion} from 'react-native-reanimated';
 import useThemeColors from '../../hooks/useThemeColors';
 import PrimaryText from './PrimaryText';
 import Icon from './Icons';
@@ -18,8 +18,8 @@ const SwipeTutorialTooltip: React.FC<SwipeTutorialTooltipProps> = ({onDismiss}) 
 
   return (
     <Animated.View
-      entering={FadeIn.duration(300)}
-      exiting={FadeOut.duration(200)}
+      entering={FadeIn.duration(300).reduceMotion(ReduceMotion.System)}
+      exiting={FadeOut.duration(200).reduceMotion(ReduceMotion.System)}
       style={[gs.mx16, gs.mb10, gs.rounded12, gs.p14, gs.rowBetweenCenter, {backgroundColor: colors.accentGreen}]}>
       <View style={[gs.rowCenter, gs.flex1, gs.mr10]}>
         <Icon name="arrow-left-right" size={16} color={colors.buttonText} />
