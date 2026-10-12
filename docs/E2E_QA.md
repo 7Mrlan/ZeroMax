@@ -68,3 +68,12 @@ network timeout/cancel, manifest recovery after process death, API-key
 lifecycle, TalkBack, or language switching.
 
 - `ai-offline-queue.yaml`：最新代码的 Home AI 快捷入口、离线输入、入队和 Queued 状态；当前已用 API35 adb 手工完成同等步骤，Maestro 运行记录仍待环境中执行。
+
+## Current HEAD AI offline queue smoke (2026-10-12)
+
+The current `cf5f53e` trace-on APK was installed on API35 `zero-api35`. From
+Home, the AI quick entry accepted `lunch` and rendered a `Queued` task while
+AI remained disabled and no cloud request was sent. Tapping cancel changed the
+task to `Cancelled` and exposed the cleanup action. This is an adb manual smoke,
+not a Maestro pass; network timeout/cancel, API-key lifecycle, process-death
+recovery, TalkBack, and physical-device validation remain open.

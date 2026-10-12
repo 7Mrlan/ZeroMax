@@ -166,9 +166,9 @@ SHA-256 `37f6b50803394bcaba1faea96af55ccd234e128ec553ff0fc1443670b2b01c9a`;
 APK Signature Scheme v2 verification passed, and the temporary keystore plus
 `android/keystore.properties` were removed. This is packaging evidence only.
 
-The current host has no usable emulator or Maestro CLI, so the current artifact
-has no new startup, migration, language, AI, TalkBack, or performance runtime
-pass. Production signing/AAB and physical-device validation remain open.
+The concentrated build itself is packaging evidence; the API35 adb runtime
+smoke for this artifact is recorded below. Maestro, TalkBack, production
+signing/AAB and physical-device validation remain open.
 
 ## Current HEAD API35 adb smoke (2026-10-12)
 
@@ -180,3 +180,8 @@ ZeroPerf boot marks. Manual adb taps then completed 30 four-tab round trips and
 [`PERFORMANCE_BENCHMARK.md`](./PERFORMANCE_BENCHMARK.md); this is not a Maestro
 pass and does not cover TalkBack, language switching, AI network/restart,
 physical devices, or a comparative performance claim.
+
+The same current API35 manual session also opened Home → AI, queued `lunch`
+while AI was disabled, and cancelled it to `Cancelled`; no cloud request was
+made. This is recorded as an adb smoke only, not a Maestro/network/restart
+pass.
