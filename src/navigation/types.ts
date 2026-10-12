@@ -23,6 +23,13 @@ export type HomeStackParamList = {
     expenseDate: string;
     expenseAmount: number;
   };
+  UpdateIncomeScreen: {
+    incomeId: string;
+    incomeTitle: string;
+    incomeAmount: number;
+    incomeCategoryId: string;
+    incomeDate: string;
+  };
   AddCategoryScreen: {kind?: 'expense' | 'income'} | undefined;
   UpdateCategoryScreen: {
     categoryId: string;

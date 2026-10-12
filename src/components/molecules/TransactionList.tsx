@@ -300,7 +300,16 @@ const TransactionList: React.FC<TransactionListProps> = ({
   );
 
   const handleEdit = useCallback((transaction: Transaction) => {
-    if (getTransactionKind(transaction) === 'income') return;
+    if (getTransactionKind(transaction) === 'income') {
+      navigate('UpdateIncomeScreen', {
+        incomeId: String(transaction.id),
+        incomeTitle: transaction.title,
+        incomeAmount: transaction.amount,
+        incomeCategoryId: transaction.categoryId,
+        incomeDate: transaction.date,
+      });
+      return;
+    }
     navigate('UpdateTransactionScreen', {
       expenseId: String(transaction.id),
       expenseTitle: transaction.title,

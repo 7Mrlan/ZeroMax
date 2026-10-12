@@ -165,6 +165,7 @@
   },
   "income": {
     "addTitle": "新增收入",
+    "editTitle": "编辑收入",
     "titleLabel": "标题",
     "titlePlaceholder": "例如：工资",
     "amountLabel": "金额",
