@@ -47,7 +47,7 @@ Only the candidate report may claim a performance improvement. A candidate P95 r
 
 ## Opt-in trace instrumentation
 
-The candidate now has an Android `ZeroPerformance` bridge behind the Gradle
+The candidate at code commit `81b278a` now has an Android `ZeroPerformance` bridge behind the Gradle
 property `-PzeroPerf=true`. It stores bounded, PII-free mark/measure events in
 memory and flushes them as `ZeroPerf` logcat JSON only when the benchmark flag
 is enabled. The default build uses `ZERO_PERF_ENABLED=false`; an API35 runtime
@@ -56,3 +56,8 @@ benchmark debug package emitted `process.start`, `boot.initBackend` and
 `boot.ready` records. This proves the switch and bridge, not a performance
 result. Frame sessions, query metrics, release Hermes collection and the raw
 30-sample report are still pending.
+
+The benchmark debug smoke ran on API35 `zero-api35` and emitted a single
+`boot.initBackend` duration of `414.857359ms` plus process/app/ready marks.
+That one debug observation only proves the trace path; it is not a TTI sample,
+baseline comparison, or performance claim.
