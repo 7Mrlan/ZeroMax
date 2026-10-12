@@ -17,6 +17,9 @@ export interface ImportResult {
   stats: ImportStats;
 }
 
+const categoryKey = (kind: 'expense' | 'income', parentName: string | null, name: string): string =>
+  `${kind}|${parentName ?? ''}|${name}`;
+
 /**
  * Restores a backup ATOMICALLY: wipe-existing + recreate-everything happen in
  * ONE database.write with ONE database.batch. If anything fails, the write
@@ -68,7 +71,7 @@ export const importAllData = async (data: ExportData): Promise<ImportResult> => 
     const categoryIdByKey = new Map<string, string>();
     const categoryIds = plan.categories.map(planned => {
       const id = nanoid(24);
-      categoryIdByKey.set(`${planned.kind}|${planned.parentName ?? ''}|${planned.name}`, id);
+      categoryIdByKey.set(categoryKey(planned.kind, planned.parentName, planned.name), id);
       return {planned, id};
     });
     const newCategories = categoryIds.map(({planned, id}) => {
@@ -82,7 +85,7 @@ export const importAllData = async (data: ExportData): Promise<ImportResult> => 
         if (Object.prototype.hasOwnProperty.call(cat._raw, 'kind')) {
           cat.kind = planned.kind;
           cat.parentId = planned.parentName
-            ? categoryIdByKey.get(`${planned.kind}|${planned.parentName}|${planned.parentName}`)
+            ? categoryIdByKey.get(categoryKey(planned.kind, null, planned.parentName))
             : undefined;
         }
       });
@@ -121,7 +124,7 @@ export const importAllData = async (data: ExportData): Promise<ImportResult> => 
         expense.amount = planned.amount;
         expense.description = planned.description;
         expense.categoryId =
-          categoryIdByKey.get(`${planned.categoryKind}|${planned.categoryParentName ?? ''}|${planned.categoryName}`) ??
+          categoryIdByKey.get(categoryKey(planned.categoryKind, planned.categoryParentName, planned.categoryName)) ??
           '';
         expense.userId = userId;
         expense.date = planned.date;
@@ -134,7 +137,7 @@ export const importAllData = async (data: ExportData): Promise<ImportResult> => 
             income.title = planned.title;
             income.amount = planned.amount;
             income.categoryId =
-              categoryIdByKey.get(`income|${planned.categoryParentName ?? ''}|${planned.categoryName}`) ?? '';
+              categoryIdByKey.get(categoryKey('income', planned.categoryParentName, planned.categoryName)) ?? '';
             income.userId = userId;
             income.date = planned.date;
           }),
