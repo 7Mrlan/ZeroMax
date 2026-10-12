@@ -10,15 +10,18 @@ const initialState = categoriesAdapter.getInitialState({
   error: null as string | null,
 });
 
-export const fetchCategories = createAsyncThunk<Category[], void, {state: RootState}>('category/fetchAll', async (_, {getState, rejectWithValue}) => {
-  try {
-    const userId = selectUserId(getState());
-    const categories = await getAllCategoriesByUserId(userId);
-    return categories;
-  } catch (error) {
-    return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch categories');
-  }
-});
+export const fetchCategories = createAsyncThunk<Category[], void, {state: RootState}>(
+  'category/fetchAll',
+  async (_, {getState, rejectWithValue}) => {
+    try {
+      const userId = selectUserId(getState());
+      const categories = await getAllCategoriesByUserId(userId);
+      return categories;
+    } catch (error) {
+      return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch categories');
+    }
+  },
+);
 
 const categoryDataSlice = createSlice({
   name: 'category',
@@ -54,6 +57,10 @@ export const selectCategoryError = (state: RootState) => state.category.error;
 
 export const selectActiveCategories = createSelector([selectCategoryData], categoryData =>
   categoryData.filter((category: Category) => category.categoryStatus === true),
+);
+
+export const selectDeletedCategories = createSelector([selectCategoryData], categoryData =>
+  categoryData.filter((category: Category) => category.categoryStatus === false),
 );
 
 export default categoryDataSlice.reducer;

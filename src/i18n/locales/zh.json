@@ -137,7 +137,10 @@
   "categories": {
     "title": "分类",
     "addCategory": "新增分类",
-    "openDetails": "查看{{name}}详情"
+    "openDetails": "查看{{name}}详情",
+    "showDeleted": "已删除（{{count}}）",
+    "hideDeleted": "隐藏已删除",
+    "restore": "恢复{{name}}"
   },
   "transaction": {
     "addTitle": "新增记录",

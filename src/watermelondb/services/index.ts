@@ -2,7 +2,13 @@
 export {createUser, updateUserById, getAllUsers} from './userService';
 
 // Category Service
-export {createCategory, softDeleteCategoryById, updateCategoryById, getAllCategoriesByUserId} from './categoryService';
+export {
+  createCategory,
+  softDeleteCategoryById,
+  restoreCategoryById,
+  updateCategoryById,
+  getAllCategoriesByUserId,
+} from './categoryService';
 export type {CategoryData} from './categoryService';
 
 // Expense Service

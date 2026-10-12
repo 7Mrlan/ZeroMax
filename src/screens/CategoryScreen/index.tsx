@@ -27,6 +27,7 @@ const CategoryRow = memo(
     onEdit,
     onDelete,
     onOpen,
+    onRestore,
     onToggle,
     depth,
     hasChildren,
@@ -35,12 +36,14 @@ const CategoryRow = memo(
     tutorialSwipeRef,
     totalAmount,
     formatAmount,
+    isDeleted,
   }: {
     category: Category;
     colors: Colors;
-    onEdit: (id: string, name: string, icon: string, color: string) => void;
-    onDelete: (id: string) => void;
+    onEdit?: (id: string, name: string, icon: string, color: string) => void;
+    onDelete?: (id: string) => void;
     onOpen: (id: string, name: string, icon: string, color: string, kind: 'expense' | 'income') => void;
+    onRestore: (id: string) => void;
     onToggle: () => void;
     depth: number;
     hasChildren: boolean;
@@ -49,15 +52,19 @@ const CategoryRow = memo(
     tutorialSwipeRef?: React.RefObject<SwipeableMethods | null>;
     totalAmount: number;
     formatAmount: (amount: number) => string;
+    isDeleted: boolean;
   }) => {
     const {t} = useTranslation();
     const handleEdit = useCallback(() => {
-      onEdit(String(category.id), category.name, category.icon ?? '', category.color ?? colors.primaryText);
+      onEdit?.(String(category.id), category.name, category.icon ?? '', category.color ?? colors.primaryText);
     }, [onEdit, category, colors.primaryText]);
 
     const handleDelete = useCallback(() => {
-      onDelete(category.id);
+      onDelete?.(category.id);
     }, [onDelete, category.id]);
+    const handleRestore = useCallback(() => {
+      onRestore(category.id);
+    }, [category.id, onRestore]);
     const handleOpen = useCallback(() => {
       onOpen(category.id, category.name, category.icon ?? '', category.color ?? colors.primaryText, category.kind);
     }, [category, colors.primaryText, onOpen]);
@@ -65,8 +72,8 @@ const CategoryRow = memo(
     return (
       <View style={gs.mb5}>
         <SwipeableRow
-          onEdit={handleEdit}
-          onDelete={handleDelete}
+          onEdit={isDeleted ? undefined : handleEdit}
+          onDelete={isDeleted ? undefined : handleDelete}
           colors={colors}
           swipeRef={tutorialSwipeRef}
           openSwipeableRef={openSwipeableRef}>
@@ -77,6 +84,7 @@ const CategoryRow = memo(
               gs.px14,
               gs.py12,
               {backgroundColor: colors.containerColor, marginLeft: depth * 18},
+              isDeleted && gs.opacity60,
             ]}>
             <View
               style={[
@@ -105,6 +113,16 @@ const CategoryRow = memo(
                 {formatAmount(totalAmount)}
               </PrimaryText>
             ) : null}
+            {isDeleted ? (
+              <TouchableOpacity
+                onPress={handleRestore}
+                style={[gs.size32, gs.center]}
+                testID={`category-restore-${String(category.id)}`}
+                accessibilityRole="button"
+                accessibilityLabel={t('categories.restore', {name: category.name})}>
+                <Icon name="undo-2" size={16} color={colors.accentGreen} />
+              </TouchableOpacity>
+            ) : null}
             <TouchableOpacity
               onPress={handleOpen}
               style={[gs.size32, gs.center]}
@@ -121,20 +139,33 @@ const CategoryRow = memo(
 );
 
 const CategoryScreen = () => {
-  const {colors, refreshing, onRefresh, categories, categoryTotals, handleEdit, handleOpen, handleDelete} =
-    useCategory();
+  const {
+    colors,
+    refreshing,
+    onRefresh,
+    categories,
+    allCategories,
+    deletedCategories,
+    categoryTotals,
+    handleEdit,
+    handleOpen,
+    handleDelete,
+    handleRestore,
+  } = useCategory();
   const {t} = useTranslation();
   const formatAmount = useFormatAmount();
   const openSwipeableRef = useRef<{close: () => void} | null>(null);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [showDeleted, setShowDeleted] = useState(false);
+  const sourceCategories = showDeleted ? allCategories : categories;
   const visibleCategories = useMemo(() => {
     const childrenByParent = new Map<string, Category[]>();
-    for (const category of categories) {
+    for (const category of sourceCategories) {
       if (category.parentId) {
         childrenByParent.set(category.parentId, [...(childrenByParent.get(category.parentId) ?? []), category]);
       }
     }
-    return categories.flatMap(category => {
+    return sourceCategories.flatMap(category => {
       if (category.parentId) return [];
       const children = childrenByParent.get(category.id) ?? [];
       const root = {category, depth: 0, hasChildren: children.length > 0};
@@ -142,10 +173,10 @@ const CategoryScreen = () => {
         ? [root, ...children.map(child => ({category: child, depth: 1, hasChildren: false}))]
         : [root];
     });
-  }, [categories, expandedIds]);
+  }, [expandedIds, sourceCategories]);
   const {shouldShowTutorial, tutorialRef, dismissTutorial} = useSwipeTutorial({
     screen: 'category',
-    itemCount: categories.length,
+    itemCount: sourceCategories.length,
   });
 
   const renderCategoryItem = useCallback(
@@ -156,6 +187,7 @@ const CategoryScreen = () => {
         onEdit={handleEdit}
         onDelete={handleDelete}
         onOpen={handleOpen}
+        onRestore={handleRestore}
         depth={item.depth}
         hasChildren={item.hasChildren}
         expanded={expandedIds.has(item.category.id)}
@@ -171,9 +203,20 @@ const CategoryScreen = () => {
         tutorialSwipeRef={index === 0 ? tutorialRef : undefined}
         totalAmount={categoryTotals.get(item.category.id) ?? 0}
         formatAmount={formatAmount}
+        isDeleted={!item.category.categoryStatus}
       />
     ),
-    [categoryTotals, colors, expandedIds, formatAmount, handleEdit, handleDelete, handleOpen, tutorialRef],
+    [
+      categoryTotals,
+      colors,
+      expandedIds,
+      formatAmount,
+      handleDelete,
+      handleEdit,
+      handleOpen,
+      handleRestore,
+      tutorialRef,
+    ],
   );
 
   const ListEmptyComponent = useCallback(
@@ -185,7 +228,27 @@ const CategoryScreen = () => {
     <>
       <PrimaryView colors={colors} useSidePadding={false} useBottomPadding={false}>
         <View style={[gs.mb15, gs.px16]}>
-          <HeaderContainer testID="categories-screen-header" headerText={t('categories.title')} />
+          <View style={gs.rowBetweenCenter}>
+            <View style={gs.flex1}>
+              <HeaderContainer testID="categories-screen-header" headerText={t('categories.title')} />
+            </View>
+            {deletedCategories.length > 0 ? (
+              <TouchableOpacity
+                onPress={() => setShowDeleted(current => !current)}
+                testID="categories-toggle-deleted"
+                accessibilityRole="button"
+                accessibilityState={{expanded: showDeleted}}
+                accessibilityLabel={t(showDeleted ? 'categories.hideDeleted' : 'categories.showDeleted', {
+                  count: deletedCategories.length,
+                })}>
+                <PrimaryText size={11} color={colors.secondaryText}>
+                  {t(showDeleted ? 'categories.hideDeleted' : 'categories.showDeleted', {
+                    count: deletedCategories.length,
+                  })}
+                </PrimaryText>
+              </TouchableOpacity>
+            ) : null}
+          </View>
         </View>
         {shouldShowTutorial && <SwipeTutorialTooltip onDismiss={dismissTutorial} />}
         <View style={gs.flex1}>

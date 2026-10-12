@@ -137,7 +137,10 @@
   "categories": {
     "title": "Categories",
     "addCategory": "Add new category",
-    "openDetails": "Open {{name}} details"
+    "openDetails": "Open {{name}} details",
+    "showDeleted": "Deleted ({{count}})",
+    "hideDeleted": "Hide deleted",
+    "restore": "Restore {{name}}"
   },
   "transaction": {
     "addTitle": "Add Transaction",

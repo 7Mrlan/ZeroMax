@@ -1,6 +1,11 @@
 import {useAppDispatch, useAppSelector} from '../../redux/hooks';
 import useThemeColors from '../../hooks/useThemeColors';
-import {fetchCategories, selectActiveCategories} from '../../redux/slice/categoryDataSlice';
+import {
+  fetchCategories,
+  selectActiveCategories,
+  selectCategoryData,
+  selectDeletedCategories,
+} from '../../redux/slice/categoryDataSlice';
 import {selectUserId} from '../../redux/slice/userIdSlice';
 import {selectMonthIndex, selectYear} from '../../redux/slice/monthSelectionSlice';
 import {getMonthNames, getMonthNumber} from '../../utils/dateUtils';
@@ -9,7 +14,7 @@ import {buildCategoryTotals} from './categoryTotals';
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {useFocusEffect} from '@react-navigation/native';
 import {navigate} from '../../utils/navigationUtils';
-import {softDeleteCategoryById} from '../../watermelondb/services';
+import {restoreCategoryById, softDeleteCategoryById} from '../../watermelondb/services';
 import {useDialog} from '../../context/DialogContext';
 import {useTranslation} from 'react-i18next';
 
@@ -19,6 +24,8 @@ const useCategory = () => {
   const {showDialog} = useDialog();
   const {t} = useTranslation();
   const categories = useAppSelector(selectActiveCategories);
+  const allCategories = useAppSelector(selectCategoryData);
+  const deletedCategories = useAppSelector(selectDeletedCategories);
   const userId = useAppSelector(selectUserId);
   const monthIndex = useAppSelector(selectMonthIndex);
   const selectedYear = useAppSelector(selectYear);
@@ -47,7 +54,7 @@ const useCategory = () => {
       .getByMonth(userId, yearMonth)
       .then(records => {
         if (active && request === totalsRequestRef.current) {
-          setCategoryTotals(buildCategoryTotals(categories, records));
+          setCategoryTotals(buildCategoryTotals(allCategories, records));
         }
       })
       .catch(() => {
@@ -56,7 +63,7 @@ const useCategory = () => {
     return () => {
       active = false;
     };
-  }, [categories, totalsRevision, userId, yearMonth]);
+  }, [allCategories, totalsRevision, userId, yearMonth]);
 
   useEffect(() => {
     if (!refreshing) return;
@@ -98,7 +105,7 @@ const useCategory = () => {
       let changed = true;
       while (changed) {
         changed = false;
-        for (const category of categories) {
+        for (const category of allCategories) {
           if (category.parentId && categoryIds.has(category.parentId) && !categoryIds.has(category.id)) {
             categoryIds.add(category.id);
             changed = true;
@@ -116,7 +123,20 @@ const useCategory = () => {
         monthLabel: `${selectedMonth} ${selectedYear}`,
       });
     },
-    [categories, selectedMonth, selectedYear, yearMonth],
+    [allCategories, selectedMonth, selectedYear, yearMonth],
+  );
+
+  const handleRestore = useCallback(
+    async (categoryId: string) => {
+      if (!userId) return;
+      try {
+        await restoreCategoryById(categoryId, userId);
+        dispatch(fetchCategories());
+      } catch (error) {
+        if (__DEV__) console.error('Error restoring category:', categoryId, error);
+      }
+    },
+    [dispatch, userId],
   );
 
   const handleDelete = useCallback(
@@ -147,10 +167,13 @@ const useCategory = () => {
     refreshing,
     onRefresh,
     categories,
+    allCategories,
+    deletedCategories,
     categoryTotals,
     handleEdit,
     handleOpen,
     handleDelete,
+    handleRestore,
   };
 };
 

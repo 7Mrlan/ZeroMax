@@ -45,15 +45,29 @@ export const createCategory = async (
   return id;
 };
 
+const getDescendants = async (categoryId: string, userId: string): Promise<Category[]> => {
+  const categories = await database.get<Category>('categories').query(Q.where('user_id', userId)).fetch();
+  const parentById = new Map(categories.map(category => [category.id, category.parentId ?? null]));
+  return categories.filter(category => {
+    if (category.id === categoryId) return false;
+    const visited = new Set<string>();
+    let parentId = category.parentId ?? null;
+    while (parentId && !visited.has(parentId)) {
+      if (parentId === categoryId) return true;
+      visited.add(parentId);
+      parentId = parentById.get(parentId) ?? null;
+    }
+    return false;
+  });
+};
+
 /**
  * Soft deletes a category by ID (sets categoryStatus to false)
  */
 export const softDeleteCategoryById = async (categoryId: string): Promise<void> => {
   await database.write(async () => {
     const category = await database.get<Category>('categories').find(categoryId);
-    const children = category.parentId
-      ? []
-      : await database.get<Category>('categories').query(Q.where('parent_id', categoryId)).fetch();
+    const children = await getDescendants(categoryId, category.userId);
     await database.batch(
       category.prepareUpdate(cat => {
         cat.categoryStatus = false;
@@ -61,6 +75,25 @@ export const softDeleteCategoryById = async (categoryId: string): Promise<void> 
       ...children.map(child =>
         child.prepareUpdate(childRecord => {
           childRecord.categoryStatus = false;
+        }),
+      ),
+    );
+  });
+};
+
+/** Restores a category and all of its existing descendants. */
+export const restoreCategoryById = async (categoryId: string, userId: string): Promise<void> => {
+  await database.write(async () => {
+    const category = await database.get<Category>('categories').find(categoryId);
+    if (category.userId !== userId) throw new Error('Category does not belong to the active user');
+    const descendants = await getDescendants(categoryId, userId);
+    await database.batch(
+      category.prepareUpdate(record => {
+        record.categoryStatus = true;
+      }),
+      ...descendants.map(child =>
+        child.prepareUpdate(record => {
+          record.categoryStatus = true;
         }),
       ),
     );
