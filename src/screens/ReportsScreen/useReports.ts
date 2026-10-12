@@ -1,6 +1,7 @@
 import {useAppDispatch, useAppSelector} from '../../redux/hooks';
 import useThemeColors from '../../hooks/useThemeColors';
 import {useCallback, useEffect, useMemo, useState} from 'react';
+import {useTranslation} from 'react-i18next';
 import {
   getCurrentYear,
   getWeekdayShortNames,
@@ -9,8 +10,6 @@ import {
   getMonthNames,
   formatDate,
 } from '../../utils/dateUtils';
-
-const MONTHS = getMonthNames();
 
 import {useFocusEffect} from '@react-navigation/native';
 import {getWeekStartDay, rotateWeekdays, type WeekStartDay} from '../../utils/weekStart';
@@ -37,12 +36,16 @@ const CURRENT_MONTH_INDEX = new Date().getMonth();
 
 const useReports = () => {
   const colors = useThemeColors();
+  useTranslation();
   const dispatch = useAppDispatch();
   const [availableYears, setAvailableYears] = useState<number[]>([CURRENT_YEAR]);
 
   const selectedMonthIndex = useAppSelector(selectMonthIndex);
   const selectedYear = useAppSelector(selectYear);
-  const selectedMonth = MONTHS[selectedMonthIndex];
+  // useTranslation subscribes this hook to language changes. dateUtils returns
+  // the refreshed cached array, so reading it here adds no per-render allocation.
+  const months = getMonthNames();
+  const selectedMonth = months[selectedMonthIndex];
 
   const filteredTransactions = useAppSelector(selectExpenseData) as TransactionWithCategory[];
   const incomeTransactions = useAppSelector(selectIncomeData);

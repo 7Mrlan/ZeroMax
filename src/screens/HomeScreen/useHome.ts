@@ -1,4 +1,5 @@
 import {useCallback, useEffect, useMemo, useState} from 'react';
+import {useTranslation} from 'react-i18next';
 import useThemeColors from '../../hooks/useThemeColors';
 import {useAppDispatch, useAppSelector} from '../../redux/hooks';
 import {fetchExpensesByMonth, invalidateExpenseCache, selectExpenseData} from '../../redux/slice/expenseDataSlice';
@@ -21,12 +22,12 @@ import type {ExpenseData as Expense} from '../../watermelondb/services';
 import {loadAvailableYears} from '../../utils/availableYearsCache';
 import {useFocusEffect} from '@react-navigation/native';
 
-const MONTHS = getMonthNames();
 const CURRENT_YEAR = getCurrentYear();
 const CURRENT_MONTH_INDEX = new Date().getMonth();
 
 const useHome = () => {
   const colors = useThemeColors();
+  useTranslation();
   const [refreshing, setRefreshing] = useState(false);
   const [availableYears, setAvailableYears] = useState<number[]>([CURRENT_YEAR]);
 
@@ -34,6 +35,9 @@ const useHome = () => {
 
   const selectedMonthIndex = useAppSelector(selectMonthIndex);
   const selectedYear = useAppSelector(selectYear);
+  // useTranslation subscribes this hook to language changes. dateUtils returns
+  // the refreshed cached array, so reading it here adds no per-render allocation.
+  const months = getMonthNames();
 
   const expenses = useAppSelector(selectExpenseData);
   const incomes = useAppSelector(selectIncomeData);
@@ -43,7 +47,7 @@ const useHome = () => {
   const userName = useAppSelector(selectUserName);
   const userId = useAppSelector(selectUserId);
 
-  const selectedMonthName = MONTHS[selectedMonthIndex];
+  const selectedMonthName = months[selectedMonthIndex];
   const yearMonth = `${selectedYear}-${getMonthNumber(selectedMonthName)}`;
 
   useEffect(() => {
