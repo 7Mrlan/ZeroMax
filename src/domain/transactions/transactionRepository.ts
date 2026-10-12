@@ -9,6 +9,7 @@ import {
   type IncomeWithCategory,
 } from '../../watermelondb/services/incomeService';
 import {fromExpenseRecord, fromIncomeRecord, sortTransactionRecords, type TransactionRecord} from './transactionRecord';
+import {measurePerformance} from '../../utils/performanceTrace';
 
 export interface TransactionRepository {
   getByMonth: (userId: string, yearMonth: string) => Promise<TransactionRecord[]>;
@@ -43,16 +44,20 @@ export const createTransactionRepository = ({
   getIncomesByCategory = getAllIncomesByCategoriesAndMonth,
 }: TransactionRepositoryDependencies = {}): TransactionRepository => ({
   getByMonth: async (userId, yearMonth) => {
-    const [expenses, incomes] = await Promise.all([getExpenses(userId, yearMonth), getIncomes(userId, yearMonth)]);
-    return sortTransactionRecords([...expenses.map(fromExpenseRecord), ...incomes.map(fromIncomeRecord)]);
+    return measurePerformance('query.transactions.month', async () => {
+      const [expenses, incomes] = await Promise.all([getExpenses(userId, yearMonth), getIncomes(userId, yearMonth)]);
+      return sortTransactionRecords([...expenses.map(fromExpenseRecord), ...incomes.map(fromIncomeRecord)]);
+    });
   },
   getByCategory: async (userId, categoryId, yearMonth, kind, categoryIds = [categoryId]) => {
-    if (kind === 'income') {
-      const incomes = await getIncomesByCategory(userId, categoryIds, yearMonth);
-      return sortTransactionRecords(incomes.map(fromIncomeRecord));
-    }
-    const expenses = await getExpensesByCategory(userId, categoryIds, yearMonth);
-    return sortTransactionRecords(expenses.map(fromExpenseRecord));
+    return measurePerformance(`query.transactions.category.${kind}`, async () => {
+      if (kind === 'income') {
+        const incomes = await getIncomesByCategory(userId, categoryIds, yearMonth);
+        return sortTransactionRecords(incomes.map(fromIncomeRecord));
+      }
+      const expenses = await getExpensesByCategory(userId, categoryIds, yearMonth);
+      return sortTransactionRecords(expenses.map(fromExpenseRecord));
+    });
   },
 });
 

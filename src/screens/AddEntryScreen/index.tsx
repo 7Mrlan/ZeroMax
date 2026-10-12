@@ -13,6 +13,7 @@ import IncomeEntry from '../../components/molecules/IncomeEntry';
 import useThemeColors from '../../hooks/useThemeColors';
 import {useTranslation} from 'react-i18next';
 import {gs} from '../../styles/globalStyles';
+import useAnimationFrameSession from '../../hooks/useAnimationFrameSession';
 
 type EntryMode = 'expense' | 'income';
 
@@ -31,10 +32,12 @@ const AddEntryScreen = () => {
   const [visitedModes, setVisitedModes] = useState<Record<EntryMode, boolean>>({expense: true, income: false});
   const [segmentWidth, setSegmentWidth] = useState(0);
   const modeProgress = useSharedValue(0);
+  const {start: startAnimationSession} = useAnimationFrameSession('animation.entry_switch');
 
   const switchMode = useCallback(
     (nextMode: EntryMode) => {
       if (nextMode === mode) return;
+      startAnimationSession();
       modeProgress.value = withTiming(nextMode === 'income' ? 1 : 0, {
         duration: 180,
         easing: Easing.out(Easing.cubic),
@@ -43,7 +46,7 @@ const AddEntryScreen = () => {
       setVisitedModes(current => (current[nextMode] ? current : {...current, [nextMode]: true}));
       setMode(nextMode);
     },
-    [mode, modeProgress],
+    [mode, modeProgress, startAnimationSession],
   );
 
   const indicatorStyle = useAnimatedStyle(

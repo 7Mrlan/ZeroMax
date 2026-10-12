@@ -4,6 +4,7 @@ import type {BottomTabBarProps} from '@react-navigation/bottom-tabs';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import Animated, {Easing, ReduceMotion, useAnimatedStyle, useSharedValue, withTiming} from 'react-native-reanimated';
 import useThemeColors from '../hooks/useThemeColors';
+import useAnimationFrameSession from '../hooks/useAnimationFrameSession';
 
 const styles = StyleSheet.create({
   bar: {position: 'relative', flexDirection: 'row', paddingHorizontal: 8, paddingTop: 6},
@@ -13,6 +14,7 @@ const styles = StyleSheet.create({
 
 const AnimatedTabBar = ({state, descriptors, navigation}: BottomTabBarProps) => {
   const colors = useThemeColors();
+  const animationSession = useAnimationFrameSession('animation.tab_switch');
   const insets = useSafeAreaInsets();
   const [barWidth, setBarWidth] = useState(0);
   const activeIndex = useSharedValue(state.index);
@@ -49,6 +51,7 @@ const AnimatedTabBar = ({state, descriptors, navigation}: BottomTabBarProps) => 
         const onPress = () => {
           const event = navigation.emit({type: 'tabPress', target: route.key, canPreventDefault: true});
           if (!focused && !event.defaultPrevented) {
+            animationSession.start();
             navigation.navigate(route.name as never);
           }
         };
