@@ -97,3 +97,9 @@ Zero `d7725cd` release APK（SHA `0b94f4c9c46c7ec78eeb045282489de73a452d61b715ec
 ### Current-code release rebuild（2026-10-12，代码 `9590e2a`）
 
 在 durable AI、OpenAI response 和完整中文文案合入后，重新完成 trace-off/trace-on 两次 `:app:assembleRelease`，各 740 actionable tasks 成功。最新 trace-on APK 为 102,069,263 bytes，SHA-256 `67fd6cc8b9e31aa9343355c80312e8947075347824f41574cb98e595137892c3`；v2 签名和 Android artifact contract 通过，临时 keystore 已清理。该构建确认最新 JS 能进入 release bundle，但尚未完成最新包的语言/AI/TalkBack 设备回归，也不产生性能百分比。
+
+### Current HEAD concentrated release build（2026-10-12，代码 `cf5f53e`）
+
+按集中 native/performance 模块规则，当前 HEAD 依次执行 trace-off/trace-on `:app:assembleRelease`，使用临时 JDK17/SDK37/NDK28 工具链和 test keystore；临时 keystore 与 `android/keystore.properties` 已清理。最终 trace-on APK 为 102,067,727 bytes，SHA-256 `37f6b50803394bcaba1faea96af55ccd234e128ec553ff0fc1443670b2b01c9a`，APK Signature Scheme v2 验证通过，manifest target SDK 36、arm64/Hermes 内容存在。
+
+当前主机没有可用 emulator 或 Maestro CLI，故本轮只记录构建/签名/产物事实；没有把它扩展成启动、迁移、帧率、TTI、RSS、语言、AI、TalkBack 或性能提升证据。`performance/latest.json` 仍缺失。

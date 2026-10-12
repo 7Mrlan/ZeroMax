@@ -156,3 +156,16 @@ cancel control. AI remained disabled and no request was sent. Network,
 restart, key lifecycle, TalkBack and production signing remain open.
 
 - [ ] Run `ai-offline-queue.yaml` on the current-code release artifact and record the Maestro output; the equivalent API35 adb smoke is documented above but is not a Maestro pass.
+
+## Current HEAD concentrated release build (2026-10-12)
+
+For current HEAD `cf5f53e`, trace-off and trace-on `:app:assembleRelease`
+were invoked in one concentrated build module with temporary JDK17/SDK37/NDK28
+and a local test keystore. The final trace-on APK is 102,067,727 bytes,
+SHA-256 `37f6b50803394bcaba1faea96af55ccd234e128ec553ff0fc1443670b2b01c9a`;
+APK Signature Scheme v2 verification passed, and the temporary keystore plus
+`android/keystore.properties` were removed. This is packaging evidence only.
+
+The current host has no usable emulator or Maestro CLI, so the current artifact
+has no new startup, migration, language, AI, TalkBack, or performance runtime
+pass. Production signing/AAB and physical-device validation remain open.
